@@ -1,0 +1,17 @@
+
+conda 方式安装opencv：
+conda install -c https://conda.anaconda.org/menpo opencv
+
+
+直接使用pip安装
+
+
+pip install numpy Matplotlib #由于opencv依赖numpy
+pip install opencv-python
+ 
+#或者使用国内镜像
+pip install opencv-python -i  https://pypi.douban.com/simple
+　安装完成之后再命令行解释器输入：
+
+1
+import cv2
