@@ -5,7 +5,8 @@ import datetime
 import cv2
 import os
 
-from face import detect_face,detect_eye
+from face import detect_face, detect_eye, face_rec
+
 
 class Application:
     def __init__(self):
@@ -32,9 +33,16 @@ class Application:
 
     def process_img(self, img):
         '''以后其他的验证方法就要放到这里面来了'''
-        resultimg=detect_face(img=img)
+        # resultimg=detect_face(img=img)
         # resultimg = detect_eye(img=img)
-        return resultimg
+        resultimg = face_rec(img=img)
+        if resultimg is None:
+            return img
+        else:
+            return resultimg
+
+
+
 
     def video_loop(self):
         """ Get frame from the video stream and show it in Tkinter """
@@ -42,6 +50,7 @@ class Application:
 
         if ok:  # frame captured without any errors
             cv2image = cv2.cvtColor(self.process_img(frame), cv2.COLOR_BGR2RGBA)  # convert colors from BGR to RGBA
+
             self.current_image = Image.fromarray(cv2image)  # convert image for PIL
             imgtk = ImageTk.PhotoImage(image=self.current_image)  # convert image for tkinter
             self.panel.imgtk = imgtk  # anchor imgtk so it does not be deleted by garbage-collector
