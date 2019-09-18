@@ -1,35 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="dd634b62-a4c2-4ed2-bcf7-3aa8ad705d0f" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/test/1000.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1001.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1002.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1003.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1004.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1005.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1006.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/1007.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3001.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3002.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3003.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3004.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3005.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3006.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/3007.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/4001.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/4002.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/4003.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/5001.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/5002.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/application.py" beforeDir="false" afterPath="$PROJECT_DIR$/application.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/face.py" beforeDir="false" afterPath="$PROJECT_DIR$/face.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/wangjie.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/1.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/zhakeboge1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/test/2001.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/zhakeboge2.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/test/2002.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/zhakeboge3.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/test/2003.jpg" afterDir="false" />
-    </list>
+    <list default="true" id="dd634b62-a4c2-4ed2-bcf7-3aa8ad705d0f" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -130,7 +102,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="1">
+  <component name="ProjectFrameBounds">
     <option name="x" value="24" />
     <option name="width" value="1467" />
     <option name="height" value="860" />
@@ -290,7 +262,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="24" y="0" width="1467" height="860" extended-state="1" />
+    <frame x="24" y="0" width="1467" height="860" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2757173" />
