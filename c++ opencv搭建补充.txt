@@ -1,0 +1,5 @@
+将E:\opencv\build\x64\vc15\lib 下面的 opencv_world411.lib 和 opencv_world411d.lib放到下面的目录中：
+C:\Windows\System32
+C:\Windows\SysWOW64
+
+即可解决opencv_world411.lib 和opencv_world411.lib问题
