@@ -75,4 +75,6 @@ class Application:
 print("[INFO] starting...")
 # pba = Application(args["output"])
 pba = Application()
-pba.root.mainloop()
+import profile
+profile.run('pba.root.mainloop()')
+

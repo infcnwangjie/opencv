@@ -69,15 +69,19 @@ def getTrainImg(filepath=None):
 face_cascade = cv.CascadeClassifier("./cascades/haarcascade_frontalface_default.xml")
 names = {"1000": 'wangjie', "1001": 'wangjie', "1002": 'wangjie', "1003": 'wangjie', "1004": 'wangjie',
          "1005": 'wangjie', "1006": 'wangjie', "1007": 'wangjie',
-         '2001': 'zhakeboge', '2002': 'zhakeboge', '2003': 'zhakeboge', '3001': 'yichaoshuo', '3002': 'yichaoshuo',
+         '2001': 'zhakeboge', '2002': 'zhakeboge', '2003': 'zhakeboge',
+         '3001': 'yichaoshuo', '3002': 'yichaoshuo',
          '3003': 'yichaoshuo',
          '3004': 'yichaoshuo', '3005': 'yichaoshuo', '3006': 'yichaoshuo', '3007': 'yichaoshuo',
-         '4001':'yibaoquan','4002':'yibaoquan','4003':'yibaoquan','5001':'yuemu','5002':'yuemu'}
+         '4001': 'yibaoquan', '4002': 'yibaoquan', '4003': 'yibaoquan', '5001': 'yuemu', '5002': 'yuemu'}
 
 position = {"wangjie": "当前位置西地华府", "yichaoshuo": "当前位置东华园", "zhakeboge": "当前位置纽约"}
 [X, Y] = getTrainImg("./test")
 Y = np.asarray(Y, dtype=np.int32)
 model = cv.face.EigenFaceRecognizer_create()
+# model = cv.face.FisherFaceRecognizer_create()
+
+# model = cv.face.LBPHFaceRecognizer_create()
 model.train(X, Y)
 
 
@@ -89,7 +93,7 @@ def face_rec(img=None, filename=None, test=False):
     # resize_img = cv.resize(img, (400, 600))
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 3)
 
     for (x, y, w, h) in faces:
         img = cv.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
