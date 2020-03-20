@@ -19,10 +19,12 @@ class DigitLocation:
 
 
 class Box:
-	def __init__(self, box, img, id=1, digitdetector=None):
+	def __init__(self, contour, img, id=1, digitdetector=None):
 		if img is None:
 			raise Exception("box img must not none")
-		self.id, self.box, self.img = id, box, img
+		self.id, self.img = id, img
+		self.contour = contour
+		self.box = cv2.boundingRect(contour)
 		self.x, self.y, self.w, self.h = self.box
 		self.boxcenterpoint = (self.x + round(self.w * 0.5), self.y + round(self.h * 0.5))
 		self.roi_contours, self.thresh = None, None
@@ -52,7 +54,7 @@ class Box:
 			self.has_compute_contours = True
 			x, y, w, h = self.box
 			roi_img = self.img[y + 1:y + h, x + 1:x + w]
-			if roi_img is None :
+			if roi_img is None:
 				raise Exception("roi_img 拷贝失败！")
 			roi_gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
 			ret, thresh = cv2.threshold(roi_gray, 127, 255, cv2.THRESH_BINARY_INV)  # 简单阈值
@@ -71,8 +73,21 @@ class Box:
 		return self.roi_contours
 
 	# 修改目标物的显示内容
-	def modify_box_content(self, digitdetector):
+	def modify_box_content(self, digitdetector, no_num=True):
 		# 如果box内部没有内部轮廓，就直接退出循环
+		if no_num:
+			# x, y, w, h = self.box
+			# self.box_content = "bag_location:{},bag_area:{} ，width:{} ,height:{}".format(
+			# 	"->(" + str(self.boxcenterpoint[0]) + "," + str(self.boxcenterpoint[1]) + ")",
+			# 	cv2.contourArea(self.contour), w, h)
+			self.box_content = "bag_location:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+				self.boxcenterpoint[1]) + ")"
+			return
+
+		# x, y, w, h = self.box
+		# self.box_content = "bag_location:{},bag_area:{} ，width:{} ,height:{}".format(
+		# 	"->(" + str(self.boxcenterpoint[0]) + "," + str(self.boxcenterpoint[1]) + ")",
+		# 	cv2.contourArea(self.contour), w, h)
 		for digital_contour in self.inercontours:
 			[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
 				digital_contour)
@@ -86,9 +101,7 @@ class Box:
 			                                 locationpoint=(
 				                                 self.x + digit_point_x, self.y + digit_point_y))
 			self.digitLocations.append(boxdigitlocation)
-		self.modifyLocations()
-
-	def modifyLocations(self):
+		# modify locations if has locations
 		if self.digitLocations is None or len(self.digitLocations) == 0:
 			return
 		self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
