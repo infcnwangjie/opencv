@@ -2,26 +2,31 @@ import cv2
 
 
 def orb_match():
-	img1 = cv2.imread("imgs/test/bag1.bmp")  # 导入灰度图像
-	img2 = cv2.imread("imgs/test/bag2.bmp")
+    template1 = cv2.imread("imgs/land_mark/6.png")  # 导入灰度图像
 
-	detector = cv2.ORB_create()
+    obj_img = cv2.imread("imgs/test/bag3.bmp")
 
-	kp1 = detector.detect(img1, None)
-	kp2 = detector.detect(img2, None)
-	kp1, des1 = detector.compute(img1, kp1)
-	kp2, des2 = detector.compute(img2, kp2)
+    detector = cv2.ORB_create()
 
-	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-	matches = bf.match(des1, des2)
-	for matchitem in matches:
-		print(matchitem)
-	# cv2.imshow("t",des2)
-	# matches = sorted(matches, key=lambda x: x.distance)  # 据距离来排序
-	img3 = cv2.drawMatches(img1, kp1, img2, kp2, matches[:10], None, flags=0)
-	cv2.namedWindow("orbTest",0)
-	cv2.imshow('orbTest', img3)
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+    kp_obj = detector.detect(obj_img, None)
+    kp_obj, des_obj = detector.compute(obj_img, kp_obj)
+
+    kp1_t = detector.detect(template1, None)
+    kp1_t, des1_t = detector.compute(template1, kp1_t)
+    
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des1_t, des_obj)
+    img3 = cv2.drawMatches(template1, kp1_t, obj_img, kp_obj, matches[:10], None, flags=0)
+
+   
+   
+    # for matchitem in matches:
+    #     print(matchitem)
+    
+    cv2.namedWindow("orbTest", 0)
+    cv2.imshow('orbTest', img3)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 
 orb_match()

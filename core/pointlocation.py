@@ -38,16 +38,26 @@ class PointLocationService:
 	# 预处理_定位地标:解决的目标是，减少颜色的干扰
 	# 尝试过颜色范围限定，但对于光照影响也很敏感，暗处的地标识别不了
 	def preprocess_for_landmark(self, colorlow=(61, 83, 31), colorhigh=(81, 255, 250)):
-		# hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
-		# colormin, colormax = np.array(colorlow), np.array(colorhigh)
+		hsv_g = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		colormin, colormax = np.array(colorlow), np.array(colorhigh)
 		# 去除颜色范围外的其余颜色
-		# mask = cv2.inRange(hsv, colormin, colormax)
-		# ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
-		grayimg=cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-		ret, binary = cv2.threshold(grayimg, 80, 255, cv2.THRESH_BINARY)
-		# 去噪
-		binary = cv2.medianBlur(binary, 3)
-		return binary
+		mask_g = cv2.inRange(hsv_g, colormin, colormax)
+		ret, binary_g = cv2.threshold(mask_g, 50, 255, cv2.THRESH_BINARY)
+
+		# gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		# ret, binary = cv2.threshold(gray, 90, 150, cv2.THRESH_BINARY)  # 灰度阈值
+		# # 对binary去噪，腐蚀与膨胀
+		# binary = cv2.erode(binary, None, iterations=3)
+		#
+		# binary=cv2.bitwise_and(binary1,binary)
+
+		hsv_y = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		colormin_y, colormax_y = np.array((22,93,0)), np.array((45,255,255))
+		# 去除颜色范围外的其余颜色
+		mask_g = cv2.inRange(hsv_y, colormin_y, colormax_y)
+		ret, binary_y = cv2.threshold(mask_g, 50, 255, cv2.THRESH_BINARY)
+
+		return binary_y
 
 	# 计算袋的坐标
 	def computer_bags_location(self, digitdetector):
