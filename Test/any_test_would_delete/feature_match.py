@@ -2,22 +2,40 @@ import cv2
 import numpy as np
 
 
+def calculate(image1, image2):
+    # 灰度直方图算法
+    # 计算单通道的直方图的相似值
+    hist1 = cv2.calcHist([image1], [0], None, [128], [0.0, 255.0])
+    hist2 = cv2.calcHist([image2], [0], None, [128], [0.0, 255.0])
+    # 计算直方图的重合度
+    degree = 0
+    for i in range(len(hist1)):
+        if hist1[i] != hist2[i]:
+            degree = degree + \
+                (1 - abs(hist1[i] - hist2[i]) / max(hist1[i], hist2[i]))
+        else:
+            degree = degree + 1
+    degree = degree / len(hist1)
+    return degree
+
 def img_hist( color=[255, 0, 0]):
-	image=cv2.imread("../imgs/test/6.png")
-	img=cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
-	hist = cv2.calcHist([img], [0], None, [256], [0.0, 255.0])
-	minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(hist)
-	histImg = np.zeros([256, 256, 3], np.uint8)
-	hpt = int(0.9 * 256)
+	image1=cv2.imread("C:/work/imgs/test/7.jpg")
+	img1=cv2.cvtColor(image1,cv2.COLOR_BGR2HSV)
+	# image2=cv2.imread("C:/work/imgs/test/test_landmark.png")
+	image2=cv2.imread("C:/work/imgs/test/2.jpg")
+	img2=cv2.cvtColor(image2,cv2.COLOR_BGR2HSV)
+	# hist = cv2.calcHist([img], [0], None, [256], [0.0, 255.0])
+	# minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(hist)
+	# histImg = np.zeros([256, 256, 3], np.uint8)
+	# hpt = int(0.9 * 256)
+	i=calculate(img1,img2)
+	print("相似度为:{}".format(i))
 
-	cv2.namedWindow("image")
-	cv2.imshow("image", image)
+	cv2.namedWindow("image1")
+	cv2.imshow("image1", image1)
+	cv2.namedWindow("image2")
+	cv2.imshow("image2", image2)
 
-	for h in range(256):
-		intensity = int(hist[h] * hpt / maxVal)
-		cv2.line(histImg, (h, 256), (h, 256 - intensity), color)
-	cv2.namedWindow("histImg")
-	cv2.imshow("histImg",histImg)
 
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
@@ -67,6 +85,7 @@ def orb_match():
 	cv2.imshow('orbTest', img3)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
 	# orb_match()

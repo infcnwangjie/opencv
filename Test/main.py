@@ -1,3 +1,4 @@
+# encoding:utf-8
 import os
 
 
@@ -247,7 +248,7 @@ def hug_svm_test():
 	cell_size = (8, 8)  # （从一个单元格移动8*8像素到另外一个单元格）
 	num_bins = 10  # 对于每一个单元格，统计9个方向的梯度直方图。
 	hog = cv2.HOGDescriptor(win_size, block_size, block_stride, cell_size, num_bins)
-	land_mark_dir = "imgs/land_mark/"  # 设置正负数据集所在的位置
+	land_mark_dir = "C:/work/imgs/land_mark"  # 设置正负数据集所在的位置
 	x_lands = []
 	for landfile in os.listdir(land_mark_dir):  # 在0到900张图片中随机挑选400张图片
 		filename = "{dir}/{i}".format(dir=land_mark_dir, i=landfile)
@@ -261,7 +262,7 @@ def hug_svm_test():
 	train_lands = np.array(x_lands, dtype=np.float32)  # 数据类型转换，兼容OpenCv
 	label_lands = np.ones(train_lands.shape[0], dtype=np.int32)  # 将训练样本赋值为1给y_pos
 
-	othersdir = "imgs/others/"
+	othersdir = "C:/work/imgs/others/"
 	x_ohters = []
 	for otherfile in os.listdir(othersdir):
 		filename = '%s/%s' % (othersdir, otherfile)
@@ -271,7 +272,7 @@ def hug_svm_test():
 	train_ohers = np.array(x_ohters, dtype=np.float32)  # 数据类型转换，兼容OpenCv
 	lable_others = 3 * np.ones(train_ohers.shape[0], dtype=np.int32)  # 将训练样本赋值给y_neg   np.ones 填充1
 
-	bagsdir = "imgs/bags/"
+	bagsdir = "C:/work/imgs/bags/"
 	x_bags = []
 	for bagfile in os.listdir(bagsdir):
 		filename = '%s/%s' % (bagsdir, bagfile)
@@ -315,7 +316,7 @@ def hug_svm_test():
 	# 		arrayTest = np.append(arrayTest, [[i, j]], axis=0)
 	# pt = np.array(np.random.rand(50, 2) * 10, dtype='float32')  # np.random.rand(50,2) * 10可以替换成arrayTest
 
-	filename = "imgs/test/nm.png"
+	filename = "C:/work/imgs/test/10.png"
 	testimg = cv2.imread(filename)
 	cv2.imshow("test", testimg)
 	testimg = cv2.resize(testimg, (512, 512))
@@ -929,13 +930,14 @@ def car_detect():
 
 
 if __name__ == '__main__':
-	im = cv2.imread('d:/imgs/test/bag1.bmp')
+	im = cv2.imread('C:/work/imgs/test/bag5.bmp')
 	# rectangle_detect()
 	# # im = cv2.imread('img.png')
 	a = PointLocationService(img=im)
 	a.location_objects(flag=BAG_AND_LANDMARK)
 	# hug_svm_detect_contours()
 	# hug_ann_detect_contours()
+	# hug_svm_test()
 # orb_match()
 # fast_detect()
 # orb_test()

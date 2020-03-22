@@ -69,10 +69,9 @@ class PointLocationService:
 	# 计算地标的坐标
 	def computer_landmarks_location(self, digitdetector):
 		process = LandMarkPreprocess(self.img)
-		binary=process.processedimg
 		cv2.namedWindow('landmark_binary', cv2.WINDOW_KEEPRATIO)
-		cv2.imshow("landmark_binary", binary)
-		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		cv2.imshow("landmark_binary", process.processedimg)
+		contours, hierarchy = cv2.findContours(process.processedimg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		if contours is None or len(contours) == 0:
 			return
 		# 大小适中的轮廓，过小的轮廓被去除了
