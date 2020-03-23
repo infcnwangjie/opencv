@@ -2,14 +2,21 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 # 发现
+from config import SECOND_TEMPLATE_PATH, FIRST_TEMPLATE_PATH, THIRD_TEMPLATE_PATH, FIRST_NEG_TEMPLATE_PATH, \
+	SECOND_NEG_TEMPLATE_PATH
+from core.mark import calculate, isRectange
+from core.target_detect.shapedetect import ShapeDetector
+
+
 class Preprocess(object):
 	def __init__(self, img):
 		if isinstance(img, str):
 			self.img = cv2.imread(img)
 		else:
 			self.img = img
+
+		self.shapedetector = ShapeDetector()
 
 	# 直方图正规化
 	def enhance_histrg(self, img):
@@ -33,11 +40,37 @@ class Preprocess(object):
 
 	# 过滤轮廓
 	def filter_contours(self, c):
+		# if not self.shapedetector.detect(c,4):
+		# 	return False
 		x, y, w, h = cv2.boundingRect(c)
 		if w < 20 or h < 20 or w > 100 or h > 100:
 			return False
-		if not 800 < cv2.contourArea(c) < 20000:
+
+		if not 900 < cv2.contourArea(c) < 20000:
 			return False
+
+		# if not isRectange(c):
+		# 	return False
+
+		first_template = cv2.imread(FIRST_TEMPLATE_PATH)
+		second_template = cv2.imread(FIRST_TEMPLATE_PATH)
+		third_template = cv2.imread(THIRD_TEMPLATE_PATH)
+
+		targetimg = self.img[y:y + h, x:x + w]
+		first_match_result = calculate(first_template, targetimg)
+		second_match_result = calculate(second_template, targetimg)
+		third_match_result = calculate(third_template, targetimg)
+		if first_match_result > 0.45 or second_match_result > 0.45 or third_match_result > 0.45:
+			return True
+
+		neg_template1 = cv2.imread(FIRST_NEG_TEMPLATE_PATH)
+		neg_template2 = cv2.imread(SECOND_NEG_TEMPLATE_PATH)
+		neg_firstmatch_result = calculate(neg_template1, targetimg)
+		neg_secondmatch_result = calculate(neg_template2, targetimg)
+		if neg_firstmatch_result > 0.4 or neg_secondmatch_result > 0.4:
+			return False
+
+
 		return True
 
 	# 普通二值化操作
@@ -67,7 +100,6 @@ class Preprocess(object):
 		support_left_contours, _drop = cv2.findContours(left_binary_support, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		contours = list(filter(lambda c: self.filter_contours(c), contours + support_left_contours))
 		support_left_contours = list(filter(lambda c: self.filter_contours(c), support_left_contours))
-		# contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)
 
 		allzero = np.zeros_like(binary)
 		for contour in contours:
@@ -82,6 +114,13 @@ class Preprocess(object):
 		cv2.namedWindow("easy_binary", 0)
 		cv2.imshow("easy_binary", allzero)
 		return all_contours, allzero
+
+	# 对灰度图像做数据插值运算
+	def interpolation_binary_data(self, binary_image):
+		rows, cols = binary_image.shape
+		destimg=np.zeros_like(binary_image)
+		cv2.resize(binary_image,destimg,interpolation=cv2.INTER_NEAREST)
+		return destimg
 
 	# 找到地标的轮廓
 	def find_contours_bylandmark_colorrange(self):
@@ -103,8 +142,10 @@ class Preprocess(object):
 		for contour in contours:
 			x, y, w, h = cv2.boundingRect(contour)
 			allzero[y:y + h, x:x + w] = binary[y:y + h, x:x + w]
+		destimg=self.interpolation_binary_data(allzero)
+		# _drop,allzero=cv2.threshold(allzero,0,255,cv2.THRESH_BINARY)
 		cv2.namedWindow("landmark_binary", 0)
-		cv2.imshow("landmark_binary", allzero)
+		cv2.imshow("landmark_binary", destimg)
 		return contours, allzero
 
 	# 找到袋子轮廓
@@ -137,7 +178,7 @@ class Preprocess(object):
 	@property
 	def processedimg(self):
 		img1 = self.img.copy()
-		landmark_contours, landmark_binary = self.find_contours_bylandmark_colorrange()
+		# landmark_contours, landmark_binary = self.find_contours_bylandmark_colorrange()
 		# result1 = cv2.drawContours(img1, landmark_contours, -1,
 		#                            (0, 255, 0), 3)
 		# bag_contours, bag_binary = self.find_contours_bybagcolorrange()
@@ -149,7 +190,7 @@ class Preprocess(object):
 
 		easy_contours, easy_binary = self.find_contours_byeasyway()
 		result = cv2.drawContours(img1, easy_contours, -1,
-		                          (0, 0, 255), 3)
+		                          (255, 0, 0), 3)
 		# finaly = np.zeros_like(landmark_binary)
 		# 发现hsv检测出来的方式，轮廓大致保存完整，不完整的部分，让普通二进制的方式补充即可
 		# 1：该方法找到地标的位置，从灰度图像上拷贝合适的像素过来，相对来说可以
@@ -172,8 +213,7 @@ class Preprocess(object):
 		# plt.subplot(1, 3, 3)
 		# plt.imshow(result)
 		# plt.show()
-
-		return easy_binary
+		return easy_binary, easy_contours
 
 
 if __name__ == '__main__':

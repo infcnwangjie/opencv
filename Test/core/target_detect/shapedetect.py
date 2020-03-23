@@ -12,6 +12,8 @@ class ShapeDetector:
 	def detect(self, c, shape_flag=7):
 		peri = cv2.arcLength(c, True)
 		approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+
+		print(len(approx))
 		# if the shape is a triangle, it will have 3 vertices
 		shape=0
 		if len(approx) == 3:

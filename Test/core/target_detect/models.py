@@ -19,6 +19,9 @@ class DigitLocation:
 
 
 class Box:
+	'''
+	Box(contour，grayimage,id,numdetector)
+	'''
 	def __init__(self, contour, img, id=1, digitdetector=None):
 		if img is None:
 			raise Exception("box img must not none")
@@ -46,7 +49,7 @@ class Box:
 		[x1, y1, w1, h1] = cv2.boundingRect(c)
 		area = cv2.contourArea(c)
 		# and h1 > h * 0.50
-		return maxarea > area > minarea
+		return maxarea > area > minarea and w1<100 and h1<100
 
 	# 内部使用，计算box中的所有数字轮廓
 	def compute_iner_contours(self):
@@ -54,10 +57,11 @@ class Box:
 			self.has_compute_contours = True
 			x, y, w, h = self.box
 			roi_img = self.img[y + 1:y + h, x + 1:x + w]
+			# cv2.imshow("roi",roi_img)
 			if roi_img is None:
 				raise Exception("roi_img 拷贝失败！")
-			roi_gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
-			ret, thresh = cv2.threshold(roi_gray, 60, 255, cv2.THRESH_BINARY_INV)  # 简单阈值
+			# roi_gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
+			ret, thresh = cv2.threshold(roi_img, 0, 255, cv2.THRESH_BINARY_INV)  # 简单阈值
 			# 在特征区域中再次寻找轮廓
 			roi_contours, hierarchy1 = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 			roi_contours = [contour for contour in roi_contours if self.__contours_area_filter(contour)]
@@ -80,15 +84,15 @@ class Box:
 				self.boxcenterpoint[1]) + ")"
 			return
 
-
 		for digital_contour in self.inercontours:
 			[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
 				digital_contour)
 			roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
 			      digit_point_x:digit_point_x + digit_contor_width]
 			results = digitdetector.readnum(roi)
+
 			roi_digitvalue = str(int((results[0][0])))
-			cv2.drawContours(roi, digital_contour, -1, (0, 0, 205), 1)
+			# cv2.drawContours(roi, digital_contour, -1, (0, 0, 205), 1)
 			boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
 			                                 bagcenterpoint=self.boxcenterpoint,
 			                                 locationpoint=(
