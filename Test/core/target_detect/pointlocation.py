@@ -8,7 +8,7 @@
 import cv2
 import numpy as np
 
-from core.preprocess.landmarkpreprocess import LandMarkPreprocess
+from core.preprocess.preprocess import Preprocess
 from core.target_detect.models import Box
 from core.target_detect.digitdetect import DigitDetector
 
@@ -40,8 +40,8 @@ class PointLocationService:
 	# 计算袋的坐标
 	def computer_bags_location(self, digitdetector):
 		binary = self.preprocess_for_bag(colorlow=[120, 50, 50], colorhigh=[180, 255, 255])
-		cv2.namedWindow('bags_binary', cv2.WINDOW_KEEPRATIO)
-		cv2.imshow("bags_binary", binary)
+		# cv2.namedWindow('bags_binary', cv2.WINDOW_KEEPRATIO)
+		# cv2.imshow("bags_binary", binary)
 		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		if contours is None or len(contours) == 0:
 			return
@@ -68,7 +68,7 @@ class PointLocationService:
 
 	# 计算地标的坐标
 	def computer_landmarks_location(self, digitdetector):
-		process = LandMarkPreprocess(self.img)
+		process = Preprocess(self.img)
 		cv2.namedWindow('landmark_binary', cv2.WINDOW_KEEPRATIO)
 		cv2.imshow("landmark_binary", process.processedimg)
 		contours, hierarchy = cv2.findContours(process.processedimg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)

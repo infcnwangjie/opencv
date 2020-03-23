@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def calculate(image1, image2):
     # 灰度直方图算法
@@ -19,10 +19,12 @@ def calculate(image1, image2):
     return degree
 
 def img_hist( color=[255, 0, 0]):
-	image1=cv2.imread("C:/work/imgs/test/7.jpg")
+	image1=cv2.imread("C:/work/imgs/test/test_landmark.png")
 	img1=cv2.cvtColor(image1,cv2.COLOR_BGR2HSV)
 	# image2=cv2.imread("C:/work/imgs/test/test_landmark.png")
-	image2=cv2.imread("C:/work/imgs/test/2.jpg")
+	# image2=cv2.imread("C:/work/imgs/test/18.png")
+
+	image2=cv2.imread("C:/work/imgs/test/5.png")
 	img2=cv2.cvtColor(image2,cv2.COLOR_BGR2HSV)
 	# hist = cv2.calcHist([img], [0], None, [256], [0.0, 255.0])
 	# minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(hist)
@@ -31,14 +33,21 @@ def img_hist( color=[255, 0, 0]):
 	i=calculate(img1,img2)
 	print("相似度为:{}".format(i))
 
-	cv2.namedWindow("image1")
-	cv2.imshow("image1", image1)
-	cv2.namedWindow("image2")
-	cv2.imshow("image2", image2)
+	# cv2.namedWindow("image1")
+	# cv2.imshow("image1", image1)
+	# cv2.namedWindow("image2")
+	# cv2.imshow("image2", image2)
 
 
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+	plt.figure()
+	plt.subplot(1,2, 1)
+	plt.imshow(image1)
+	plt.subplot(1, 2, 2)
+	plt.imshow(image2)
+	plt.show()
+
+	# cv2.waitKey(0)
+	# cv2.destroyAllWindows()
 
 def sift_match():
 	img1_gray = cv2.imread("../imgs/test/19.png")

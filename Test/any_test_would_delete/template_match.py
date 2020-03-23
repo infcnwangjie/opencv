@@ -1,9 +1,9 @@
 #opencv模板匹配----单目标匹配
 import cv2
 #读取目标图片
-target = cv2.imread("../imgs/test/bag5.bmp")
+target = cv2.imread("C:/work/imgs/test/bag1.bmp")
 #读取模板图片
-template = cv2.imread("../imgs/test/8.png")
+template = cv2.imread("C:/work/imgs/test/18.png")
 #获得模板图片的高宽尺寸
 theight, twidth = template.shape[:2]
 template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2HSV)
