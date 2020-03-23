@@ -37,6 +37,7 @@ class Box:
 		# 数字检测对象
 		self.digitdetector = digitdetector
 		self.compute_iner_contours()
+		self.status=True
 
 	def __str__(self):
 		return 'id:{id}-box_center_x:{box_center_x}-box_center_y:{box_center_y}'.format(id=self.id, box_center_x=

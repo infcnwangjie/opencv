@@ -1,0 +1,11 @@
+scoredict = {}
+		for a in self.landmarks:
+			scoredict[str(a.id)] = 0
+			for b in self.landmarks:
+				if a == b:
+					scoredict[str(a.id)] += 1
+				elif abs(a.x-b.x)+abs(a.y-b.y)<700:
+					continue
+				elif abs(a.x - b.x) < 30 or abs(a.y - b.y) < 30:
+					scoredict[str(a.id)] += 1
+		good_boxes = [index for index, score in scoredict.items() if score >2]

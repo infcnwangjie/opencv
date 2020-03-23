@@ -142,10 +142,10 @@ class Preprocess(object):
 		for contour in contours:
 			x, y, w, h = cv2.boundingRect(contour)
 			allzero[y:y + h, x:x + w] = binary[y:y + h, x:x + w]
-		destimg=self.interpolation_binary_data(allzero)
+		# destimg=self.interpolation_binary_data(allzero)
 		# _drop,allzero=cv2.threshold(allzero,0,255,cv2.THRESH_BINARY)
 		cv2.namedWindow("landmark_binary", 0)
-		cv2.imshow("landmark_binary", destimg)
+		cv2.imshow("landmark_binary", allzero)
 		return contours, allzero
 
 	# 找到袋子轮廓

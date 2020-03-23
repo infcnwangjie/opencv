@@ -5,6 +5,8 @@
 # 2、找到所有的地标
 #
 # 3、移动钩子到所有袋子
+import math
+
 import cv2
 import numpy as np
 
@@ -80,12 +82,30 @@ class PointLocationService:
 			box.modify_box_content(digitdetector, no_num=False)
 			print(box.box_content)
 			boxindex += 1
-			# 标记坐标和值
-			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 			self.landmarks.append(box)
+
+		scoredict = {}
+		for a in self.landmarks:
+			scoredict[str(a.id)] = 0
+			for b in self.landmarks:
+				if a == b:
+					scoredict[str(a.id)] += 1
+				elif abs(a.x-b.x)+abs(a.y-b.y)<700:
+					continue
+				elif abs(a.x - b.x) < 30 or abs(a.y - b.y) < 30:
+					scoredict[str(a.id)] += 1
+		good_boxes = [index for index, score in scoredict.items() if score >2]
+		# print(good_boxes)
+		good_contours=[]
+		for box in self.landmarks:
+			if str(box.id ) in good_boxes:
+				# 标记坐标和值
+				cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
+				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
+				good_contours.append(box.contour)
+
 		# 用紫色画轮廓
-		cv2.drawContours(self.img, contours, -1, (0 ,255 ,255), 5)
+		cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
 
 	# 这一步定位所有摄像头看到的目标，并且计算出坐标
 	def location_objects(self, flag=BAG_AND_LANDMARK):
