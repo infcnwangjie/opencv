@@ -11,4 +11,6 @@ scoredict = {}
 		good_boxes = [index for index, score in scoredict.items() if score >2]
 
 
-循环遍历序列，如果物体a和物体b 坐标轴相近，则加权，否则不加权，系数低的要过滤
+循环遍历序列，如果物体a和物体b 坐标轴相近，则加权，否则不加权，系数低的要过滤。
+
+如果大部分数据都有序，那么无序的个体就是噪音。
