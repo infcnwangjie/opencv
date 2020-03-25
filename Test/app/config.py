@@ -1,9 +1,9 @@
 import os
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) #根目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-TRAIN_DATA_DIR = os.path.join(BASE_DIR, 'train_data')#训练数据目录
+TRAIN_DATA_DIR = os.path.join(BASE_DIR, 'train_data')
 
 FIRST_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'template1.png')
 

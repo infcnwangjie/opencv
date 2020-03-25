@@ -67,8 +67,6 @@ class PointLocationService:
 	def computer_landmarks_location(self, digitdetector):
 		process = Preprocess(self.img)
 		binary_image, contours = process.processedimg
-		# cv2.namedWindow('landmark_binary', cv2.WINDOW_KEEPRATIO)
-		# cv2.imshow("landmark_binary", binary_image)
 		# contours, hierarchy = cv2.findContours(process.processedimg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		if contours is None or len(contours) == 0:
 			return

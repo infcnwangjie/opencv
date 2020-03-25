@@ -39,12 +39,6 @@ class Box:
 		self.compute_iner_contours()
 		self.status=True
 
-	# def __str__(self):
-	# 	return 'id:{id}-box_center_x:{box_center_x}-box_center_y:{box_center_y}'.format(id=self.id, box_center_x=
-	# 	self.boxcenterpoint[0],
-	# 	                                                                                box_center_y=
-	# 	                                                                                self.boxcenterpoint[1])
-
 	# 内部使用,通过轮廓面积过滤轮廓
 	def __contours_area_filter(self, c, minarea=100, maxarea=3000):
 		[x1, y1, w1, h1] = cv2.boundingRect(c)
