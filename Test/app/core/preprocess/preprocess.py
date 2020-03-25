@@ -72,6 +72,8 @@ class Preprocess(object):
 	# 普通二值化操作
 	def find_contours_byeasyway(self):
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		cv2.namedWindow("gray", 0)
+		cv2.imshow("gray", gray)
 		# gray = cv2.equalizeHist(gray)
 		# gray=self.enhance_histrg(gray)
 		rows, cols = gray.shape
@@ -79,6 +81,7 @@ class Preprocess(object):
 		left_gray = gray[:, 0:round(cols / 2 - 1)]
 		# 110 能检测出06 07 ；40 能检测出05
 		left_ret, left_binary = cv2.threshold(left_gray, 110, 250, cv2.THRESH_BINARY)  # 灰度阈值
+		# 40
 		left_ret_support, left_binary_support = cv2.threshold(left_gray, 40, 250, cv2.THRESH_BINARY)  # 灰度阈值
 
 		# 行车环境，右侧部分光线较暗
@@ -89,6 +92,9 @@ class Preprocess(object):
 		binary = np.zeros_like(gray)
 		binary[:, 0:round(cols / 2 - 1)] = left_binary
 		binary[:, round(cols / 2):] = right_binary
+
+		cv2.namedWindow("binary", 0)
+		cv2.imshow("binary", binary)
 
 		# binary = self.sharper(binary)#图像锐化
 		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -107,8 +113,7 @@ class Preprocess(object):
 			allzero[y:y + h, x:x + w] = left_binary_support[y:y + h, x:x + w]
 
 		all_contours = contours + support_left_contours
-		# cv2.namedWindow("easy_binary", 0)
-		# cv2.imshow("easy_binary", allzero)
+
 		return all_contours, allzero
 
 	# 对灰度图像做数据插值运算
@@ -138,10 +143,6 @@ class Preprocess(object):
 		for contour in contours:
 			x, y, w, h = cv2.boundingRect(contour)
 			allzero[y:y + h, x:x + w] = binary[y:y + h, x:x + w]
-		# destimg=self.interpolation_binary_data(allzero)
-		# _drop,allzero=cv2.threshold(allzero,0,255,cv2.THRESH_BINARY)
-		# cv2.namedWindow("landmark_binary", 0)
-		# cv2.imshow("landmark_binary", allzero)
 		return contours, allzero
 
 	# 找到袋子轮廓
@@ -150,8 +151,6 @@ class Preprocess(object):
 		ret, binary = cv2.threshold(gray, 70, 150, cv2.THRESH_BINARY)  # 灰度阈值
 		# 对binary去噪，腐蚀与膨胀
 		binary = cv2.erode(binary, None, iterations=3)
-		# cv2.namedWindow("bag_detect", 0)
-		# cv2.imshow("bag_detect", binary)
 		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)
 		return contours[0:20], binary
@@ -163,9 +162,6 @@ class Preprocess(object):
 		# 去除颜色范围外的其余颜色
 		mask = cv2.inRange(hsv, colormin, colormax)
 		ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
-		# binary.where()
-		# cv2.namedWindow("car_detect", 0)
-		# cv2.imshow("car_detect", binary)
 		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)
 		return contours[0:10], binary
@@ -176,24 +172,43 @@ class Preprocess(object):
 		img1 = self.img.copy()
 		if method == DETECT_BY_MULTIPLEAREA:
 			easy_contours, easy_binary = self.find_contours_byeasyway()
-			result = cv2.drawContours(img1, easy_contours, -1,
-			                          (255, 0, 0), 3)
+		# result = cv2.drawContours(img1, easy_contours, -1,
+		#                           (255, 0, 0), 3)
 		else:
 			landmark_contours, landmark_binary = self.find_contours_bylandmark_colorrange()
-			result = cv2.drawContours(img1, landmark_contours, -1,
-			                          (0, 255, 0), 3)
-		# cv2.namedWindow("easycontours", 0)
-		# cv2.imshow("easycontours", result)
+		# result = cv2.drawContours(img1, landmark_contours, -1,
+		#                           (0, 255, 0), 3)
+
 
 		return easy_binary, easy_contours
 
+#
+# def enhance_digital():
+# 	img = cv2.imread("D:/imgs/test/bag10.bmp")
+# 	hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+# 	# colorlow = (61, 83, 31)
+# 	# colorhigh = (81, 255, 250)
+# 	colorlow = (26, 43, 46)
+# 	colorhigh = (34, 255, 250)
+# 	colormin, colormax = np.array(colorlow), np.array(colorhigh)
+# 	# 去除颜色范围外的其余颜色
+# 	mask = cv2.inRange(hsv_img, colormin, colormax)
+# 	# mask = cv2.erode(mask, None, iterations=3)
+#
+# 	ret, binary = cv2.threshold(mask, 100, 255, cv2.THRESH_BINARY)
+# 	cv2.namedWindow("binary",0)
+# 	cv2.imshow("binary",binary)
+# 	cv2.waitKey(0)
+# 	cv2.destroyAllWindows()
 
-if __name__ == '__main__':
-	process = Preprocess(img="bag8.bmp")
-	# img = process.processedimg
-	img = process.processedimg
 
-	# cv2.namedWindow("finaly", 0)
-	# cv2.imshow("finaly", img)
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+# if __name__ == '__main__':
+# process = Preprocess(img="bag8.bmp")
+# # img = process.processedimg
+# img = process.processedimg
+#
+# # cv2.namedWindow("finaly", 0)
+# # cv2.imshow("finaly", img)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+# enhance_digital()
