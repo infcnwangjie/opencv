@@ -143,14 +143,17 @@ class PointLocationService:
 	def compute_distance(self, point1, point2):
 		point1_x, point1_y = point1
 		point2_x, point2_y = point2
-
 		img_distance = math.sqrt(
 			math.pow(point2_y - point1_y, 2) + math.pow(point2_x - point1_x, 2))
+
 		return img_distance
+
 
 	def next_move(self):
 		# 寻找钩子
 		hockposition = self.compute_hook_location()
+		hock_loc = (hockposition[0]+50,hockposition[1])
+		cv2.putText(self.img, "hock->({},{})".format(hockposition[0]+60,hockposition[1]+60), hock_loc, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 
 		grayimg = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
 		rows, cols = grayimg.shape
@@ -181,9 +184,16 @@ class PointLocationService:
 		nearest_bag = distance_dict[str(smallestindex)]
 		print(nearest_bag.box_content)
 
-		moveinfo = "x:{},y:{}".format(bag.x - hockposition[0], bag.y - hockposition[1])
-		word_position=(int(bag.x+abs(0.5*(bag.x-hockposition[0]))),int(bag.y+abs(0.5*(bag.y-hockposition[1]))))
-		cv2.putText(self.img, moveinfo, word_position, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+
+		x_distance=nearest_bag.x - hockposition[0]
+		y_distance=nearest_bag.y - hockposition[1]
+
+		moveinfo_x = "forward x move:{}cm ,".format(x_distance*200/704)
+		moveinfo_y="forward y move:{}cm".format(y_distance*200/704)
+		word_position_x=(int(bag.x+abs(0.5*(bag.x-hockposition[0]))),hockposition[1]-100)
+		word_position_y = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] - 60)
+		cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+		cv2.putText(self.img, moveinfo_y, word_position_y, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 		cv2.line(self.img, hockposition, nearest_bag.boxcenterpoint, (0, 255, 255), thickness=3)
 
 		if self.print_or_no:
