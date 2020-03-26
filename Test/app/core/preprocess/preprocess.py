@@ -4,7 +4,7 @@ import numpy as np
 # 发现
 from app.config import FIRST_TEMPLATE_PATH, THIRD_TEMPLATE_PATH, FIRST_NEG_TEMPLATE_PATH, \
 	SECOND_NEG_TEMPLATE_PATH, DETECT_BY_MULTIPLEAREA
-from app.core.mark import calculate
+from app.core.target_detect.histcalcute import calculate
 from app.core.target_detect.shapedetect import ShapeDetector
 
 
@@ -72,8 +72,8 @@ class Preprocess(object):
 	# 普通二值化操作
 	def find_contours_byeasyway(self):
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-		cv2.namedWindow("gray", 0)
-		cv2.imshow("gray", gray)
+		# cv2.namedWindow("gray", 0)
+		# cv2.imshow("gray", gray)
 		# gray = cv2.equalizeHist(gray)
 		# gray=self.enhance_histrg(gray)
 		rows, cols = gray.shape
@@ -93,8 +93,8 @@ class Preprocess(object):
 		binary[:, 0:round(cols / 2 - 1)] = left_binary
 		binary[:, round(cols / 2):] = right_binary
 
-		cv2.namedWindow("binary", 0)
-		cv2.imshow("binary", binary)
+		# cv2.namedWindow("binary", 0)
+		# cv2.imshow("binary", binary)
 
 		# binary = self.sharper(binary)#图像锐化
 		contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)

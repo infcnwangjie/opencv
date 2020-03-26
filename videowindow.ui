@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1289</width>
+    <height>899</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QGroupBox" name="operatorBox">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>221</width>
+      <height>651</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>操作区域</string>
+    </property>
+    <widget class="QToolButton" name="only_start_button">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>171</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>仅开始</string>
+     </property>
+    </widget>
+    <widget class="QToolButton" name="stop_button">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>160</y>
+       <width>171</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>结束</string>
+     </property>
+    </widget>
+    <widget class="QToolButton" name="start_and_store_button">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>171</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>开始并录制</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="videosBox">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>700</y>
+      <width>1191</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>1191</width>
+      <height>16777215</height>
+     </size>
+    </property>
+    <property name="title">
+     <string>回放录像</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="videoBox">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>40</y>
+      <width>961</width>
+      <height>651</height>
+     </rect>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>961</width>
+      <height>651</height>
+     </size>
+    </property>
+    <property name="title">
+     <string>视频区域</string>
+    </property>
+    <widget class="QLabel" name="picturelabel">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>40</y>
+       <width>851</width>
+       <height>541</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1289</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

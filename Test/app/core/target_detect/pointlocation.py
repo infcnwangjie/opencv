@@ -6,7 +6,7 @@
 #
 # 3、移动钩子到所有袋子
 
-# conding:utf-8
+# encoding:utf-8
 import math
 import random
 
@@ -131,6 +131,7 @@ class PointLocationService:
 		# cv2.imshow('im', self.img)
 		cv2.namedWindow('im', cv2.WINDOW_KEEPRATIO)
 		cv2.imshow("im", self.img)
+		return self.im
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		if self.print_or_no:
@@ -147,13 +148,14 @@ class PointLocationService:
 
 		cv2.putText(self.img, "lasterlocation->({},{})".format(lasterposition[0], lasterposition[1]),
 		            (lasterposition[0] + 100, lasterposition[1]),
-		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2)
 		cv2.circle(self.img, lasterposition, 40, (0, 0, 255), -1)
 		hockposition = (2337, 1902)  # 钩子的坐标
 		cv2.circle(self.img, hockposition, 60, (0, 255, 0), -1)
 		cv2.putText(self.img, "hock location->({},{})".format(hockposition[0], hockposition[1]),
 		            (hockposition[0] + 100, hockposition[1]),
-		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2)
+
 		return (2337, 1902)
 
 	@property
@@ -181,22 +183,24 @@ class PointLocationService:
 		:return: 两点之间图像像素距离，两点之间真实距离，
 		两点之间X轴需要真实移动距离，两点之间Y轴需要真实移动距离
 		'''
-		# 计算图像中两个点之间的像素距离
+
 		point1_x, point1_y = point1
 		point2_x, point2_y = point2
+		# 计算图像中两个点之间的像素距离
 		img_distance = math.sqrt(
 			math.pow(point2_y - point1_y, 2) + math.pow(point2_x - point1_x, 2))
 
+		# 两个点之间的实际距离
 		real_distance = round(img_distance * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
 
-		x_move = abs(round(point2_x - point1_x))
+		x_move = round(point1_x - point2_x)
 		real_x_distance = round(x_move * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
 
-		y_move = abs(round(point2_y - point1_y))
+		y_move = round(point1_y - point2_y)
 		real_y_distance = round(y_move * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
 		return img_distance, real_distance, real_x_distance, real_y_distance
 
-	def next_move(self):
+	def move(self):
 		# 寻找钩子
 		hockposition = self.compute_hook_location()
 
@@ -204,21 +208,41 @@ class PointLocationService:
 		for bag in self.bags:
 			img_distance, real_distance, _movex, _movey = self.compute_distance(bag.boxcenterpoint, hockposition)
 			distance_dict[str(int(img_distance))] = bag
-			print(bag.box_content)
 
 		smallestindex = min(distance_dict.keys(), key=lambda item: int(item))
 		nearest_bag = distance_dict[str(smallestindex)]
 
 		img_distance, real_distance, move_x, move_y = self.compute_distance(nearest_bag.boxcenterpoint, hockposition)
-		moveinfo_x = "forward x move:{}cm ,".format(
-			round(move_x, 2))
-		moveinfo_y = "forward y move:{}cm".format(
-			round(move_y, 2))
-		word_position_x = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] - 100)
-		word_position_y = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] - 60)
-		cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
-		cv2.putText(self.img, moveinfo_y, word_position_y, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+		if move_x < 0:
+			moveinfo_x = u"move left:{}cm".format(
+				abs(round(move_x, 2)))
+		else:
+			moveinfo_x = u"move right:{}cm".format(
+				round(move_x, 2))
+
+		if move_y > 0:
+			moveinfo_y = u"move back:{}cm".format(
+				round(move_y, 2))
+		else:
+			moveinfo_y = u"move forward:{}cm".format(
+				abs(round(move_y, 2)))
+
+		# 袋子质心到钩子的直线
 		cv2.line(self.img, hockposition, nearest_bag.boxcenterpoint, (0, 255, 255), thickness=3)
+		# 袋子质心与钩子所在x轴的垂直线
+		cv2.line(self.img, nearest_bag.boxcenterpoint, (nearest_bag.boxcenterpoint[0], hockposition[1]), (0, 255, 255),
+		         thickness=3)
+
+		word_position_y = (int(bag.x - 60), hockposition[1] - 60)
+
+		cv2.putText(self.img, moveinfo_y, word_position_y, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
+
+		word_position_x = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] + 100)
+		cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
+
+		cv2.line(self.img, (nearest_bag.boxcenterpoint[0], hockposition[1]), hockposition, (0, 255, 255),
+		         thickness=3)
 
 		if self.print_or_no:
 			self.print_location_onimg()
+		return self.img
