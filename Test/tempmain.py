@@ -7,7 +7,7 @@ from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_L
 
 
 if __name__ == '__main__':
-	im = cv2.imread('C:/work/imgs/test/bag4.bmp')
+	im = cv2.imread('C:/work/imgs/test/bag6.bmp')
 	with PointLocationService(img=im,print_or_no=True) as  a:
 		a.computelocations(flag=BAG_AND_LANDMARK)
 		a.next_move()

@@ -5,12 +5,15 @@
 # 2、找到所有的地标
 #
 # 3、移动钩子到所有袋子
+
+# conding:utf-8
 import math
 import random
 
 import cv2
 import numpy as np
 
+from app.config import DISTANCE_LANDMARK_SPACE
 from app.core.preprocess.preprocess import Preprocess
 from app.core.target_detect.models import Box, LandMark, Bag
 from app.core.target_detect.digitdetect import DigitDetector
@@ -135,62 +138,83 @@ class PointLocationService:
 			cv2.destroyAllWindows()
 
 	def compute_hook_location(self):
-		# 这里先写死，后面再修改
-		hockposition = (2337, 1902)
+		'''
+		摄像头的位置只有X轴移动，在Y轴是固定的；激光灯理想的安装情况是，灯光的Y轴与钩子同步，跟随点击运动。
+		已知量：灯光的位置、地标间隔实际距离、地标间隔图像距离，摄像头在Y轴上距离是固定的，不用去管
+		:return:
+		'''
+		lasterposition = (2337, 1702)  # 激光灯位置X轴较钩子小
+
+		cv2.putText(self.img, "lasterlocation->({},{})".format(lasterposition[0], lasterposition[1]),
+		            (lasterposition[0] + 100, lasterposition[1]),
+		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+		cv2.circle(self.img, lasterposition, 40, (0, 0, 255), -1)
+		hockposition = (2337, 1902)  # 钩子的坐标
 		cv2.circle(self.img, hockposition, 60, (0, 255, 0), -1)
+		cv2.putText(self.img, "hock location->({},{})".format(hockposition[0], hockposition[1]),
+		            (hockposition[0] + 100, hockposition[1]),
+		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 		return (2337, 1902)
 
+	@property
+	def landmark_virtual_distance(self):
+		if not hasattr(self, 'landmarkvirtualdistance') or self.landmarkvirtualdistance is None:
+			# 寻找左侧的地标
+			left_landmarks, right_landmarks = [], []
+			grayimg = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
+			rows, cols = grayimg.shape
+			for landmark in self.landmarks:
+				if landmark.x < cols * 0.5:
+					left_landmarks.append(landmark)
+				else:
+					right_landmarks.append(landmark)
+			# 选择挨着的两个地标
+			left_landmarks = sorted(left_landmarks, key=lambda position: position.y)
+			landmark1, landmark2 = left_landmarks[0:2]
+			self.landmarkvirtualdistance = abs(round(landmark1.y - landmark2.y, 3))
+		return self.landmarkvirtualdistance
+
 	def compute_distance(self, point1, point2):
+		'''
+		:param point1:
+		:param point2:
+		:return: 两点之间图像像素距离，两点之间真实距离，
+		两点之间X轴需要真实移动距离，两点之间Y轴需要真实移动距离
+		'''
+		# 计算图像中两个点之间的像素距离
 		point1_x, point1_y = point1
 		point2_x, point2_y = point2
 		img_distance = math.sqrt(
 			math.pow(point2_y - point1_y, 2) + math.pow(point2_x - point1_x, 2))
 
-		return img_distance
+		real_distance = round(img_distance * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
 
+		x_move = abs(round(point2_x - point1_x))
+		real_x_distance = round(x_move * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
+
+		y_move = abs(round(point2_y - point1_y))
+		real_y_distance = round(y_move * DISTANCE_LANDMARK_SPACE / self.landmark_virtual_distance, 2)
+		return img_distance, real_distance, real_x_distance, real_y_distance
 
 	def next_move(self):
 		# 寻找钩子
 		hockposition = self.compute_hook_location()
-		hock_loc = (hockposition[0]+50,hockposition[1])
-		cv2.putText(self.img, "hock->({},{})".format(hockposition[0]+60,hockposition[1]+60), hock_loc, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
-
-		grayimg = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
-		rows, cols = grayimg.shape
-
-		left_landmarks = []
-		right_landmarks = []
-		for landmark in self.landmarks:
-			if landmark.x < cols * 0.5:
-				left_landmarks.append(landmark)
-			else:
-				right_landmarks.append(landmark)
-
-		# assert len(left_landmarks) <2, "landmark数目较小"
-
-		landmark1, landmark2 = random.sample(left_landmarks, 2)
-		print(landmark1.boxcenterpoint)
-		print(landmark2.boxcenterpoint)
-		img_distance = self.compute_distance(landmark1.boxcenterpoint, landmark2.boxcenterpoint)
-		print("img_distance is {},real_distance is 2米".format(img_distance))
 
 		distance_dict = {}
 		for bag in self.bags:
-			distance = self.compute_distance(bag.boxcenterpoint, hockposition)
-			distance_dict[str(int(distance))] = bag
+			img_distance, real_distance, _movex, _movey = self.compute_distance(bag.boxcenterpoint, hockposition)
+			distance_dict[str(int(img_distance))] = bag
 			print(bag.box_content)
 
 		smallestindex = min(distance_dict.keys(), key=lambda item: int(item))
 		nearest_bag = distance_dict[str(smallestindex)]
-		print(nearest_bag.box_content)
 
-
-		x_distance=nearest_bag.x - hockposition[0]
-		y_distance=nearest_bag.y - hockposition[1]
-
-		moveinfo_x = "forward x move:{}cm ,".format(x_distance*200/704)
-		moveinfo_y="forward y move:{}cm".format(y_distance*200/704)
-		word_position_x=(int(bag.x+abs(0.5*(bag.x-hockposition[0]))),hockposition[1]-100)
+		img_distance, real_distance, move_x, move_y = self.compute_distance(nearest_bag.boxcenterpoint, hockposition)
+		moveinfo_x = "forward x move:{}cm ,".format(
+			round(move_x, 2))
+		moveinfo_y = "forward y move:{}cm".format(
+			round(move_y, 2))
+		word_position_x = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] - 100)
 		word_position_y = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] - 60)
 		cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 		cv2.putText(self.img, moveinfo_y, word_position_y, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
