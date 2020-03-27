@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
 	sys.exit(app.exec_())
 # app = QApplication(sys.argv)
-# im = cv2.imread('C:/work/imgs/test/bag6.bmp')
+# im = cv2.imread('C:/work/icons/test/bag6.bmp')
 # with PointLocationService(img=im,print_or_no=True) as  a:
 # 	a.computelocations(flag=BAG_AND_LANDMARK)
 # 	a.move()

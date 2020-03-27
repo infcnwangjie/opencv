@@ -33,7 +33,7 @@ def calculate(image1, image2):
 
 
 if __name__ == '__main__':
-	image1 = cv2.imread("C:/work/imgs/test/template1.png")
-	image2 = cv2.imread("C:/work/imgs/test/8.png")
+	image1 = cv2.imread("C:/work/icons/test/template1.png")
+	image2 = cv2.imread("C:/work/icons/test/8.png")
 	i = calculate(image1, image2)
 	print("相似度为:{}".format(i))

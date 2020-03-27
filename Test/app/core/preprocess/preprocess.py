@@ -184,7 +184,7 @@ class Preprocess(object):
 
 #
 # def enhance_digital():
-# 	img = cv2.imread("D:/imgs/test/bag10.bmp")
+# 	img = cv2.imread("D:/icons/test/bag10.bmp")
 # 	hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 # 	# colorlow = (61, 83, 31)
 # 	# colorhigh = (81, 255, 250)
