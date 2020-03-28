@@ -15,7 +15,7 @@ def video_write():
 	imgInfo = img.shape
 	size = (imgInfo[1], imgInfo[0])
 	print(size)
-	videoWrite = cv2.VideoWriter('D:/video/test.mp4', -1, 15, size)  # 写入对象 1 file name
+	videoWrite = cv2.VideoWriter('D:/autowork/test.mp4', -1, 15, size)  # 写入对象 1 file name
 	# 2 编码器 3 帧率 4 size
 	for imgfile in os.listdir("D:/imgs/merge"):
 		fileName = os.path.join("D:/imgs/merge", imgfile)

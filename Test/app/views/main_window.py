@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 import itertools
 import os
-import sys
 
 import cv2
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import QSize, QRect, QCoreApplication, Qt
-from PyQt5.QtGui import QImage, QPixmap, QIcon, QBrush
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QGroupBox, QRadioButton, QHBoxLayout, QWidget, QAction, \
-	QTreeWidgetItem, QTreeWidget, QFileDialog, QApplication, QMessageBox
+from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtGui import QImage, QPixmap, QIcon
+from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
+	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox
 
 from app.config import ICON_DIR
 from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
 from app.core.video.imageprovider import ImageProvider
-from app.core.video.workthread import WorkThread
+from app.core.autowork.intelligentthread import IntelligentThread
 
 
 class CentWindowUi(object):
@@ -47,7 +46,7 @@ class CentWindowUi(object):
 				child = QTreeWidgetItem(root)
 				child.setText(0, filepath)
 				# child1.setText(1, 'ios')
-				child.setIcon(0, QIcon(os.path.join(ICON_DIR, 'video.png')))
+				child.setIcon(0, QIcon(os.path.join(ICON_DIR, 'autowork.png')))
 				# child1.setCheckState(0, Qt.Checked)
 				root.addChild(child)
 
@@ -83,13 +82,6 @@ class CentWindowUi(object):
 		operate_layout = QtWidgets.QGridLayout()
 		operate_layout.addWidget(self.play_button, *(0, 0))
 
-		# self.auto_work_button = QtWidgets.QPushButton(self)
-		# self.auto_work_button.setMaximumSize(QSize(130, 41))
-		# self.auto_work_button.setIcon(QIcon(os.path.join(ICON_DIR, "auto.png")))
-		# self.auto_work_button.setObjectName("auto_work_button")
-		#
-		# operate_layout.addWidget(self.auto_work_button, *(0, 1))
-
 		self.stop_button = QtWidgets.QToolButton(self)
 		self.stop_button.setIcon(QIcon(os.path.join(ICON_DIR, "stop.png")))
 		self.stop_button.setIconSize(QSize(60, 60))
@@ -97,23 +89,6 @@ class CentWindowUi(object):
 		self.stop_button.setObjectName("stop_button")
 		self.stop_button.setStyleSheet("border:none")
 		operate_layout.addWidget(self.stop_button, *(0, 1))
-
-		# self.stop_work_button = QtWidgets.QPushButton(self)
-		# self.stop_work_button.setMaximumSize(QSize(130, 41))
-		# self.stop_work_button.setIcon(QIcon(os.path.join(ICON_DIR, "close.png")))
-		# operate_layout.addWidget(self.stop_work_button, *(1, 1))
-
-		# self.quit_button = QtWidgets.QPushButton(self)
-		# self.quit_button.setMaximumSize(QSize(130, 41))
-		# self.quit_button.setIcon(QIcon(os.path.join(ICON_DIR, "quit.png")))
-		# self.quit_button.setObjectName("quit_button")
-		# operate_layout.addWidget(self.quit_button, *(2, 0))
-
-		# self.test_button = QtWidgets.QPushButton(self)
-		# self.test_button.setMaximumSize(QSize(130, 41))
-		# self.test_button.setIcon(QIcon(os.path.join(ICON_DIR, "test.png")))
-		# self.test_button.setObjectName("test")
-		# operate_layout.addWidget(self.test_button, *(2, 1))
 
 		baginfo_layout = QtWidgets.QFormLayout()
 
@@ -142,10 +117,6 @@ class CentWindowUi(object):
 		self.operatorBox.setTitle(_translate("MainWindow", "操作区域"))
 		self.play_button.setText(_translate("MainWindow", "开始"))
 		self.stop_button.setText(_translate("MainWindow", "停止"))
-		# self.auto_work_button.setText(_translate("MainWindow", "开启智能"))
-		# self.stop_work_button.setText(_translate("MainWindow", "停止智能"))
-		# self.quit_button.setText(_translate("MainWindow", "退出系统"))
-		# self.test_button.setText(_translate("MainWindow", "测试"))
 		self.videoBox.setTitle(_translate("MainWindow", "视频区域"))
 
 
@@ -155,8 +126,8 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.setupUi(self)
 		self.play_button.clicked.connect(self.play)
 		self.stop_button.clicked.connect(self.stop)
-		self.thread = WorkThread(IMGHANDLE=IMGHANDLE, video_player=self.picturelabel)
-		self.thread.sinOut.connect(self.info)
+		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, video_player=self.picturelabel)
+		self.intelligentthread.sinOut.connect(self.info)
 
 	def changeEvent(self, e):
 		if e.type() == QtCore.QEvent.WindowStateChange:
@@ -184,18 +155,21 @@ class CenterWindow(QWidget, CentWindowUi):
 		print('Key=%s,value=%s' % (item.text(0), item.text(1)))
 
 	def play(self):
-		if self.thread.IMAGE_HANDLE:
-			self.thread.playing = True
-			self.thread.start()
+		if self.intelligentthread.IMAGE_HANDLE:
+			self.intelligentthread.playing = True
+			self.intelligentthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
-			                        self.tr("还没有开启摄像头或者选择播放视频!"))
+			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
+
+	def autowork(self):
+		self.intelligentthread.autowork()
 
 	def stop(self):
 		'''暂停摄像机'''
 		print("关闭摄像")
-		self.thread.stopcamera()
+		self.intelligentthread.stopcamera()
 
 	def info(self, infomessage):
 		'''接收反馈信号'''
@@ -271,6 +245,9 @@ class MainWindow(QMainWindow):
 		openCameraToolbar = self.addToolBar("OpenCamera")
 		openCameraToolbar.addAction(openCameraAction)
 
+		closeToolbar = self.addToolBar("CloseCamera")
+		closeToolbar.addAction(stopCameraAction)
+
 		intellectToolbar = self.addToolBar("Intellect")
 		intellectToolbar.addAction(robotAction)
 
@@ -278,22 +255,34 @@ class MainWindow(QMainWindow):
 		testToolbar.addAction(testAction)
 
 		self.setWindowTitle('Main window')
-		self.show()
+		self.statusBar().show()
+
+	# self.show()
 
 	def openCamera(self):
 		# 正常情况读取sdk
 		imagehandle = ImageProvider(ifsdk=True)
-		self.centralwidget.thread.IMAGE_HANDLE = imagehandle
+		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
+		self.statusBar().showMessage("已经开启摄像头!", 0)
+
+	# self.statusBar().show()
 
 	def stopCamera(self):
-		del self.centralwidget.thread.IMAGE_HANDLE
+		'''关闭摄像机'''
+		del self.centralwidget.intelligentthread.IMAGE_HANDLE
+		self.statusBar().showMessage("已经关闭摄像头!", 0)
+
+	# self.statusBar().show()
 
 	def work_as_robot(self):
+		'''开始智能抓取'''
 		self.centralwidget.autowork()
+		self.statusBar().showMessage("已经开启智能识别!", 0)
+
+	# self.statusBar().show()
 
 	def openfile(self):
-		# openfile_name = QFileDialog.getOpenFileName(self, '选择文件', '', 'Excel files(*.xlsx , *.xls)')
 		filename, filetype = QFileDialog.getOpenFileName(self,
 		                                                 "选取文件",
 		                                                 "./",
@@ -303,7 +292,7 @@ class MainWindow(QMainWindow):
 		else:
 			# 正常情况读取sdk
 			imagehandle = ImageProvider(ifsdk=True)
-		self.centralwidget.thread.IMAGE_HANDLE = imagehandle
+		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
 		print(filename, filetype)
 

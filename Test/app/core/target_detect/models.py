@@ -157,3 +157,10 @@ class Bag(Box):
 		# 如果box内部没有内部轮廓，就直接退出循环
 		self.box_content = "bag_location:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
 			self.boxcenterpoint[1]) + ")"
+
+# 激光灯
+class Laster(Box):
+	def modify_box_content(self):
+		# 如果box内部没有内部轮廓，就直接退出循环
+		self.box_content = "laster_location:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+			self.boxcenterpoint[1]) + ")"

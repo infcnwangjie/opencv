@@ -3,7 +3,7 @@ import numpy as np
 
 # 发现
 from app.config import FIRST_TEMPLATE_PATH, THIRD_TEMPLATE_PATH, FIRST_NEG_TEMPLATE_PATH, \
-	SECOND_NEG_TEMPLATE_PATH, DETECT_BY_MULTIPLEAREA
+	SECOND_NEG_TEMPLATE_PATH, DETECT_BY_MULTIPLEAREA, DEBUG
 from app.core.target_detect.histcalcute import calculate
 from app.core.target_detect.shapedetect import ShapeDetector
 
@@ -168,47 +168,41 @@ class Preprocess(object):
 
 	# 获取已处理过的二值化图像
 	@property
-	def processedimg(self, method=DETECT_BY_MULTIPLEAREA):
+	def processedlandmarkimg(self):
 		img1 = self.img.copy()
-		if method == DETECT_BY_MULTIPLEAREA:
-			easy_contours, easy_binary = self.find_contours_byeasyway()
-		# result = cv2.drawContours(img1, easy_contours, -1,
-		#                           (255, 0, 0), 3)
+		if DEBUG:
+			contours, binary = self.find_contours_bylandmark_colorrange()
 		else:
-			landmark_contours, landmark_binary = self.find_contours_bylandmark_colorrange()
-		# result = cv2.drawContours(img1, landmark_contours, -1,
-		#                           (0, 255, 0), 3)
+			contours, binary = self.find_contours_byeasyway()
+		return binary, contours
+
+	@property
+	def processed_bag(self):
+		colorlow=[120, 50, 50]
+		colorhigh=[180, 255, 255]
+		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		colormin, colormax = np.array(colorlow), np.array(colorhigh)
+		# 去除颜色范围外的其余颜色
+		mask = cv2.inRange(hsv, colormin, colormax)
+		ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
+		# 去噪
+		binary = cv2.medianBlur(binary, 3)
+		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return binary,contours
+
+	@property
+	def processed_hock(self):
+		colorlow = [26, 43, 46]
+		colorhigh = [34, 255, 255]
+		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		colormin, colormax = np.array(colorlow), np.array(colorhigh)
+		# 去除颜色范围外的其余颜色
+		mask = cv2.inRange(hsv, colormin, colormax)
+		ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
+		# 去噪
+		binary = cv2.medianBlur(binary, 3)
+		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return binary, contours
 
 
-		return easy_binary, easy_contours
 
-#
-# def enhance_digital():
-# 	img = cv2.imread("D:/icons/test/bag10.bmp")
-# 	hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-# 	# colorlow = (61, 83, 31)
-# 	# colorhigh = (81, 255, 250)
-# 	colorlow = (26, 43, 46)
-# 	colorhigh = (34, 255, 250)
-# 	colormin, colormax = np.array(colorlow), np.array(colorhigh)
-# 	# 去除颜色范围外的其余颜色
-# 	mask = cv2.inRange(hsv_img, colormin, colormax)
-# 	# mask = cv2.erode(mask, None, iterations=3)
-#
-# 	ret, binary = cv2.threshold(mask, 100, 255, cv2.THRESH_BINARY)
-# 	cv2.namedWindow("binary",0)
-# 	cv2.imshow("binary",binary)
-# 	cv2.waitKey(0)
-# 	cv2.destroyAllWindows()
-
-
-# if __name__ == '__main__':
-# process = Preprocess(img="bag8.bmp")
-# # img = process.processedimg
-# img = process.processedimg
-#
-# # cv2.namedWindow("finaly", 0)
-# # cv2.imshow("finaly", img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-# enhance_digital()
