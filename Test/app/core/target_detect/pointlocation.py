@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 
 from app.config import DISTANCE_LANDMARK_SPACE, DEBUG
+from app.core.exceptions.allexception import NotFoundBagException, NotFoundHockException
 from app.core.preprocess.preprocess import Preprocess
 from app.core.target_detect.models import Box, LandMark, Bag, Laster, Hock
 from app.core.target_detect.digitdetect import DigitDetector
@@ -55,6 +56,7 @@ class PointLocationService:
         # 大小适中的轮廓，过小的轮廓被去除了
         moderatesize_countours = []
         boxindex = 0
+        self.bags.clear()
         for countour in contours:
             countour_rect = cv2.boundingRect(countour)
             rect_x, rect_y, rect_w, rect_h = countour_rect
@@ -115,11 +117,13 @@ class PointLocationService:
     # 这一步定位所有摄像头看到的目标，并且计算出坐标
     def computelocations(self, flag=ALL):
         self.computer_bags_location()  # 计算了所有袋子的距离
-        self.computer_landmarks_location()  # 计算地标仅仅为了像素位置、实际位置的换算
+        if self.bags is None or len(self.bags) == 0:
+            raise NotFoundBagException("not found bag")
+
         hockposition = self.compute_hook_location()  # 计算钩子位置，为了移动钩子
 
         if hockposition is None:
-            return None
+            raise NotFoundHockException("not found hock")
 
         distance_dict = {}
         for bag in self.bags:
@@ -191,26 +195,26 @@ class PointLocationService:
         if contours is None or len(contours) == 0:
             return
 
-        points=[]
+        points = []
         # 大小适中的轮廓，过小的轮廓被去除了
         for countour in contours:
             countour_rect = cv2.boundingRect(countour)
             rect_x, rect_y, rect_w, rect_h = countour_rect
-            points.append((rect_x,rect_y))
+            points.append((rect_x, rect_y))
 
-        left_point=min(points,key=lambda point:point[0])
+        left_point = min(points, key=lambda point: point[0])
 
-        top_point=min(points,key=lambda point:point[1])
+        top_point = min(points, key=lambda point: point[1])
 
         right_point = max(points, key=lambda point: point[0])
 
         bottom_point = max(points, key=lambda point: point[1])
 
-        left_top_point=(left_point[0],top_point[1])
-        right_bottom_point=(right_point[0],bottom_point[1])
+        left_top_point = (left_point[0], top_point[1])
+        right_bottom_point = (right_point[0], bottom_point[1])
 
-        new_binary=np.zeros_like(laster_binary)
-        cv2.rectangle(new_binary,left_top_point,right_bottom_point,color=(255,255,255),thickness=2)
+        new_binary = np.zeros_like(laster_binary)
+        cv2.rectangle(new_binary, left_top_point, right_bottom_point, color=(255, 255, 255), thickness=2)
         # cv2.imshow("binary2", new_binary)
 
         contours, _hierarchy = cv2.findContours(new_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -223,7 +227,6 @@ class PointLocationService:
         print(len(contours))
 
         cv2.drawContours(self.img, contours, -1, (0, 255, 0), 1)  # 找到唯一的轮廓就退出即可
-
 
         # TODO 目前灯光的位置，是默认的没有处理，后期要修改成仙识别灯光位置，然后再计算钩子位置
         lasterposition = self.laster.boxcenterpoint  # 激光灯位置X轴较钩子小
@@ -247,6 +250,7 @@ class PointLocationService:
 
         if not hasattr(self, 'landmarkvirtualdistance') or self.landmarkvirtualdistance is None:
             # 寻找左侧的地标
+            self.computer_landmarks_location()  # 计算地标仅仅为了像素位置、实际位置的换算
             left_landmarks, right_landmarks = [], []
             grayimg = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
             rows, cols = grayimg.shape
@@ -336,10 +340,10 @@ class PointLocationService:
 
 
 if __name__ == '__main__':
-    img=cv2.imread("C:/work/imgs/test/test2.png")
-    service=PointLocationService(img=img)
+    img = cv2.imread("C:/work/imgs/test/test2.png")
+    service = PointLocationService(img=img)
     service.compute_hook_location()
     # service.print_location_onimg()
-    cv2.imshow("test",service.img)
+    cv2.imshow("test", service.img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

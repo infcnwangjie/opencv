@@ -1,6 +1,6 @@
 import cv2
 
-from app.core.exceptions.sdkexceptions import SdkException
+from app.core.exceptions.allexception import SdkException
 
 
 class ImageProvider(object):
