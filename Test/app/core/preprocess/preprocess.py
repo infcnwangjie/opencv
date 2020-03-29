@@ -199,8 +199,8 @@ class Preprocess(object):
 		ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
 		# 去噪
 		# binary = cv2.medianBlur(binary, 3)
-		cv2.namedWindow("hockbinaray",0)
-		cv2.imshow("hockbinaray",binary)
+		# cv2.namedWindow("hockbinaray",0)
+		# cv2.imshow("hockbinaray",binary)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return binary, contours
 

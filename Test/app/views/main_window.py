@@ -7,10 +7,11 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QImage, QPixmap, QIcon
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
-	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox
+	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget
 
 from app.config import ICON_DIR
-from app.core.autowork.instruct import InstructSender
+from app.core.autowork.hockthread import HockThread
+from app.core.plc.plchandle import PlcHandle
 from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
 from app.core.video.imageprovider import ImageProvider
 from app.core.autowork.intelligentthread import IntelligentThread
@@ -127,9 +128,14 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.setupUi(self)
 		self.play_button.clicked.connect(self.play)
 		self.stop_button.clicked.connect(self.stop)
-		self.instructsender=InstructSender()
-		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE,instruct_sender=self.instructsender, video_player=self.picturelabel)
-		self.intelligentthread.sinOut.connect(self.info)
+		self.positionservice = PointLocationService()
+		self.plchandle = PlcHandle()
+		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=self.positionservice,
+		                                           video_player=self.picturelabel)
+		self.hockthread = HockThread(plchandle=self.plchandle)
+		self.hockthread.askforSingnal.connect(self.askforposition)
+		self.intelligentthread.finishSignal.connect(self.finish)
+		self.intelligentthread.positionSignal.connect(self.writeposition)
 
 	def changeEvent(self, e):
 		if e.type() == QtCore.QEvent.WindowStateChange:
@@ -137,14 +143,10 @@ class CenterWindow(QWidget, CentWindowUi):
 				print("窗口最小化")
 			elif self.isMaximized():
 				print("窗口最大化")
-			# desktop = QDesktopWidget()
-			# screen_width = desktop.screenGeometry().width()
-			# screen_height = desktop.screenGeometry().height()
-			# self.resize(QSize(screen_width,screen_height))
-			# print(screen_width, screen_height)
-			# self.picturelabel.resize(QSize(screen_width * 0.7 - 20, screen_height * 0.75))
-			# self.operatorBox.resize(QSize(screen_width*0.3, screen_height * 0.8))
-			# self.videoBox.resize(QSize(screen_width * 0.7, screen_height * 0.8))
+				desktop = QDesktopWidget()
+				screen_width = desktop.screenGeometry().width()
+				screen_height = desktop.screenGeometry().height()
+				print(screen_width, screen_height)
 
 			elif self.isFullScreen():
 				print("全屏显示")
@@ -158,24 +160,39 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def play(self):
 		if self.intelligentthread.IMAGE_HANDLE:
-			self.intelligentthread.playing = True
+			self.intelligentthread.play = True
 			self.intelligentthread.start()
+			self.hockthread.on = True
+			self.hockthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
 
 	def autowork(self):
-		self.intelligentthread.autowork()
+		self.intelligentthread.work = True
 
 	def stop(self):
 		'''暂停摄像机'''
 		print("关闭摄像")
-		self.intelligentthread.stopcamera()
+		self.intelligentthread.play = False
 
-	def info(self, infomessage):
+	def finish(self, info):
+		print("工作完成")
+		print(info)
+
+	def writeposition(self, position):
 		'''接收反馈信号'''
-		print(infomessage)
+		print("X轴移动：{}，Y轴移动{}".format(position[0], position[1]))
+		print(position)
+		self.plchandle.write_position(position)
+		# self.intelligentthread.work = False
+		self.hockthread.on = True
+
+	def askforposition(self, info: str):
+		print(info)
+		self.intelligentthread.work = True
+		self.hockthread.on = False
 
 	def test(self):
 		img = cv2.imread('C:/work/imgs/test/bag6.bmp')

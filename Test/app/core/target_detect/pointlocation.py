@@ -243,7 +243,7 @@ class PointLocationService:
     @property
     def landmark_virtual_distance(self):
         if DEBUG:
-            return 20
+            return 2
 
         if not hasattr(self, 'landmarkvirtualdistance') or self.landmarkvirtualdistance is None:
             # 寻找左侧的地标
