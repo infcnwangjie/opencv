@@ -69,7 +69,7 @@ class PointLocationService:
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
                 self.bags.append(box)
         # 用紫色画轮廓
-        cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
+        # cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
 
     # 计算地标的坐标
     def computer_landmarks_location(self, digitdetector=None):
@@ -115,7 +115,7 @@ class PointLocationService:
         self.landmarks = good_boxes
 
     # 这一步定位所有摄像头看到的目标，并且计算出坐标
-    def computelocations(self, flag=ALL):
+    def compute_bag_hock_location(self):
         self.computer_bags_location()  # 计算了所有袋子的距离
         if self.bags is None or len(self.bags) == 0:
             raise NotFoundBagException("not found bag")
@@ -132,6 +132,7 @@ class PointLocationService:
 
         smallestindex = min(distance_dict.keys(), key=lambda item: int(item))
         nearest_bag = distance_dict[str(smallestindex)]
+        cv2.drawContours(self.img, [nearest_bag.contour], -1, (0, 255, 0), 1)
         self.nearestbag = nearest_bag  # 计算出离钩子距离最近的袋子
 
         img_distance, real_distance, move_x, move_y = self.compute_distance(nearest_bag.boxcenterpoint, hockposition)
@@ -166,10 +167,11 @@ class PointLocationService:
             cv2.line(self.img, (nearest_bag.boxcenterpoint[0], hockposition[1]), hockposition, (0, 255, 255),
                      thickness=3)
 
-            if self.print_or_no:
-                self.print_location_onimg()
+            # if self.print_or_no:
+            #     self.print_location_onimg()
 
-        return img_distance, real_distance, move_x, move_y
+        # return img_distance, real_distance, move_x, move_y
+        return  nearest_bag.boxcenterpoint, hockposition
 
     # 将坐标打印到图片上
     def print_location_onimg(self):
@@ -224,7 +226,7 @@ class PointLocationService:
             box.modify_box_content()
             self.laster = box
             break
-        print(len(contours))
+        # print(len(contours))
 
         cv2.drawContours(self.img, contours, -1, (0, 255, 0), 1)  # 找到唯一的轮廓就退出即可
 

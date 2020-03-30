@@ -4,7 +4,7 @@ from app.core.plc.plchandle import PlcHandle
 from app.status import HockStatus
 
 
-class HockThread(QThread):
+class PlcThread(QThread):
     '''钩子运动的时候，一定要向PLC中写入X，Y位置参数'''
     askforSingnal = pyqtSignal(str)
     moveSignal = pyqtSignal(str)
@@ -48,3 +48,4 @@ class HockThread(QThread):
                 self.askforSingnal.emit("plc need hock  position!")
             elif plcstatus == "move":
                 self.moveSignal.emit("hock moveing")
+

@@ -8,10 +8,13 @@ class PlcHandle:
 
     def read_status(self):
         # 可能有 ready、move
-        statuslist = ['move', 'stop', 'reback', 'finish']
+        statuslist = ['move', 'stop', 'reback']
         status = random.choice(statuslist)
         print("hockthread read plc status:{}".format(status))
         return status
+
+    def write_stop(self):
+        print("imgdetector send stop instruct")
 
 
 if __name__ == '__main__':
