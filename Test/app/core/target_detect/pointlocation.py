@@ -167,8 +167,6 @@ class PointLocationService:
             cv2.line(self.img, (nearest_bag.boxcenterpoint[0], hockposition[1]), hockposition, (0, 255, 255),
                      thickness=3)
 
-            # if self.print_or_no:
-            #     self.print_location_onimg()
 
         # return img_distance, real_distance, move_x, move_y
         return  nearest_bag.boxcenterpoint, hockposition
