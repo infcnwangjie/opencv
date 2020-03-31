@@ -16,7 +16,7 @@ from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_L
 from app.core.video.imageprovider import ImageProvider
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.status import HockStatus
-
+import app.icons.resource
 
 class CentWindowUi(object):
 
@@ -44,12 +44,12 @@ class CentWindowUi(object):
 		for datestr, files in groupinfo:
 			root = QTreeWidgetItem(self.tree)
 			root.setText(0, datestr)
-			root.setIcon(0, QIcon(os.path.join(ICON_DIR, "catalogue.png")))
+			root.setIcon(0, QIcon(":icons/catalogue.png"))
 			for filepath in files:
 				child = QTreeWidgetItem(root)
 				child.setText(0, filepath)
 				# child1.setText(1, 'ios')
-				child.setIcon(0, QIcon(os.path.join(ICON_DIR, 'autowork.png')))
+				child.setIcon(0, QIcon(":icons/autowork.png"))
 				# child1.setCheckState(0, Qt.Checked)
 				root.addChild(child)
 
@@ -76,7 +76,7 @@ class CentWindowUi(object):
 		all_layout.addWidget(self.operatorBox)
 
 		self.play_button = QtWidgets.QToolButton(self)
-		self.play_button.setIcon(QIcon(os.path.join(ICON_DIR, "play.png")))
+		self.play_button.setIcon(QIcon(":icons/play.png"))
 		self.play_button.setIconSize(QSize(60, 60))
 		self.play_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 		self.play_button.setObjectName("play_button")
@@ -86,7 +86,7 @@ class CentWindowUi(object):
 		operate_layout.addWidget(self.play_button, *(0, 0))
 
 		self.stop_button = QtWidgets.QToolButton(self)
-		self.stop_button.setIcon(QIcon(os.path.join(ICON_DIR, "stop.png")))
+		self.stop_button.setIcon(QIcon("icons/stop.png"))
 		self.stop_button.setIconSize(QSize(60, 60))
 		self.stop_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 		self.stop_button.setObjectName("stop_button")
@@ -290,32 +290,32 @@ class MainWindow(QMainWindow):
 		self.menu_toolbar_ui()
 
 	def menu_toolbar_ui(self):
-		openFileAction = QAction(QIcon(os.path.join(ICON_DIR, 'openfile.png')), '打开', self)
+		openFileAction = QAction(QIcon(":icons/openfile.png"), '打开', self)
 		openFileAction.setShortcut('Ctrl+F')
 		openFileAction.setStatusTip('打开文件')
 		openFileAction.triggered.connect(self.openfile)
 
-		exitAction = QAction(QIcon(os.path.join(ICON_DIR, 'quit.png')), '退出', self)
+		exitAction = QAction(QIcon(':icons/quit.png'), '退出', self)
 		exitAction.setShortcut('Ctrl+Q')
 		exitAction.setStatusTip('退出应用')
 		exitAction.triggered.connect(self.close)
 
-		openCameraAction = QAction(QIcon(os.path.join(ICON_DIR, 'camera.png')), '摄像头', self)
+		openCameraAction = QAction(QIcon(':icons/camera.png'), '摄像头', self)
 		openCameraAction.setShortcut('Ctrl+o')
 		openCameraAction.setStatusTip('打开摄像头')
 		openCameraAction.triggered.connect(self.openCamera)
 
-		stopCameraAction = QAction(QIcon(os.path.join(ICON_DIR, 'close.png')), '关闭摄像头', self)
+		stopCameraAction = QAction(QIcon(":icons/close.png"), '关闭摄像头', self)
 		stopCameraAction.setShortcut('Ctrl+q')
 		stopCameraAction.setStatusTip('关闭摄像头')
 		stopCameraAction.triggered.connect(self.stopCamera)
 
-		robotAction = QAction(QIcon(os.path.join(ICON_DIR, 'robot.png')), '自动抓取模式', self)
+		robotAction = QAction(QIcon( ':icons/robot.png'), '自动抓取模式', self)
 		robotAction.setShortcut('Ctrl+o')
 		robotAction.setStatusTip('自动抓取模式')
 		robotAction.triggered.connect(self.work_as_robot)
 
-		testAction = QAction(QIcon(os.path.join(ICON_DIR, 'test.png')), '测试模式', self)
+		testAction = QAction(QIcon(":icons/test.png"), '测试模式', self)
 		testAction.setShortcut('Ctrl+t')
 		testAction.setStatusTip('测试模式')
 		testAction.triggered.connect(self.test)
