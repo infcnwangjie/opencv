@@ -31,4 +31,4 @@ DEBUG = True
 
 # MVCAMERACONTROLDLL_PATH=os.path.join(BASE_DIR,'core/video/mvs/MvCameraControl.lib')
 # MVCAMERACONTROLDLL_PATH='e:/MvCameraControl.lib'
-MVCAMERACONTROLDLL_PATH='D:/MVS/Development/Libraries/win32/MvCameraControl.lib'
+MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'

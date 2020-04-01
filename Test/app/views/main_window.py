@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 import os
+import re
 
 import cv2
 from PyQt5 import QtCore, QtWidgets
@@ -18,7 +19,9 @@ from app.core.autowork.intelligentthread import IntelligentThread
 from app.status import HockStatus
 import app.icons.resource
 
+
 class CentWindowUi(object):
+	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
 
 	def setupUi(self, Form):
 		Form.setObjectName("Form")
@@ -32,9 +35,17 @@ class CentWindowUi(object):
 		layout = QtWidgets.QVBoxLayout()
 
 		# days = ['2020-03-26', '2020-03-27']
-		videos = ['2020-03-26 08:40:21.mp4', '2020-03-26 09:41:21.mp4', '2020-03-26 14:21:21.mp4',
-		          '2020-03-26 15:21:21.mp4', '2020-03-27 09:34:21.mp4', '2020-03-27 11:50:34.mp4',
-		          '2020-03-27 14:40:34.mp4']
+		videos = []
+		for file in os.listdir("D:/video"):
+			# if os.path.isfile(file):
+			matchresult = re.match(self.movie_pattern, file)
+			# print(file)
+			if matchresult:
+				videos.append(matchresult.group(0))
+
+		# videos = ['2020-04-01-15-11.mp4', '2020-03-26 09:41:21.mp4', '2020-03-26 14:21:21.mp4',
+		#           '2020-03-26 15:21:21.mp4', '2020-03-27 09:34:21.mp4', '2020-03-27 11:50:34.mp4',
+		#           '2020-03-27 14:40:34.mp4']
 		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
 		self.tree = QTreeWidget()
 
@@ -49,7 +60,7 @@ class CentWindowUi(object):
 				child = QTreeWidgetItem(root)
 				child.setText(0, filepath)
 				# child1.setText(1, 'ios')
-				child.setIcon(0, QIcon(":icons/autowork.png"))
+				child.setIcon(0, QIcon(":icons/video.png"))
 				# child1.setCheckState(0, Qt.Checked)
 				root.addChild(child)
 
@@ -86,7 +97,7 @@ class CentWindowUi(object):
 		operate_layout.addWidget(self.play_button, *(0, 0))
 
 		self.stop_button = QtWidgets.QToolButton(self)
-		self.stop_button.setIcon(QIcon("icons/stop.png"))
+		self.stop_button.setIcon(QIcon(":icons/stop.png"))
 		self.stop_button.setIconSize(QSize(60, 60))
 		self.stop_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 		self.stop_button.setObjectName("stop_button")
@@ -178,6 +189,13 @@ class CenterWindow(QWidget, CentWindowUi):
 	def onClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
 		print('Key=%s,value=%s' % (item.text(0), item.text(1)))
+		filename = os.path.join("D:/video", item.text(0))
+
+		if filename and os.path.isfile(filename) and os.path.exists(filename):
+			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
+			self.intelligentthread.IMAGE_HANDLE = imagehandle
+			self.play()
+
 
 	def play(self):
 		if self.intelligentthread.IMAGE_HANDLE:
@@ -310,7 +328,7 @@ class MainWindow(QMainWindow):
 		stopCameraAction.setStatusTip('关闭摄像头')
 		stopCameraAction.triggered.connect(self.stopCamera)
 
-		robotAction = QAction(QIcon( ':icons/robot.png'), '自动抓取模式', self)
+		robotAction = QAction(QIcon(':icons/robot.png'), '自动抓取模式', self)
 		robotAction.setShortcut('Ctrl+o')
 		robotAction.setStatusTip('自动抓取模式')
 		robotAction.triggered.connect(self.work_as_robot)
@@ -382,9 +400,6 @@ class MainWindow(QMainWindow):
 		                                                 "All Files (*);;Text Files (*.txt)")  # 设置文件扩展名过滤,注意用双分号间隔
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
 			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
-		else:
-			# 正常情况读取sdk
-			imagehandle = ImageProvider(ifsdk=True)
 		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
 		print(filename, filetype)

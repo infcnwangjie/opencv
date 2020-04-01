@@ -9,6 +9,6 @@ from app.views.main_window import CenterWindow, MainWindow
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)  # 生成应用
-	mainwindow=MainWindow()
+	mainwindow = MainWindow()
 	mainwindow.show()
 	sys.exit(app.exec_())

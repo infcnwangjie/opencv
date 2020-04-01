@@ -1,19 +1,21 @@
 import cv2
 
 from app.core.exceptions.allexception import SdkException
+# from app.core.video.sdk import SdkHandle
 
 
 class ImageProvider(object):
 	'''部署到工控机上使用sdk获取图像，如果测试阶段使用opencv视频库来获取图像'''
 
-	def __init__(self, videofile=None, ifsdk=False):
+	def __init__(self, videofile=None, ifsdk=True):
 		self.videofile = videofile
 		self.ifsdk = ifsdk
 		if videofile and ifsdk == False:
 			self.IMG_HANDLE = cv2.VideoCapture(videofile)
 		else:
 			# sdk还没开始调研
-			self.IMG_HANDLE = cv2.VideoCapture(0)
+			pass
+			# self.IMG_HANDLE = SdkHandle()
 
 	def read(self):
 		'''从sdk或者opencv获取一帧图像'''
