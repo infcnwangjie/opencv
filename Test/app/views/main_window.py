@@ -43,9 +43,6 @@ class CentWindowUi(object):
 			if matchresult:
 				videos.append(matchresult.group(0))
 
-		# videos = ['2020-04-01-15-11.mp4', '2020-03-26 09:41:21.mp4', '2020-03-26 14:21:21.mp4',
-		#           '2020-03-26 15:21:21.mp4', '2020-03-27 09:34:21.mp4', '2020-03-27 11:50:34.mp4',
-		#           '2020-03-27 14:40:34.mp4']
 		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
 		self.tree = QTreeWidget()
 
@@ -196,7 +193,6 @@ class CenterWindow(QWidget, CentWindowUi):
 			self.intelligentthread.IMAGE_HANDLE = imagehandle
 			self.play()
 
-
 	def play(self):
 		if self.intelligentthread.IMAGE_HANDLE:
 			self.intelligentthread.play = True
@@ -236,12 +232,6 @@ class CenterWindow(QWidget, CentWindowUi):
 		# print("X轴移动：{}，Y轴移动{},z轴移动{}".format(*position))
 		# print(position)
 		self.plchandle.write_position(position)
-		# if z < 0:
-		#
-		# elif z > 0:
-		# 	print("正在拉起袋子")
-		# 	self.intelligentthread.hockstatus = HockStatus.DROP_BAG
-		# 	self.currentstatus_edit.setText("正在拉起袋子")
 		self.plcthread.work = True
 		self.intelligentthread.work = True
 

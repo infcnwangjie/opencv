@@ -29,6 +29,4 @@ DISTANCE_LANDMARK_SPACE = 200  # 地标与地标之间间隔大概2米
 
 DEBUG = True
 
-# MVCAMERACONTROLDLL_PATH=os.path.join(BASE_DIR,'core/video/mvs/MvCameraControl.lib')
-# MVCAMERACONTROLDLL_PATH='e:/MvCameraControl.lib'
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
