@@ -27,7 +27,9 @@ DISTANCE_LASTER_HOCK_Y = 60  # 灯与钩子Y轴误差距离60cm
 
 DISTANCE_LANDMARK_SPACE = 200  # 地标与地标之间间隔大概2米
 
-DEBUG = True
+DEBUG=True
+SDK_OPEN = False
+PLC_OPEN=False
 #####海康威视图像动态连接库#############################################################
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
 

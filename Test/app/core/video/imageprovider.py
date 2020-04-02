@@ -12,12 +12,14 @@ class ImageProvider(object):
 	def __init__(self, videofile=None, ifsdk=True):
 		self.videofile = videofile
 		self.ifsdk = ifsdk
-		if videofile and ifsdk == False:
+		if videofile:
 			self.IMG_HANDLE = cv2.VideoCapture(videofile)
-		else:
-			# sdk还没开始调研
+		elif ifsdk:
+			# self.IMG_HANDLE = SdkHandle() 开启海康sdk调用
 			pass
-			# self.IMG_HANDLE = SdkHandle()
+		else:
+			#开启本机摄像头
+			self.IMG_HANDLE = cv2.VideoCapture(0)
 
 	def read(self):
 		'''从sdk或者opencv获取一帧图像'''

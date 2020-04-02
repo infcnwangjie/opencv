@@ -10,7 +10,7 @@ from PyQt5.QtGui import QImage, QPixmap, QIcon
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter
 
-from app.config import ICON_DIR
+from app.config import ICON_DIR, SDK_OPEN, DEBUG
 from app.core.autowork.plcthread import PlcThread
 from app.core.plc.plchandle import PlcHandle
 from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
@@ -18,7 +18,6 @@ from app.core.video.imageprovider import ImageProvider
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.status import HockStatus
 import app.icons.resource
-
 
 class CentWindowUi(object):
 	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
@@ -103,6 +102,11 @@ class CentWindowUi(object):
 
 		baginfo_layout = QtWidgets.QFormLayout()
 
+		test_label = QLabel("调试状态：")
+		self.test_status_edit = QLineEdit()
+		self.test_status_edit.setReadOnly(True)
+		baginfo_layout.addRow(test_label, self.test_status_edit)
+
 		plc_label = QLabel("PLC状态：")
 		self.plc_status_edit = QLineEdit()
 		self.plc_status_edit.setReadOnly(True)
@@ -150,18 +154,28 @@ class CenterWindow(QWidget, CentWindowUi):
 	def __init__(self, IMGHANDLE=None):
 		super().__init__()
 		self.setupUi(self)
-		self.play_button.clicked.connect(self.play)
-		self.stop_button.clicked.connect(self.stop)
-		self.positionservice = PointLocationService()
+		self.init_button()  # 按钮状态设置
+		self.check_test_status()  # 查验测试状态
+
+
 		self.plchandle = PlcHandle()
 
-		self.plc_status_edit.setText('plc连接成功' if self.plchandle.status else "很抱歉，连接失败")
-		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=self.positionservice,
-		                                           video_player=self.picturelabel)
+		self.check_plc_status()  # 检验plc状态
+
+		self.init_plc_thread()  # 初始化plc线程
+
+		self.init_imgdetector_thread(IMGHANDLE)  # 初始化图像处理线程
+
+	def init_plc_thread(self):
+		'''初始化plc线程'''
 		self.plcthread = PlcThread(plchandle=self.plchandle)
 		self.plcthread.askforSingnal.connect(self.plc_askposition)
 		self.plcthread.moveSignal.connect(self.plc_not_needposition)
 
+	def init_imgdetector_thread(self, IMGHANDLE):
+		'''初始化图像处理线程'''
+		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=PointLocationService(),
+		                                           video_player=self.picturelabel)
 		self.intelligentthread.positionSignal.connect(self.imgdetector_position_bag_hock)  # 发送移动位置
 		self.intelligentthread.dropHockSignal.connect(self.imgdetector_drophock)  # 命令放下钩子
 		self.intelligentthread.pullHockSignal.connect(self.imgdetector_pullhock)  # 命令拉起钩子
@@ -169,26 +183,18 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.intelligentthread.dropBagSignal.connect(self.imgdetector_dropbag)
 		self.intelligentthread.rebackSignal.connect(self.imgdetector_reback)
 		self.intelligentthread.finishSignal.connect(self.imgdetector_finish)
-
 		# self.intelligentthread.rebackSignal.connect(self.afterreback)
 		self.intelligentthread.foundbagSignal.connect(self.imgdetector_editbagnum)
 
-	def changeEvent(self, e):
-		if e.type() == QtCore.QEvent.WindowStateChange:
-			if self.isMinimized():
-				print("窗口最小化")
-			elif self.isMaximized():
-				print("窗口最大化")
-				desktop = QDesktopWidget()
-				screen_width = desktop.screenGeometry().width()
-				screen_height = desktop.screenGeometry().height()
-				print(screen_width, screen_height)
+	def check_plc_status(self):
+		self.plc_status_edit.setText('plc连接成功' if self.plchandle.status else "很抱歉，连接失败")
 
-			elif self.isFullScreen():
-				print("全屏显示")
-			elif self.isActiveWindow():
-				print("活动窗口")
-		QtWidgets.QWidget.changeEvent(self, e)
+	def init_button(self):
+		self.play_button.clicked.connect(self.play)
+		self.stop_button.clicked.connect(self.stop)
+
+	def check_test_status(self):
+		self.test_status_edit.setText('测试状态开启' if DEBUG else "测试状态关闭")
 
 	def onClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
@@ -196,7 +202,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		filename = os.path.join("D:/video", item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
-			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
+			imagehandle = ImageProvider(videofile=filename, ifsdk= SDK_OPEN)
 			self.intelligentthread.IMAGE_HANDLE = imagehandle
 			self.play()
 
@@ -285,16 +291,19 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.intelligentthread.work = False
 
 	def test(self):
-		img = cv2.imread('C:/work/imgs/test/bag6.bmp')
-		with PointLocationService(img=img, print_or_no=False) as  a:
-			a.computelocations(flag=BAG_AND_LANDMARK)
-			img = a.move()
-		img = cv2.resize(img, (800, 800))
-		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+		self.check_test_status()
 
-		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-		self.picturelabel.setPixmap(QPixmap.fromImage(showImage))
-		self.picturelabel.setScaledContents(True)
+
+# img = cv2.imread('C:/work/imgs/test/bag6.bmp')
+# with PointLocationService(img=img, print_or_no=False) as  a:
+# 	a.compute_hook_location()
+# # img = a.move()
+# img = cv2.resize(img, (800, 800))
+# show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#
+# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+# self.picturelabel.setPixmap(QPixmap.fromImage(showImage))
+# self.picturelabel.setScaledContents(True)
 
 
 class MainWindow(QMainWindow):
@@ -303,13 +312,13 @@ class MainWindow(QMainWindow):
 		self.resize(1289, 1000)
 		self.centralwidget = CenterWindow()  # 创建一个文本编辑框组件
 		self.setCentralWidget(self.centralwidget)  # 将它设置成QMainWindow的中心组件。中心组件占据了所有剩下的空间。
-		self.menu_toolbar_ui()
+		self.init_menu_toolbar()
 
-	def menu_toolbar_ui(self):
+	def init_menu_toolbar(self):
 		openFileAction = QAction(QIcon(":icons/openfile.png"), '打开', self)
 		openFileAction.setShortcut('Ctrl+F')
 		openFileAction.setStatusTip('打开文件')
-		openFileAction.triggered.connect(self.openfile)
+		openFileAction.triggered.connect(self._openfile)
 
 		exitAction = QAction(QIcon(':icons/quit.png'), '退出', self)
 		exitAction.setShortcut('Ctrl+Q')
@@ -319,22 +328,22 @@ class MainWindow(QMainWindow):
 		openCameraAction = QAction(QIcon(':icons/camera.png'), '摄像头', self)
 		openCameraAction.setShortcut('Ctrl+o')
 		openCameraAction.setStatusTip('打开摄像头')
-		openCameraAction.triggered.connect(self.openCamera)
+		openCameraAction.triggered.connect(self._openCamera)
 
 		stopCameraAction = QAction(QIcon(":icons/close.png"), '关闭摄像头', self)
 		stopCameraAction.setShortcut('Ctrl+q')
 		stopCameraAction.setStatusTip('关闭摄像头')
-		stopCameraAction.triggered.connect(self.stopCamera)
+		stopCameraAction.triggered.connect(self._stopCamera)
 
 		robotAction = QAction(QIcon(':icons/robot.png'), '自动抓取模式', self)
 		robotAction.setShortcut('Ctrl+o')
 		robotAction.setStatusTip('自动抓取模式')
-		robotAction.triggered.connect(self.work_as_robot)
+		robotAction.triggered.connect(self._work_as_robot)
 
 		testAction = QAction(QIcon(":icons/test.png"), '测试模式', self)
 		testAction.setShortcut('Ctrl+t')
 		testAction.setStatusTip('测试模式')
-		testAction.triggered.connect(self.test)
+		testAction.triggered.connect(self._test)
 
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
@@ -368,37 +377,37 @@ class MainWindow(QMainWindow):
 
 	# self.show()
 
-	def openCamera(self):
+	def _openCamera(self):
 		# 正常情况读取sdk
-		imagehandle = ImageProvider(ifsdk=True)
+		imagehandle = ImageProvider(ifsdk=SDK_OPEN)
 		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
 		self.statusBar().showMessage("已经开启摄像头!")
 
 	# self.statusBar().show()
 
-	def stopCamera(self):
+	def _stopCamera(self):
 		'''关闭摄像机'''
 		del self.centralwidget.intelligentthread.IMAGE_HANDLE
 		self.statusBar().showMessage("已经关闭摄像头!")
 
 	# self.statusBar().show()
 
-	def work_as_robot(self):
+	def _work_as_robot(self):
 		'''开始智能抓取'''
 		self.centralwidget.autowork()
 		self.statusBar().showMessage("已经开启智能识别!")
 
-	def openfile(self):
+	def _openfile(self):
 		filename, filetype = QFileDialog.getOpenFileName(self,
 		                                                 "选取文件",
 		                                                 "./",
 		                                                 "All Files (*);;Text Files (*.txt)")  # 设置文件扩展名过滤,注意用双分号间隔
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
-			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
+			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
 		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
 		print(filename, filetype)
 
-	def test(self):
+	def _test(self):
 		self.centralwidget.test()

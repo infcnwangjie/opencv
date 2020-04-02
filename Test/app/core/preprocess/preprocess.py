@@ -3,7 +3,7 @@ import numpy as np
 
 # 发现
 from app.config import FIRST_TEMPLATE_PATH, THIRD_TEMPLATE_PATH, FIRST_NEG_TEMPLATE_PATH, \
-	SECOND_NEG_TEMPLATE_PATH, DETECT_BY_MULTIPLEAREA, DEBUG
+	SECOND_NEG_TEMPLATE_PATH, DETECT_BY_MULTIPLEAREA
 from app.core.target_detect.histcalcute import calculate
 from app.core.target_detect.shapedetect import ShapeDetector
 

@@ -13,7 +13,7 @@ import random
 import cv2
 import numpy as np
 
-from app.config import DISTANCE_LANDMARK_SPACE, DEBUG
+from app.config import DISTANCE_LANDMARK_SPACE, SDK_OPEN
 from app.core.exceptions.allexception import NotFoundBagException, NotFoundHockException
 from app.core.preprocess.preprocess import Preprocess
 from app.core.target_detect.models import Box, LandMark, Bag, Laster, Hock
@@ -244,7 +244,7 @@ class PointLocationService:
 
 	@property
 	def landmark_virtual_distance(self):
-		if DEBUG:
+		if not SDK_OPEN:
 			return 2
 
 		if not hasattr(self, 'landmarkvirtualdistance') or self.landmarkvirtualdistance is None:
