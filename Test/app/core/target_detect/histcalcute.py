@@ -17,6 +17,8 @@ def isRectange(contour):
 
 
 def calculate(image1, image2):
+	if image1 is None or image2 is None:
+		return 0
 	img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
 	img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2HSV)
 	hist1 = cv2.calcHist([img1], [0], None, [128], [0.0, 255.0])

@@ -292,18 +292,18 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def test(self):
 		self.check_test_status()
+		# img = cv2.imread('C:/work/imgs/test/bag6.bmp')
+		img = cv2.imread('C:/work/imgs/test/test.bmp')
+		with PointLocationService(img=img, print_or_no=False) as  a:
+			# a.compute_hook_location()
+			a.computer_landmarks_location()
+		# img = a.move()
+		img = cv2.resize(img, (800, 800))
+		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-
-# img = cv2.imread('C:/work/imgs/test/bag6.bmp')
-# with PointLocationService(img=img, print_or_no=False) as  a:
-# 	a.compute_hook_location()
-# # img = a.move()
-# img = cv2.resize(img, (800, 800))
-# show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-#
-# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-# self.picturelabel.setPixmap(QPixmap.fromImage(showImage))
-# self.picturelabel.setScaledContents(True)
+		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+		self.picturelabel.setPixmap(QPixmap.fromImage(showImage))
+		self.picturelabel.setScaledContents(True)
 
 
 class MainWindow(QMainWindow):

@@ -91,6 +91,7 @@ class IntelligentThread(QThread):
 	def process(self):
 		if self.hockstatus == HockStatus.POSITION_NEARESTBAG:
 			try:
+				self.positionservice.computer_landmarks_location()
 				nearest_bag_position, hockposition = self.positionservice.compute_bag_hock_location()
 				img_distance, real_distance, real_x_distance, real_y_distance = self.positionservice.compute_distance(
 					nearest_bag_position, hockposition)

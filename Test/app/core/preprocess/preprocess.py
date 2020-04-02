@@ -55,11 +55,27 @@ class Preprocess(object):
 		third_template = cv2.imread(THIRD_TEMPLATE_PATH)
 
 		targetimg = self.img[y:y + h, x:x + w]
-		first_match_result = calculate(first_template, targetimg)
-		second_match_result = calculate(second_template, targetimg)
-		third_match_result = calculate(third_template, targetimg)
-		if first_match_result > 0.45 or second_match_result > 0.45 or third_match_result > 0.45:
-			return True
+		try:
+			first_match_result = calculate(first_template, targetimg)
+		except:
+			pass
+		else:
+			if first_match_result > 0.45:
+				return True
+		try:
+			second_match_result = calculate(second_template, targetimg)
+		except:
+			pass
+		else:
+			if second_match_result > 0.45:
+				return True
+		try:
+			third_match_result = calculate(third_template, targetimg)
+		except:
+			pass
+		else:
+			if third_match_result > 0.45:
+				return True
 
 		neg_template1 = cv2.imread(FIRST_NEG_TEMPLATE_PATH)
 		neg_template2 = cv2.imread(SECOND_NEG_TEMPLATE_PATH)
@@ -176,8 +192,8 @@ class Preprocess(object):
 
 	@property
 	def processed_bag(self):
-		colorlow=[120, 50, 50]
-		colorhigh=[180, 255, 255]
+		colorlow = [120, 50, 50]
+		colorhigh = [180, 255, 255]
 		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
 		colormin, colormax = np.array(colorlow), np.array(colorhigh)
 		# 去除颜色范围外的其余颜色
@@ -186,7 +202,7 @@ class Preprocess(object):
 		# 去噪
 		binary = cv2.medianBlur(binary, 3)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		return binary,contours
+		return binary, contours
 
 	@property
 	def processed_laster(self):
@@ -203,6 +219,3 @@ class Preprocess(object):
 		# cv2.imshow("hockbinaray",binary)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return binary, contours
-
-
-

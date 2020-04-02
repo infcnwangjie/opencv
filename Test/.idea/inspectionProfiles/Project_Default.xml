@@ -4,7 +4,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="15">
+          <list size="20">
             <item index="0" class="java.lang.String" itemvalue="scipy" />
             <item index="1" class="java.lang.String" itemvalue="matplotlib" />
             <item index="2" class="java.lang.String" itemvalue="python-dateutil" />
@@ -20,6 +20,11 @@
             <item index="12" class="java.lang.String" itemvalue="future" />
             <item index="13" class="java.lang.String" itemvalue="pywin32-ctypes" />
             <item index="14" class="java.lang.String" itemvalue="pefile" />
+            <item index="15" class="java.lang.String" itemvalue="modbus-tk" />
+            <item index="16" class="java.lang.String" itemvalue="opencv-python" />
+            <item index="17" class="java.lang.String" itemvalue="PyQt5" />
+            <item index="18" class="java.lang.String" itemvalue="PyQt5-sip" />
+            <item index="19" class="java.lang.String" itemvalue="pyserial" />
           </list>
         </value>
       </option>
