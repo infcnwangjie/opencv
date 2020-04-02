@@ -2,7 +2,7 @@ import cv2
 import numpy
 
 from app.core.target_detect.pointlocation import PointLocationService
-from app.core.video.sdk import getImageFromSdk, SdkHandle
+from app.core.video.sdk import  SdkHandle
 
 
 def comput_test():

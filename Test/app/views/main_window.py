@@ -102,6 +102,11 @@ class CentWindowUi(object):
 		operate_layout.addWidget(self.stop_button, *(0, 1))
 
 		baginfo_layout = QtWidgets.QFormLayout()
+
+		plc_label = QLabel("PLC状态：")
+		self.plc_status_edit = QLineEdit()
+		self.plc_status_edit.setReadOnly(True)
+		baginfo_layout.addRow(plc_label, self.plc_status_edit)
 		bagnum_label = QLabel("袋子总数：")
 		self.bagnum_edit = QLineEdit()
 		baginfo_layout.addRow(bagnum_label, self.bagnum_edit)
@@ -149,6 +154,8 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.stop_button.clicked.connect(self.stop)
 		self.positionservice = PointLocationService()
 		self.plchandle = PlcHandle()
+
+		self.plc_status_edit.setText('plc连接成功' if self.plchandle.status else "很抱歉，连接失败")
 		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=self.positionservice,
 		                                           video_player=self.picturelabel)
 		self.plcthread = PlcThread(plchandle=self.plchandle)
@@ -197,7 +204,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		if self.intelligentthread.IMAGE_HANDLE:
 			self.intelligentthread.play = True
 			self.intelligentthread.start()
-			self.plcthread.on = True
+			self.plcthread.work = True
 			self.plcthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
@@ -206,6 +213,7 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def autowork(self):
 		self.intelligentthread.work = True
+		self.plcthread.work = True
 
 	def stop(self):
 		'''暂停摄像机'''
@@ -267,7 +275,7 @@ class CenterWindow(QWidget, CentWindowUi):
 	def imgdetector_finish(self, info):
 		# print("工作完成")
 		# print(info)
-		self.plchandle.write_stop()
+		self.plchandle.ugent_stop()
 		self.plcthread.work = False
 
 	def afterreback(self, info):
@@ -365,23 +373,21 @@ class MainWindow(QMainWindow):
 		imagehandle = ImageProvider(ifsdk=True)
 		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
-		self.statusBar().showMessage("已经开启摄像头!", 0)
+		self.statusBar().showMessage("已经开启摄像头!")
 
 	# self.statusBar().show()
 
 	def stopCamera(self):
 		'''关闭摄像机'''
 		del self.centralwidget.intelligentthread.IMAGE_HANDLE
-		self.statusBar().showMessage("已经关闭摄像头!", 0)
+		self.statusBar().showMessage("已经关闭摄像头!")
 
 	# self.statusBar().show()
 
 	def work_as_robot(self):
 		'''开始智能抓取'''
 		self.centralwidget.autowork()
-		self.statusBar().showMessage("已经开启智能识别!", 0)
-
-	# self.statusBar().show()
+		self.statusBar().showMessage("已经开启智能识别!")
 
 	def openfile(self):
 		filename, filetype = QFileDialog.getOpenFileName(self,
