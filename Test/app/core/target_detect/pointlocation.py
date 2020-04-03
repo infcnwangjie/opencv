@@ -60,7 +60,7 @@ class PointLocationService:
 		for countour in contours:
 			countour_rect = cv2.boundingRect(countour)
 			rect_x, rect_y, rect_w, rect_h = countour_rect
-			if cv2.contourArea(countour) > 1500 and rect_h < 100:
+			if cv2.contourArea(countour) > 1000 and rect_h < 100:
 				moderatesize_countours.append(countour)
 				box = Bag(countour, bag_binary, id=boxindex)
 				boxindex += 1
@@ -68,13 +68,16 @@ class PointLocationService:
 				cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
 				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 				self.bags.append(box)
+
 		# 用紫色画轮廓
-		# cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
+		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
 
 	# 计算地标的坐标
 	def computer_landmarks_location(self, digitdetector=None):
 		process = Preprocess(self.img)
 		binary_image, contours = process.processedlandmarkimg
+		# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
+		# cv2.imshow("landmark",binary_image)
 		if contours is None or len(contours) == 0:
 			return
 
@@ -92,18 +95,26 @@ class PointLocationService:
 			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 			good_contours.append(box.contour)
+
 		# 用黄色画轮廓
 		cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
+		# cv2.drawContours(self.img, all_contours, -1, (0, 255, 255), 5)
+		cv2.namedWindow("final_contours", 0)
+		cv2.imshow("final_contours", self.img)
 
 	# 筛选箱子
 	def filterbox(self):
 		scoredict = {}
+		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
 		for a in self.landmarks:
 			scoredict[str(a.id)] = 0
 			for b in self.landmarks:
 				if a == b:
 					scoredict[str(a.id)] += 1
 				elif abs(a.x - b.x) + abs(a.y - b.y) < 700:
+					continue
+				elif abs(b.x - 0.5 * cols) < 1000:
 					continue
 				elif abs(a.x - b.x) < 30 or abs(a.y - b.y) < 30:
 					scoredict[str(a.id)] += 1
@@ -164,8 +175,8 @@ class PointLocationService:
 			word_position_x = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] + 100)
 			cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
 
-			# cv2.line(self.img, (nearest_bag.boxcenterpoint[0], hockposition[1]), hockposition, (0, 255, 255),
-			#          thickness=3)
+		# cv2.line(self.img, (nearest_bag.boxcenterpoint[0], hockposition[1]), hockposition, (0, 255, 255),
+		#          thickness=3)
 
 		# return img_distance, real_distance, move_x, move_y
 		return nearest_bag.boxcenterpoint, hockposition

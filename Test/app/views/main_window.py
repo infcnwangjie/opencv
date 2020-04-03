@@ -19,6 +19,7 @@ from app.core.autowork.intelligentthread import IntelligentThread
 from app.status import HockStatus
 import app.icons.resource
 
+
 class CentWindowUi(object):
 	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
 
@@ -157,7 +158,6 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.init_button()  # 按钮状态设置
 		self.check_test_status()  # 查验测试状态
 
-
 		self.plchandle = PlcHandle()
 
 		self.check_plc_status()  # 检验plc状态
@@ -202,7 +202,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		filename = os.path.join("D:/video", item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
-			imagehandle = ImageProvider(videofile=filename, ifsdk= SDK_OPEN)
+			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
 			self.intelligentthread.IMAGE_HANDLE = imagehandle
 			self.play()
 
@@ -290,15 +290,18 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.plcthread.work = True
 		self.intelligentthread.work = False
 
-	def test(self):
+	def test(self, image=None):
 		self.check_test_status()
 		# img = cv2.imread('C:/work/imgs/test/bag6.bmp')
-		img = cv2.imread('C:/work/imgs/test/test.bmp')
+		if image:
+			img = cv2.imread(image)
+		else:
+			img = cv2.imread('C:/work/imgs/test/test.bmp')
 		with PointLocationService(img=img, print_or_no=False) as  a:
 			# a.compute_hook_location()
 			a.computer_landmarks_location()
 		# img = a.move()
-		img = cv2.resize(img, (800, 800))
+		img = cv2.resize(a.img, (800, 800))
 		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
@@ -403,11 +406,16 @@ class MainWindow(QMainWindow):
 		                                                 "选取文件",
 		                                                 "./",
 		                                                 "All Files (*);;Text Files (*.txt)")  # 设置文件扩展名过滤,注意用双分号间隔
-		if filename and os.path.isfile(filename) and os.path.exists(filename):
-			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
-		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
-		self.centralwidget.play()
 		print(filename, filetype)
+		if filename and os.path.isfile(filename) and os.path.exists(filename):
+			if filename.endswith("avi") or filename.endswith("mp4"):
+				imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
+				self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
+				self.centralwidget.play()
+			else:
+				self.centralwidget.test(image=filename)
+
+
 
 	def _test(self):
 		self.centralwidget.test()

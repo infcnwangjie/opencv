@@ -1,19 +1,20 @@
 import os
+import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 基准目录
 
 ICON_DIR = os.path.join(BASE_DIR, 'icons')
 TRAIN_DATA_DIR = os.path.join(BASE_DIR, 'train_data')  # 数字训练
 
-FIRST_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'template1.png')  # 模板图片
+TEMPLATES_PATH = [os.path.join(TRAIN_DATA_DIR, file) for file in os.listdir(TRAIN_DATA_DIR) if
+                  re.match("template\d{1,2}.png", file)]
 
-SECOND_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'template2.png')  # 模板图片
-
-THIRD_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'template3.png')  # 模板图片
-
-FIRST_NEG_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'neg_template1.png')  # 模板图片
-
-SECOND_NEG_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'neg_template2.png')  # 模板图片
+NEG_TEMPLATES_PATH = [os.path.join(TRAIN_DATA_DIR, file) for file in os.listdir(TRAIN_DATA_DIR) if
+                  re.match("neg_template\d{1,2}.png", file)]
+#
+# FIRST_NEG_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'neg_template1.png')  # 模板图片
+#
+# SECOND_NEG_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'neg_template2.png')  # 模板图片
 
 RECT_TEMPLATE_PATH = os.path.join(TRAIN_DATA_DIR, 'rect_template.png')  # 模板图片
 
@@ -27,9 +28,9 @@ DISTANCE_LASTER_HOCK_Y = 60  # 灯与钩子Y轴误差距离60cm
 
 DISTANCE_LANDMARK_SPACE = 200  # 地标与地标之间间隔大概2米
 
-DEBUG=True
+DEBUG = True
 SDK_OPEN = False
-PLC_OPEN=False
+PLC_OPEN = False
 #####海康威视图像动态连接库#############################################################
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
 
@@ -48,3 +49,5 @@ HOCK_STATUS_OPEN = 1
 HOCK_STATUS_OFF = 2
 HOCK_STATUS_READY = 3
 HOCK_STATUS_MOVE = 4
+
+# print(NEG_TEMPLATES_PATH)
