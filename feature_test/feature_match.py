@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
 def calculate(image1, image2):
     # 灰度直方图算法
@@ -73,8 +72,8 @@ def sift_match():
 
 
 def orb_match():
-	img1 = cv2.imread("../imgs/test/19.png")  # 导入灰度图像
-	img2 = cv2.imread("../imgs/test/bag6.bmp")
+	img1 = cv2.imread("C:/work/imgs/test/8.png")  # 导入灰度图像
+	img2 = cv2.imread("C:/work/imgs/test/2020-04-03-13-49-56test.bmp")
 
 	detector = cv2.ORB_create()
 
@@ -97,6 +96,6 @@ def orb_match():
 
 
 if __name__ == '__main__':
-	# orb_match()
+	orb_match()
 	# sift_match()
-	img_hist()
+	#img_hist()

@@ -14,7 +14,7 @@ img5 = cv2.imread("C:/work/imgs/test/2020-04-03-13-49-56test.bmp")
 img6 = cv2.imread("C:/work/imgs/test/bag6.bmp")
 
 img7 = cv2.imread("C:/work/imgs/test/bag7.bmp")
-img8=cv2.imread("C:/work/imgs/test/2020-04-03-16-05-58test.bmp")
+img8 = cv2.imread("C:/work/imgs/test/2020-04-03-16-05-58test.bmp")
 test_img = img6
 
 
@@ -66,7 +66,7 @@ def find_landmark_contours(img):
 	# rows, cols = gray.shape
 	ret, binary = cv2.threshold(gray, 60, 250, cv2.THRESH_BINARY)  # 灰度阈值
 	contours, _drop = cv2.findContours(binary, cv2.RETR_EXTERNAL,
-	                                                   cv2.CHAIN_APPROX_SIMPLE)
+	                                   cv2.CHAIN_APPROX_SIMPLE)
 
 	cv2.namedWindow("final_binary", 0)
 	cv2.imshow("final_binary", binary)
@@ -161,13 +161,13 @@ def draw_map(template_img, destimg):
 
 # draw_map(template_img=img2, destimg=img5)
 
+img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
 # img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
-# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
-img=cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
+# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
 with PointLocationService(img=img) as service:
-	service.computer_bags_location()
+	service.computer_landmarks_location()
 # find_landmark_contours(img3)
-cv2.namedWindow("landmark",0)
-cv2.imshow("landmark",service.img)
+cv2.namedWindow("landmark", 0)
+cv2.imshow("landmark", service.img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()

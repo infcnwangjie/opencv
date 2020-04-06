@@ -38,7 +38,7 @@ class Box:
 		self.has_compute_contours = False
 		# 数字检测对象
 		self.digitdetector = digitdetector
-		self.compute_iner_contours()
+		# self.compute_iner_contours()
 		self.status = True
 
 	# 内部使用,通过轮廓面积过滤轮廓
@@ -81,34 +81,34 @@ class Box:
 				self.boxcenterpoint[1]) + ")"
 			return
 
-		for digital_contour in self.inercontours:
-			[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
-				digital_contour)
-			roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
-			      digit_point_x:digit_point_x + digit_contor_width]
-			results = digitdetector.readnum(roi)
+		# for digital_contour in self.inercontours:
+		# 	[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
+		# 		digital_contour)
+		# 	roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
+		# 	      digit_point_x:digit_point_x + digit_contor_width]
+		# 	results = digitdetector.readnum(roi)
+		#
+		# 	roi_digitvalue = str(int((results[0][0])))
+		# 	boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
+		# 	                                 bagcenterpoint=self.boxcenterpoint,
+		# 	                                 locationpoint=(
+		# 		                                 self.x + digit_point_x, self.y + digit_point_y))
+		# 	self.digitLocations.append(boxdigitlocation)
 
-			roi_digitvalue = str(int((results[0][0])))
-			boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
-			                                 bagcenterpoint=self.boxcenterpoint,
-			                                 locationpoint=(
-				                                 self.x + digit_point_x, self.y + digit_point_y))
-			self.digitLocations.append(boxdigitlocation)
-
-		cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
+		# cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
 		# cv2.drawContours(self.img, self.inercontours)
-		if self.digitLocations is None or len(self.digitLocations) == 0:
-			return
-		self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
+		# if self.digitLocations is None or len(self.digitLocations) == 0:
+		# 	return
+		# self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
 		# 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
-		last_point_x, box_digitnum = 0, ""
-		for location in self.digitLocations:
-			current_x = location.locationpoint_x
-			if current_x - last_point_x > 10:
-				box_digitnum += location.digitvalue
-			last_point_x = current_x
-		self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
-			self.boxcenterpoint[1]) + ")"
+		# last_point_x, box_digitnum = 0, ""
+		# for location in self.digitLocations:
+		# 	current_x = location.locationpoint_x
+		# 	if current_x - last_point_x > 10:
+		# 		box_digitnum += location.digitvalue
+		# 	last_point_x = current_x
+		# self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+		# 	self.boxcenterpoint[1]) + ")"
 
 
 # 地标
@@ -121,34 +121,34 @@ class LandMark(Box):
 				self.boxcenterpoint[1]) + ")"
 			return
 
-		for digital_contour in self.inercontours:
-			[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
-				digital_contour)
-			roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
-			      digit_point_x:digit_point_x + digit_contor_width]
-			results = digitdetector.readnum(roi)
-
-			roi_digitvalue = str(int((results[0][0])))
-			boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
-			                                 bagcenterpoint=self.boxcenterpoint,
-			                                 locationpoint=(
-				                                 self.x + digit_point_x, self.y + digit_point_y))
-			self.digitLocations.append(boxdigitlocation)
-
-		cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
-		# cv2.drawContours(self.img, self.inercontours)
-		if self.digitLocations is None or len(self.digitLocations) == 0:
-			return
-		self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
-		# 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
-		last_point_x, box_digitnum = 0, ""
-		for location in self.digitLocations:
-			current_x = location.locationpoint_x
-			if current_x - last_point_x > 10:
-				box_digitnum += location.digitvalue
-			last_point_x = current_x
-		self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
-			self.boxcenterpoint[1]) + ")"
+		# for digital_contour in self.inercontours:
+	# 	[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
+	# 		digital_contour)
+	# 	roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
+	# 	      digit_point_x:digit_point_x + digit_contor_width]
+	# 	results = digitdetector.readnum(roi)
+	#
+	# 	roi_digitvalue = str(int((results[0][0])))
+	# 	boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
+	# 	                                 bagcenterpoint=self.boxcenterpoint,
+	# 	                                 locationpoint=(
+	# 		                                 self.x + digit_point_x, self.y + digit_point_y))
+	# 	self.digitLocations.append(boxdigitlocation)
+	#
+	# cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
+	# # cv2.drawContours(self.img, self.inercontours)
+	# if self.digitLocations is None or len(self.digitLocations) == 0:
+	# 	return
+	# self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
+	# # 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
+	# last_point_x, box_digitnum = 0, ""
+	# for location in self.digitLocations:
+	# 	current_x = location.locationpoint_x
+	# 	if current_x - last_point_x > 10:
+	# 		box_digitnum += location.digitvalue
+	# 	last_point_x = current_x
+	# self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+	# 	self.boxcenterpoint[1]) + ")"
 
 
 # 袋子

@@ -83,12 +83,15 @@ class PointLocationService:
 
 		boxindex = 0
 		for countour in contours:
-			box = LandMark(countour, binary_image, id=boxindex, digitdetector=digitdetector)
-			box.modify_box_content(digitdetector, no_num=True)
-			boxindex += 1
-			self.landmarks.append(box)
+			x, y, w, h  = cv2.boundingRect(countour)
+			cent_x,cent_y = x + round(w * 0.5), y + round(h * 0.5)
+			if not 600<cent_x<2600:
+				box = LandMark(countour, binary_image, id=boxindex, digitdetector=digitdetector)
+				box.modify_box_content(digitdetector, no_num=True)
+				boxindex += 1
+				self.landmarks.append(box)
 		# 过滤袋子->将面积较小的袋子移除
-		self.filterbox()
+		# self.filterlandmark()
 		good_contours = []
 		for box in self.landmarks:
 			# 标记坐标和值
@@ -96,14 +99,16 @@ class PointLocationService:
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 			good_contours.append(box.contour)
 
-		# 用黄色画轮廓
-		cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
-		# cv2.drawContours(self.img, all_contours, -1, (0, 255, 255), 5)
-		cv2.namedWindow("final_contours", 0)
-		cv2.imshow("final_contours", self.img)
+		if len(good_contours) > 0:
+			# 用黄色画轮廓
+			cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
+		# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
+		# cv2.namedWindow("final_contours", 0)
+		# cv2.imshow("final_contours", self.img)
 
 	# 筛选箱子
-	def filterbox(self):
+	# 该方法暂时废弃了
+	def filterlandmark(self):
 		scoredict = {}
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
 		rows, cols = gray.shape
