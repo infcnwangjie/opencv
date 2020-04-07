@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import random
 import serial
 import modbus_tk
@@ -62,12 +63,12 @@ class PlcHandle:
 			return status_value
 		else:
 
-			statuss = [1, 2, 3]
+			statuss = [3,4]
 			return random.choice(statuss)
 
 	def ugent_stop(self):
 		'''紧急停止命令'''
-		print("imgdetector send stop instruct")
+		# print("imgdetector send stop instruct")
 		if PLC_OPEN:
 			self.logger.info(
 				self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_STOP_PLC, output_value=1))  # 写入

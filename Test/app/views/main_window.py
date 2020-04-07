@@ -176,6 +176,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		'''初始化图像处理线程'''
 		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=PointLocationService(),
 		                                           video_player=self.picturelabel)
+		self.intelligentthread.hockstatus=HockStatus.POSITION_NEARESTBAG
 		self.intelligentthread.positionSignal.connect(self.imgdetector_position_bag_hock)  # 发送移动位置
 		self.intelligentthread.dropHockSignal.connect(self.imgdetector_drophock)  # 命令放下钩子
 		self.intelligentthread.pullHockSignal.connect(self.imgdetector_pullhock)  # 命令拉起钩子

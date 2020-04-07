@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from app.core.plc.plchandle import PlcHandle

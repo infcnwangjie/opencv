@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 import cv2
 
 from app.core.exceptions.allexception import SdkException
 
 
 # from app.core.video.sdk import SdkHandle
+from app.core.video.sdk import SdkHandle
 
 
 class ImageProvider(object):
@@ -15,8 +17,8 @@ class ImageProvider(object):
 		if videofile:
 			self.IMG_HANDLE = cv2.VideoCapture(videofile)
 		elif ifsdk:
-			# self.IMG_HANDLE = SdkHandle() 开启海康sdk调用
-			pass
+			self.IMG_HANDLE = SdkHandle() #开启海康sdk调用
+			# pass
 		else:
 			#开启本机摄像头
 			self.IMG_HANDLE = cv2.VideoCapture(0)
@@ -31,7 +33,7 @@ class ImageProvider(object):
 			if isinstance(imageinfo, tuple):
 				return imageinfo[1]
 			else:
-				raise SdkException("sdk返回什么类型仍未知")
+				return imageinfo
 
 	def __del__(self):
 		'''释放sdk句柄，或者opencv句柄'''

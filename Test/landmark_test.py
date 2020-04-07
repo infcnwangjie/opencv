@@ -159,15 +159,47 @@ def draw_map(template_img, destimg):
 	cv2.imshow("result", result)
 
 
+def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
+	if event == cv2.EVENT_LBUTTONDOWN:
+		print("x:{},y:{}".format(x, y))
+
+
 # draw_map(template_img=img2, destimg=img5)
 
-img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
-# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
-# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
-with PointLocationService(img=img) as service:
-	service.computer_landmarks_location()
-# find_landmark_contours(img3)
-cv2.namedWindow("landmark", 0)
-cv2.imshow("landmark", service.img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+def process_landmark():
+	img = cv2.imread("C:/work/imgs/test/2020-04-07-10-56-28test.bmp")
+	# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
+	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
+	with PointLocationService(img=img) as service:
+		service.computer_landmarks_location()
+		service.computer_bags_location()
+	# find_landmark_contours(img3)
+	cv2.namedWindow("landmark", 0)
+	loc = cv2.setMouseCallback("landmark", on_EVENT_LBUTTONDOWN)
+	cv2.imshow("landmark", service.img)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
+
+def process_laster():
+	img = cv2.imread("E:/laster.jpg")
+	colorlow = [35, 43, 46]
+	colorhigh = [77, 255, 255]
+	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+	colormin, colormax = np.array(colorlow), np.array(colorhigh)
+	# 去除颜色范围外的其余颜色
+	mask = cv2.inRange(hsv, colormin, colormax)
+	ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
+	# 去噪
+	# binary = cv2.medianBlur(binary, 3)
+	cv2.namedWindow("hockbinaray", 0)
+	cv2.imshow("hockbinaray", binary)
+	contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	cv2.drawContours(img, contours, -1, (255, 255, 0), 3)  # 找到唯一的轮廓就退出即可
+	cv2.namedWindow("hock", 0)
+	cv2.imshow("hock", img)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
+
+process_laster()

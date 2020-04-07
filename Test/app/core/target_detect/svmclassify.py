@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cv2
 # from sklearn import svm
 import numpy as np

@@ -1,12 +1,4 @@
-# 所有的功能点如下所示：
-#
-# 1、找到所有的袋子
-#
-# 2、找到所有的地标
-#
-# 3、移动钩子到所有袋子
-
-# encoding:utf-8
+# -*- coding: utf-8 -*-
 import math
 import random
 
@@ -37,6 +29,12 @@ class PointLocationService:
 		self.print_or_no = print_or_no  # 是否显示图片
 
 	@property
+	def shape(self):
+		gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
+		return rows, cols
+
+	@property
 	def img(self):
 		return self._img
 
@@ -57,13 +55,14 @@ class PointLocationService:
 		moderatesize_countours = []
 		boxindex = 0
 		self.bags.clear()
+		rows, cols = bag_binary.shape
 		for countour in contours:
 			countour_rect = cv2.boundingRect(countour)
 			rect_x, rect_y, rect_w, rect_h = countour_rect
 
 			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
 
-			if cv2.contourArea(countour) > 1000 and rect_h < 100 and center_x > 600 and center_x < 2600:
+			if cv2.contourArea(countour) > 80 and rect_h < 300 and 0.32 * cols < center_x < 0.72 * cols:
 				moderatesize_countours.append(countour)
 				box = Bag(countour, bag_binary, id=boxindex)
 				boxindex += 1
@@ -79,16 +78,17 @@ class PointLocationService:
 	def computer_landmarks_location(self, digitdetector=None):
 		process = Preprocess(self.img)
 		binary_image, contours = process.processedlandmarkimg
-		# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
-		# cv2.imshow("landmark",binary_image)
 		if contours is None or len(contours) == 0:
 			return
+
+		rows, cols = binary_image.shape
 
 		boxindex = 0
 		for countour in contours:
 			x, y, w, h = cv2.boundingRect(countour)
 			cent_x, cent_y = x + round(w * 0.5), y + round(h * 0.5)
-			if not 600 < cent_x < 2600:
+			# print(cent_x)
+			if 0 < cent_x < 0.3 * cols or 0.75 * cols < cent_x < cols:
 				box = LandMark(countour, binary_image, id=boxindex, digitdetector=digitdetector)
 				box.modify_box_content(digitdetector, no_num=True)
 				boxindex += 1
@@ -152,10 +152,15 @@ class PointLocationService:
 
 		smallestindex = min(distance_dict.keys(), key=lambda item: int(item))
 		nearest_bag = distance_dict[str(smallestindex)]
-		cv2.drawContours(self.img, [nearest_bag.contour], -1, (0, 255, 0), 1)
+		# cv2.drawContours(self.img, [nearest_bag.contour], -1, (0, 255, 0), 1)
+
 		self.nearestbag = nearest_bag  # 计算出离钩子距离最近的袋子
 
 		img_distance, real_distance, move_x, move_y = self.compute_distance(nearest_bag.boxcenterpoint, hockposition)
+		cv2.circle(self.img, nearest_bag.boxcenterpoint, 100, (0, 255, 0), thickness=3)
+		cv2.putText(self.img, "nearest bag,distance is {} pixer".format(img_distance),
+		            (nearest_bag.boxcenterpoint[0] + 50, nearest_bag.boxcenterpoint[1],), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+		            (255, 0, 0), 2)
 		if move_x < 0:
 			moveinfo_x = u"move left:{}cm".format(
 				abs(round(move_x, 2)))
@@ -177,9 +182,9 @@ class PointLocationService:
 			#          (0, 255, 255),
 			#          thickness=3)
 
-			word_position_y = (int(bag.x - 60), hockposition[1] - 60)
+			word_position = (int(bag.x - 60), hockposition[1] - 60)
 
-			cv2.putText(self.img, moveinfo_y, word_position_y, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
+			cv2.putText(self.img, moveinfo_y, word_position, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
 
 			word_position_x = (int(bag.x + abs(0.5 * (bag.x - hockposition[0]))), hockposition[1] + 100)
 			cv2.putText(self.img, moveinfo_x, word_position_x, cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 2)
@@ -209,43 +214,16 @@ class PointLocationService:
 		:return:
 		'''
 		process = Preprocess(self.img)
-		laster_binary, contours = process.processed_laster
+		laster_binary, contour = process.processed_laster
 		# cv2.imshow("binary1", laster_binary)
-		if contours is None or len(contours) == 0:
+		if contour is None:
 			return
 
-		points = []
-		# 大小适中的轮廓，过小的轮廓被去除了
-		for countour in contours:
-			countour_rect = cv2.boundingRect(countour)
-			rect_x, rect_y, rect_w, rect_h = countour_rect
-			points.append((rect_x, rect_y))
+		laster = Laster(contour, laster_binary, id=0)
+		laster.modify_box_content()
+		self.laster = laster
 
-		left_point = min(points, key=lambda point: point[0])
-
-		top_point = min(points, key=lambda point: point[1])
-
-		right_point = max(points, key=lambda point: point[0])
-
-		bottom_point = max(points, key=lambda point: point[1])
-
-		left_top_point = (left_point[0], top_point[1])
-		right_bottom_point = (right_point[0], bottom_point[1])
-
-		new_binary = np.zeros_like(laster_binary)
-		cv2.rectangle(new_binary, left_top_point, right_bottom_point, color=(255, 255, 255), thickness=2)
-		# cv2.imshow("binary2", new_binary)
-
-		contours, _hierarchy = cv2.findContours(new_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-		for contour in contours:
-			box = Laster(contour, laster_binary, id=0)
-			box.modify_box_content()
-			self.laster = box
-			break
-		# print(len(contours))
-
-		cv2.drawContours(self.img, contours, -1, (0, 255, 0), 1)  # 找到唯一的轮廓就退出即可
+		cv2.drawContours(self.img, [contour], -1, (0, 255, 0), 1)  # 找到唯一的轮廓就退出即可
 
 		# TODO 目前灯光的位置，是默认的没有处理，后期要修改成仙识别灯光位置，然后再计算钩子位置
 		lasterposition = self.laster.boxcenterpoint  # 激光灯位置X轴较钩子小

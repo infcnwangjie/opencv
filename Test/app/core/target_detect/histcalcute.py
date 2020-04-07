@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cv2
 
 from app.config import RECT_TEMPLATE_PATH

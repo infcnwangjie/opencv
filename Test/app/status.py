@@ -1,3 +1,4 @@
+# encoding:utf-8
 class HockStatus:
 	POSITION_NEARESTBAG = 0 #开始状态，寻找最近袋子
 	DROP_HOCK = 1  # 放钩

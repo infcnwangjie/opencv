@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cv2
 import numpy as np
 
@@ -40,10 +41,10 @@ class Preprocess(object):
 		# if not self.shapedetector.detect(c,4):
 		# 	return False
 		x, y, w, h = cv2.boundingRect(c)
-		if w < 20 or h < 20 or w > 100 or h > 100:
+		if w < 20 or h < 20 or w > 200 or h > 200:
 			return False
 
-		if not 300 < cv2.contourArea(c) < 20000:
+		if not 100 < cv2.contourArea(c) < 20000:
 			return False
 
 		# targetimg = self.img[y:y + h, x:x + w]
@@ -156,7 +157,7 @@ class Preprocess(object):
 		# cv2.imshow("temp_contours", self.img)
 
 		# return all_contours, allzero
-		return  all_contours,binary
+		return all_contours, binary
 
 	# 对灰度图像做数据插值运算
 	def interpolation_binary_data(self, binary_image):
@@ -234,8 +235,8 @@ class Preprocess(object):
 
 	@property
 	def processed_laster(self):
-		colorlow = [26, 43, 46]
-		colorhigh = [34, 255, 255]
+		colorlow = [35, 43, 46]
+		colorhigh = [77, 255, 255]
 		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
 		colormin, colormax = np.array(colorlow), np.array(colorhigh)
 		# 去除颜色范围外的其余颜色
@@ -246,4 +247,9 @@ class Preprocess(object):
 		# cv2.namedWindow("hockbinaray",0)
 		# cv2.imshow("hockbinaray",binary)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		return binary, contours
+
+		# 倒叙排序，返回面积最大的轮廓
+		goodcontours = sorted(list(filter(lambda c: cv2.contourArea(c) > 100, contours)),
+		                      key=lambda c: cv2.contourArea(c), reverse=True)
+
+		return binary, goodcontours[0]

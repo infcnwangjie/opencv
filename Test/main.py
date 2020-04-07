@@ -1,4 +1,4 @@
-# encoding:utf-8
+#coding=gbk
 import os
 import sys
 import cv2
@@ -8,7 +8,7 @@ from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_L
 from app.views.main_window import CenterWindow, MainWindow
 
 if __name__ == '__main__':
-	app = QApplication(sys.argv)  # 生成应用
+	app = QApplication(sys.argv)
 	mainwindow = MainWindow()
 	mainwindow.show()
 	sys.exit(app.exec_())
