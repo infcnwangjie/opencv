@@ -298,7 +298,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		else:
 			img = cv2.imread('C:/work/imgs/test/test.bmp')
 		with PointLocationService(img=img, print_or_no=False) as  a:
-			# a.compute_hook_location()
+			a.compute_hook_location()
 			a.computer_landmarks_location()
 		# img = a.move()
 		img = cv2.resize(a.img, (800, 800))

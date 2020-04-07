@@ -60,7 +60,10 @@ class PointLocationService:
 		for countour in contours:
 			countour_rect = cv2.boundingRect(countour)
 			rect_x, rect_y, rect_w, rect_h = countour_rect
-			if cv2.contourArea(countour) > 1000 and rect_h < 100:
+
+			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
+
+			if cv2.contourArea(countour) > 1000 and rect_h < 100 and center_x > 600 and center_x < 2600:
 				moderatesize_countours.append(countour)
 				box = Bag(countour, bag_binary, id=boxindex)
 				boxindex += 1
@@ -83,9 +86,9 @@ class PointLocationService:
 
 		boxindex = 0
 		for countour in contours:
-			x, y, w, h  = cv2.boundingRect(countour)
-			cent_x,cent_y = x + round(w * 0.5), y + round(h * 0.5)
-			if not 600<cent_x<2600:
+			x, y, w, h = cv2.boundingRect(countour)
+			cent_x, cent_y = x + round(w * 0.5), y + round(h * 0.5)
+			if not 600 < cent_x < 2600:
 				box = LandMark(countour, binary_image, id=boxindex, digitdetector=digitdetector)
 				box.modify_box_content(digitdetector, no_num=True)
 				boxindex += 1
@@ -102,9 +105,10 @@ class PointLocationService:
 		if len(good_contours) > 0:
 			# 用黄色画轮廓
 			cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
-		# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
-		# cv2.namedWindow("final_contours", 0)
-		# cv2.imshow("final_contours", self.img)
+
+	# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
+	# cv2.namedWindow("final_contours", 0)
+	# cv2.imshow("final_contours", self.img)
 
 	# 筛选箱子
 	# 该方法暂时废弃了
