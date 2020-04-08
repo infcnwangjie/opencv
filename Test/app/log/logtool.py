@@ -4,7 +4,7 @@ import time
 
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(pathname)s %(message)s "  # 配置输出日志格式
 DATE_FORMAT = '%Y-%m-%d  %H:%M:%S %a '  # 配置输出时间的格式，注意月份和天数不要搞乱了
-log_path=r"d:\machine_vision_logs"
+log_path=r"c:\machine_vision_logs"
 try:
 	if os.path.exists(log_path):
 		pass

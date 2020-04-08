@@ -167,7 +167,7 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 # draw_map(template_img=img2, destimg=img5)
 
 def process_landmark():
-	img = cv2.imread("C:/work/imgs/test/moni.jpg")
+	img = cv2.imread("C:/work/imgs/test/test7.jpg")
 	# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
 	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
 	with PointLocationService(img=img) as service:

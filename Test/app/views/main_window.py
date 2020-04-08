@@ -29,8 +29,13 @@ class CentWindowUi(object):
 		layout = QtWidgets.QVBoxLayout()
 
 		# days = ['2020-03-26', '2020-03-27']
+		try:
+			if not os.path.exists("c:/video"):
+				os.makedirs("c:/video")
+		except:
+			pass
 		videos = []
-		for file in os.listdir("D:/video"):
+		for file in os.listdir("c:/video"):
 			# if os.path.isfile(file):
 			matchresult = re.match(self.movie_pattern, file)
 			# print(file)

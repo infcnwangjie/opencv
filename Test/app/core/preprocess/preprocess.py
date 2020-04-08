@@ -40,10 +40,10 @@ class Preprocess(object):
 		# if not self.shapedetector.detect(c,4):
 		# 	return False
 		x, y, w, h = cv2.boundingRect(c)
-		if w < 20 or h < 20 or w > 200 or h > 200:
+		if w < 20 or h < 20 :
 			return False
 
-		if not 100 < cv2.contourArea(c) < 20000:
+		if not 100 < cv2.contourArea(c) < 80000:
 			return False
 
 		# targetimg = self.img[y:y + h, x:x + w]

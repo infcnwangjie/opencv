@@ -79,7 +79,7 @@ class PointLocationService:
 		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
 
 	# 计算地标的坐标
-	def iner_computer_landmarks_location(self, digitdetector=None):
+	def iner_computer_landmarks_location(self):
 		process = Preprocess(self.img)
 		binary_image, contours = process.processedlandmarkimg
 		if contours is None or len(contours) == 0:
@@ -91,9 +91,11 @@ class PointLocationService:
 		for countour in contours:
 			x, y, w, h = cv2.boundingRect(countour)
 			cent_x, cent_y = x + round(w * 0.5), y + round(h * 0.5)
-			if 0 < cent_x < 0.3 * cols or 0.75 * cols < cent_x < cols:
-				box = LandMark(countour, binary_image, id=boxindex, digitdetector=digitdetector)
-				box.modify_box_content(digitdetector, no_num=True)
+			# if 0 < cent_x < 0.4 * cols or 0.75 * cols < cent_x < cols:#测试
+			if 0 < cent_x < 0.3 * cols or 0.75 * cols < cent_x < cols: #真实
+
+				box = LandMark(countour, binary_image, id=boxindex)
+				box.modify_box_content(no_num=False)
 				boxindex += 1
 				self.landmarks.append(box)
 		# 过滤袋子->将面积较小的袋子移除
@@ -101,13 +103,13 @@ class PointLocationService:
 		good_contours = []
 		for box in self.landmarks:
 			# 标记坐标和值
-			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
+			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0]-200, box.boxcenterpoint[1] + 60),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 			good_contours.append(box.contour)
 
 		if len(good_contours) > 0:
 			# 用黄色画轮廓
-			cv2.drawContours(self.img, good_contours, -1, (0, 255, 255), 5)
+			cv2.drawContours(self.img, good_contours, -1, ( 255, 255,0), 5)
 
 	# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
 	# cv2.namedWindow("final_contours", 0)
@@ -142,22 +144,12 @@ class PointLocationService:
 		self.iner_computer_landmarks_location()  # 计算地标位置
 		self.inner_computer_bags_location()  # 计算所有袋子定位
 		if self.bags is None or len(self.bags) == 0:
-			reply = QMessageBox.information(self,  # 使用infomation信息框
-			                                "标题",
-			                                "没有发现袋子，请核查实际情况！",
-			                                QMessageBox.Yes | QMessageBox.No)
-			print(reply)
 			mylog_debug("没有发现袋子，请核查实际情况！")
 			return None
 
 		hockposition = self.inner_compute_hook_location()  # 计算钩子位置，为了移动钩子
 
 		if hockposition is None:
-			reply = QMessageBox.information(self,  # 使用infomation信息框
-			                                "标题",
-			                                "没有发现钩子，请核查实际情况！",
-			                                QMessageBox.Yes | QMessageBox.No)
-			print(reply)
 			mylog_error("没有发现钩子，请核查实际情况！")
 			return None
 

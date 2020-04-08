@@ -1,0 +1,5 @@
+https://digi.bib.uni-mannheim.de/tesseract/ 下载exe
+
+pip install -i https://pypi.douban.com/simple/  tesserocr pillow
+或者
+pip install -i https://pypi.douban.com/simple/ pytesseract
