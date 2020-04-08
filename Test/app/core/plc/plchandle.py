@@ -10,12 +10,18 @@ from app.config import HOCK_MOVE_X_PLC, HOCK_MOVE_Y_PLC, HOCK_MOVE_Z_PLC, HOCK_M
 
 
 class PlcHandle:
+	instance = None
+
+	def __new__(cls, *args, **kwargs):
+		if cls.instance == None:
+			cls.instance = super().__new__(cls,*args, **kwargs)
+		return cls.instance
 
 	def __init__(self, plc_port='COM3', timeout=5.0):
 		self.port = plc_port
 
 		self.timeout = timeout
-		if  PLC_OPEN:
+		if PLC_OPEN:
 			self.logger = modbus_tk.utils.create_logger("console")
 			self.init_plc()
 			self.logger.info("connected")
@@ -63,7 +69,7 @@ class PlcHandle:
 			return status_value
 		else:
 
-			statuss = [3,4]
+			statuss = [3, 4]
 			return random.choice(statuss)
 
 	def ugent_stop(self):

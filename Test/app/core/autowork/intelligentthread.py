@@ -68,7 +68,7 @@ class IntelligentThread(QThread):
 
 	def run(self):
 
-		while self.play:
+		while self.play and self.IMAGE_HANDLE:
 			sleep(1/13)
 			frame = self.IMAGE_HANDLE.read()
 			if frame is None:

@@ -3,7 +3,6 @@ import itertools
 import os
 import re
 
-import cv2
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QImage, QPixmap, QIcon
@@ -11,15 +10,9 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter
 
 from app.config import SDK_OPEN, DEBUG
-from app.core.autowork.plcthread import PlcThread
-from app.core.plc.plchandle import PlcHandle
-from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
+from app.core.autowork.process import IntelligentProcess
 from app.core.video.imageprovider import ImageProvider
-from app.core.autowork.intelligentthread import IntelligentThread
-from app.log.logtool import mylog_debug
-from app.status import HockStatus
-import app.icons.resource
-
+from app.icons import resource
 
 class CentWindowUi(object):
 	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
@@ -151,44 +144,14 @@ class CentWindowUi(object):
 		self.stop_button.setText(_translate("MainWindow", "停止"))
 		self.videoBox.setTitle(_translate("MainWindow", "视频区域"))
 
-
 class CenterWindow(QWidget, CentWindowUi):
-	def __init__(self, IMGHANDLE=None):
+	def __init__(self):
 		super().__init__()
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
-		self.check_test_status()  # 查验测试状态
-
-		self.plchandle = PlcHandle()
-
-		self.check_plc_status()  # 检验plc状态
-
-		self.init_plc_thread()  # 初始化plc线程
-
-		self.init_imgdetector_thread(IMGHANDLE)  # 初始化图像处理线程
-
-	def init_plc_thread(self):
-		'''初始化plc线程'''
-		self.plcthread = PlcThread(plchandle=self.plchandle)
-		self.plcthread.askforSingnal.connect(self.askposition_plcsignal_process)
-		self.plcthread.moveSignal.connect(self.notneedposition_plcsignal_process)
-
-	def init_imgdetector_thread(self, IMGHANDLE):
-		'''初始化图像处理线程'''
-		self.intelligentthread = IntelligentThread(IMGHANDLE=IMGHANDLE, positionservice=PointLocationService(),
-		                                           video_player=self.picturelabel)
-		self.intelligentthread.hockstatus = HockStatus.POSITION_NEARESTBAG
-		self.intelligentthread.positionSignal.connect(self.writetoplc_imgsignal_process)  # 发送移动位置
-		self.intelligentthread.dropHockSignal.connect(self.drophock_imgsignal_process)  # 命令放下钩子
-		self.intelligentthread.pullHockSignal.connect(self.pullhock_imgsignal_process)  # 命令拉起钩子
-		self.intelligentthread.findConveyerBeltSignal.connect(self.findconveyerbelt_imgsignal_process)  # 命令移动袋子到传送带
-		self.intelligentthread.dropBagSignal.connect(self.drop_bag_imgsignal_process)
-		self.intelligentthread.rebackSignal.connect(self.reback_imgsignal_process)
-		self.intelligentthread.finishSignal.connect(self.finish_imgsignal_process)
-		self.intelligentthread.foundbagSignal.connect(self.editbagnum_imgsignal_process)
-
-	def check_plc_status(self):
-		self.plc_status_edit.setText('plc连接成功' if self.plchandle.status else "很抱歉，连接失败")
+		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.picturelabel,
+		                                  plc_status_show=self.plc_status_edit, bag_num_show=self.bagnum_edit)
+		self.check_test_status()
 
 	def init_button(self):
 		self.play_button.clicked.connect(self.play)
@@ -199,116 +162,32 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def onClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
-		# print('Key=%s,value=%s' % (item.text(0), item.text(1)))
 		filename = os.path.join("D:/video", item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
 			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
-			self.intelligentthread.IMAGE_HANDLE = imagehandle
+			self.process.IMGHANDLE = imagehandle
 			self.play()
 
 	def play(self):
-		if self.intelligentthread.IMAGE_HANDLE:
-			self.intelligentthread.play = True
-			self.intelligentthread.start()
-			self.plcthread.work = False
-			self.plcthread.start()
+		if self.process.IMGHANDLE:
+			self.process.intelligentthread.play = True
+			self.process.intelligentthread.start()
+			self.process.plcthread.work = False
+			self.process.plcthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
 
 	def autowork(self):
-		self.intelligentthread.work = True
-		self.plcthread.work = True
+		self.process.intelligentthread.work = True
+		self.process.plcthread.work = True
 
 	def stop(self):
 		'''暂停摄像机'''
 		print("关闭摄像")
-		self.intelligentthread.play = False
-
-	def askposition_plcsignal_process(self, info: str):
-		print(info)
-		self.intelligentthread.work = True
-		self.plcthread.work = True
-
-	def notneedposition_plcsignal_process(self, info: str):
-		print(info)
-		self.intelligentthread.work = True
-		self.plcthread.work = True
-
-	def editbagnum_imgsignal_process(self, bagnum):
-		self.bagnum_edit.setText(str(bagnum))
-		print("bag num is {}".format(bagnum))
-
-	def writetoplc_imgsignal_process(self, position):
-		'''接收反馈信号'''
-		x, y, z = position
-		# print("X轴移动：{}，Y轴移动{},z轴移动{}".format(*position))
-		# print(position)
-		self.plchandle.write_position(position)
-		self.plcthread.work = True
-		self.intelligentthread.work = True
-
-	def drophock_imgsignal_process(self, position):
-		_x, _y, z = position
-		print("已经定位袋子，正在放下钩子,z:{}米".format(z))
-		self.plchandle.write_position(position)
-		self.intelligentthread.hockstatus = HockStatus.DROP_HOCK
-		self.currentstatus_edit.setText("已经定位袋子，正在放下钩子")
-
-	def pullhock_imgsignal_process(self, position):
-		_x, _y, z = position
-		self.currentstatus_edit.setText("正在拉起袋子,向上拉取{}米".format(z))
-		self.plchandle.write_position(position)
-		self.intelligentthread.hockstatus = HockStatus.PULL_HOCK
-
-	def findconveyerbelt_imgsignal_process(self, position):
-		self.plchandle.write_position(position)
-		self.currentstatus_edit.setText("袋子要到传送带，先向x,y,z各自移动{},{},{}米".format(*position))
-		self.intelligentthread.hockstatus = HockStatus.FIND_CONVEYERBELT
-
-	def drop_bag_imgsignal_process(self, position):
-		self.plchandle.write_position(position)
-		self.currentstatus_edit.setText("移动袋子抵达传送带，向下移动钩子{}米,放下袋子".format(position[2]))
-		self.intelligentthread.hockstatus = HockStatus.DROP_BAG
-
-	def reback_imgsignal_process(self, position):
-		self.plchandle.write_position(position)
-		print("放下钩子")
-		self.currentstatus_edit.setText("复位")
-		self.intelligentthread.hockstatus = HockStatus.POSITION_NEARESTBAG
-
-	def finish_imgsignal_process(self, info):
-		# print("工作完成")
-		# print(info)
-		self.plchandle.ugent_stop()
-		self.plcthread.work = False
-
-	def afterreback(self, info):
-		'''处理重置'''
-		print(info)
-		self.plcthread.work = True
-		self.intelligentthread.work = False
-
-	def test(self, image=None):
-		self.check_test_status()
-		if image:
-			img = cv2.imread(image)
-		else:
-			img = cv2.imread('C:/work/imgs/test/moni.jpg')
-		with PointLocationService(img=img) as  a:
-			nearest_bag_position, hockposition = a.find_nearest_bag()
-			img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
-				nearest_bag_position, hockposition)
-			mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
-		# img = a.move()
-		img = cv2.resize(a.img, (800, 800))
-		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-		self.picturelabel.setPixmap(QPixmap.fromImage(showImage))
-		self.picturelabel.setScaledContents(True)
+		self.process.intelligentthread.play = False
 
 
 class MainWindow(QMainWindow):
@@ -386,18 +265,15 @@ class MainWindow(QMainWindow):
 	def _openCamera(self):
 		# 正常情况读取sdk
 		imagehandle = ImageProvider(ifsdk=SDK_OPEN)
-		self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
+		self.centralwidget.process.IMGHANDLE = imagehandle
+		self.centralwidget.process.intelligentthread.IMAGE_HANDLE = imagehandle
 		self.centralwidget.play()
 		self.statusBar().showMessage("已经开启摄像头!")
 
-	# self.statusBar().show()
-
 	def _stopCamera(self):
 		'''关闭摄像机'''
-		del self.centralwidget.intelligentthread.IMAGE_HANDLE
+		del self.centralwidget.process.intelligentthread.IMAGE_HANDLE
 		self.statusBar().showMessage("已经关闭摄像头!")
-
-	# self.statusBar().show()
 
 	def _work_as_robot(self):
 		'''开始智能抓取'''
@@ -412,10 +288,10 @@ class MainWindow(QMainWindow):
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
 			if filename.endswith("avi") or filename.endswith("mp4"):
 				imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
-				self.centralwidget.intelligentthread.IMAGE_HANDLE = imagehandle
+				self.centralwidget.process.IMGHANDLE = imagehandle
 				self.centralwidget.play()
 			else:
-				self.centralwidget.test(image=filename)
+				self.centralwidget.process.test(image=filename)
 
 	def _test(self):
-		self.centralwidget.test()
+		self.centralwidget.process.test()

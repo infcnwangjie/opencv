@@ -310,6 +310,8 @@ class PointLocationService:
 		img_distance = math.sqrt(
 			math.pow(point2_y - point1_y, 2) + math.pow(point2_x - point1_x, 2))
 
+		if self.landmarkvirtualdistance is None or self.landmarkvirtualdistance==0:
+			self.landmarkvirtualdistance=1000000
 		# 两个点之间的实际距离
 		land_mark_realspace = DISTANCE_SAMEXLANDMARK_SPACE if self.landmark_select_method == Landmark_Model_Select.CHOOSE_X_SAME else DISTANCE_SAMEYLANDMARK_SPACE
 		real_distance = round(img_distance * land_mark_realspace / self.landmarkvirtualdistance, 2)
