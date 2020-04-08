@@ -33,6 +33,8 @@ class Box:
 		self.box = cv2.boundingRect(contour)
 		self.x, self.y, self.w, self.h = self.box
 		self.boxcenterpoint = (self.x + round(self.w * 0.5), self.y + round(self.h * 0.5))
+		self.x = self.x + round(self.w * 0.5)
+		self.y = self.y + round(self.h * 0.5)
 		self.roi_contours, self.thresh = None, None
 		self.digitLocations = []
 		self.box_content = ""
@@ -82,47 +84,7 @@ class Box:
 				self.boxcenterpoint[1]) + ")"
 			return
 
-		# for digital_contour in self.inercontours:
-		# 	[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
-		# 		digital_contour)
-		# 	roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
-		# 	      digit_point_x:digit_point_x + digit_contor_width]
-		# 	results = digitdetector.readnum(roi)
-		#
-		# 	roi_digitvalue = str(int((results[0][0])))
-		# 	boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
-		# 	                                 bagcenterpoint=self.boxcenterpoint,
-		# 	                                 locationpoint=(
-		# 		                                 self.x + digit_point_x, self.y + digit_point_y))
-		# 	self.digitLocations.append(boxdigitlocation)
-
-		# cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
-		# cv2.drawContours(self.img, self.inercontours)
-		# if self.digitLocations is None or len(self.digitLocations) == 0:
-		# 	return
-		# self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
-		# 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
-		# last_point_x, box_digitnum = 0, ""
-		# for location in self.digitLocations:
-		# 	current_x = location.locationpoint_x
-		# 	if current_x - last_point_x > 10:
-		# 		box_digitnum += location.digitvalue
-		# 	last_point_x = current_x
-		# self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
-		# 	self.boxcenterpoint[1]) + ")"
-
-
-# 地标
-class LandMark(Box):
-	# 修改目标物的显示内容
-	def modify_box_content(self, digitdetector, no_num=True):
-		# 如果box内部没有内部轮廓，就直接退出循环
-		if no_num:
-			self.box_content = "landmark:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
-				self.boxcenterpoint[1]) + ")"
-			return
-
-		# for digital_contour in self.inercontours:
+	# for digital_contour in self.inercontours:
 	# 	[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
 	# 		digital_contour)
 	# 	roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
@@ -135,13 +97,13 @@ class LandMark(Box):
 	# 	                                 locationpoint=(
 	# 		                                 self.x + digit_point_x, self.y + digit_point_y))
 	# 	self.digitLocations.append(boxdigitlocation)
-	#
+
 	# cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
-	# # cv2.drawContours(self.img, self.inercontours)
+	# cv2.drawContours(self.img, self.inercontours)
 	# if self.digitLocations is None or len(self.digitLocations) == 0:
 	# 	return
 	# self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
-	# # 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
+	# 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
 	# last_point_x, box_digitnum = 0, ""
 	# for location in self.digitLocations:
 	# 	current_x = location.locationpoint_x
@@ -152,6 +114,46 @@ class LandMark(Box):
 	# 	self.boxcenterpoint[1]) + ")"
 
 
+# 地标
+class LandMark(Box):
+	# 修改目标物的显示内容
+	def modify_box_content(self, digitdetector, no_num=True):
+		# 如果box内部没有内部轮廓，就直接退出循环
+		if no_num:
+			self.box_content = "landmark:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+				self.boxcenterpoint[1]) + ")"
+			return
+
+	# for digital_contour in self.inercontours:
+# 	[digit_point_x, digit_point_y, digit_contor_width, digit_contor_height] = cv2.boundingRect(
+# 		digital_contour)
+# 	roi = self.thresh[digit_point_y:digit_point_y + digit_contor_height,
+# 	      digit_point_x:digit_point_x + digit_contor_width]
+# 	results = digitdetector.readnum(roi)
+#
+# 	roi_digitvalue = str(int((results[0][0])))
+# 	boxdigitlocation = DigitLocation(digitvalue=roi_digitvalue, boxid=self.id,
+# 	                                 bagcenterpoint=self.boxcenterpoint,
+# 	                                 locationpoint=(
+# 		                                 self.x + digit_point_x, self.y + digit_point_y))
+# 	self.digitLocations.append(boxdigitlocation)
+#
+# cv2.drawContours(self.img, self.inercontours, -1, (0, 0, 128), 5)
+# # cv2.drawContours(self.img, self.inercontours)
+# if self.digitLocations is None or len(self.digitLocations) == 0:
+# 	return
+# self.digitLocations.sort(key=lambda location: location.locationpoint_x, reverse=False)
+# # 用于拼接数字，当然遇到6,8的时候回检测出两个轮廓，用x轴之差决定是否拼接
+# last_point_x, box_digitnum = 0, ""
+# for location in self.digitLocations:
+# 	current_x = location.locationpoint_x
+# 	if current_x - last_point_x > 10:
+# 		box_digitnum += location.digitvalue
+# 	last_point_x = current_x
+# self.box_content = box_digitnum + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+# 	self.boxcenterpoint[1]) + ")"
+
+
 # 袋子
 class Bag(Box):
 	def modify_box_content(self, digitdetector, no_num=True):
@@ -159,12 +161,14 @@ class Bag(Box):
 		self.box_content = "bag_location:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
 			self.boxcenterpoint[1]) + ")"
 
+
 # 激光灯
 class Laster(Box):
 	def modify_box_content(self):
 		# 如果box内部没有内部轮廓，就直接退出循环
 		self.box_content = "laster_location:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
 			self.boxcenterpoint[1]) + ")"
+
 
 # 钩子
 class Hock(Box):

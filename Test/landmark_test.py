@@ -3,8 +3,8 @@ import os
 import cv2
 import numpy as np
 
-from app.config import TEMPLATES_PATH, NEG_TEMPLATES_PATH, TRAIN_DATA_DIR
 from app.core.target_detect.pointlocation import PointLocationService
+from app.log.logtool import mylog_debug
 
 img1 = cv2.imread('C:/work/imgs/test/2020-04-03-08-13-29test.bmp')
 img2 = cv2.imread('C:/work/imgs/test/2020-04-03-09-49-40test.bmp')
@@ -167,12 +167,16 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 # draw_map(template_img=img2, destimg=img5)
 
 def process_landmark():
-	img = cv2.imread("C:/work/imgs/test/2020-04-07-10-56-28test.bmp")
+	img = cv2.imread("C:/work/imgs/test/moni.jpg")
 	# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
 	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
 	with PointLocationService(img=img) as service:
-		service.computer_landmarks_location()
-		service.computer_bags_location()
+		# service.computer_landmarks_location()
+		# service.computer_bags_location()
+		nearest_bag_position, hockposition = service.find_nearest_bag()
+		img_distance, real_distance, real_x_distance, real_y_distance = service.compute_distance(
+			nearest_bag_position, hockposition)
+		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 	# find_landmark_contours(img3)
 	cv2.namedWindow("landmark", 0)
 	loc = cv2.setMouseCallback("landmark", on_EVENT_LBUTTONDOWN)
@@ -182,7 +186,7 @@ def process_landmark():
 
 
 def process_laster():
-	img = cv2.imread("E:/laster.jpg")
+	img = cv2.imread("C:/work/imgs/test/laster5.jpg")
 	colorlow = [35, 43, 46]
 	colorhigh = [77, 255, 255]
 	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -195,11 +199,11 @@ def process_laster():
 	cv2.namedWindow("hockbinaray", 0)
 	cv2.imshow("hockbinaray", binary)
 	contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-	cv2.drawContours(img, contours, -1, (255, 255, 0), 3)  # 找到唯一的轮廓就退出即可
+	cv2.drawContours(img, contours, -1, (0, 255, 255), 3)  # 找到唯一的轮廓就退出即可
 	cv2.namedWindow("hock", 0)
 	cv2.imshow("hock", img)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
 
 
-process_laster()
+process_landmark()

@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 
 # 发现
-from app.config import DETECT_BY_MULTIPLEAREA, TEMPLATES_PATH, NEG_TEMPLATES_PATH
 from app.core.target_detect.histcalcute import calculate
 from app.core.target_detect.shapedetect import ShapeDetector
 
@@ -215,7 +214,7 @@ class Preprocess(object):
 		img1 = self.img.copy()
 		# contours, binary = self.find_contours_bylandmark_colorrange()
 		contours, binary = self.find_landmark_contours()
-		print("contours num is {}".format(len(contours)))
+		# print("contours num is {}".format(len(contours)))
 
 		return binary, contours
 

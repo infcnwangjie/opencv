@@ -1,20 +1,9 @@
 # -*- coding: utf-8 -*-
 import cv2
 
-from app.config import RECT_TEMPLATE_PATH
 
 
-def isRectange(contour):
-	img = cv2.imread(RECT_TEMPLATE_PATH, 0)
-	_, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)
-	contours, hierarchy = cv2.findContours(thresh, 3, 2)
-	print(len(contours))
-	result = cv2.drawContours(img, contours, -1,
-	                          (0, 255, 0), 2)
-	cv2.imshow("testrectang",result)
-	rectange_contor = contours[2]
-	rectange_diff = abs(cv2.matchShapes(contour, rectange_contor, 1, 0.0))
-	return rectange_diff<0.4
+
 
 
 def calculate(image1, image2):
@@ -39,4 +28,4 @@ if __name__ == '__main__':
 	image1 = cv2.imread("C:/work/icons/test/template1.png")
 	image2 = cv2.imread("C:/work/icons/test/8.png")
 	i = calculate(image1, image2)
-	print("相似度为:{}".format(i))
+	# print("相似度为:{}".format(i))

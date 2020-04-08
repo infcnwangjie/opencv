@@ -14,10 +14,12 @@ from app.core.video.mvs.CameraParams_const import MV_GIGE_DEVICE, MV_USB_DEVICE,
 from app.core.video.mvs.CameraParams_header import MV_CC_DEVICE_INFO_LIST, MV_TRIGGER_MODE_OFF, MVCC_INTVALUE, \
 	MV_FRAME_OUT_INFO_EX, MV_SAVE_IMAGE_PARAM_EX, MV_Image_Bmp, MV_CC_DEVICE_INFO
 from app.core.video.mvs.MvCameraControl_class import MvCamera
+from app.log.logtool import mylog_warning, mylog_error, mylog_debug
 
 
 class SdkHandle(object):
 	'''海康sdk句柄'''
+
 	def __init__(self):
 		self.deviceList = MV_CC_DEVICE_INFO_LIST()
 		self.tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
@@ -32,44 +34,43 @@ class SdkHandle(object):
 		# ch:枚举设备 | en:Enum device
 		ret = MvCamera.MV_CC_EnumDevices(self.tlayerType, self.deviceList)
 		if ret != 0:
-			print("enum devices fail! ret[0x%x]" % ret)
+			# print("enum devices fail! ret[0x%x]" % ret)
+			mylog_error("enum devices fail! ret[0x%x]" % ret)
 			raise SdkException("enum devices fail! ret[0x%x]" % ret)
 
 		if self.deviceList.nDeviceNum == 0:
-			print("find no device!")
+			mylog_error("find no device!")
 			raise SdkException("find no device!")
-
-		print("find %d devices!" % self.deviceList.nDeviceNum)
 
 		for i in range(0, self.deviceList.nDeviceNum):
 			mvcc_dev_info = cast(self.deviceList.pDeviceInfo[i], POINTER(MV_CC_DEVICE_INFO)).contents
 			if mvcc_dev_info.nTLayerType == MV_GIGE_DEVICE:
-				print("\ngige device: [%d]" % i)
+				mylog_debug("\ngige device: [%d]" % i)
 				strModeName = ""
 				for per in mvcc_dev_info.SpecialInfo.stGigEInfo.chModelName:
 					strModeName = strModeName + chr(per)
-				print("device model name: %s" % strModeName)
+				mylog_debug("device model name: %s" % strModeName)
 
 				nip1 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24)
 				nip2 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16)
 				nip3 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8)
 				nip4 = (mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff)
-				print("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
+				mylog_debug("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
 			elif mvcc_dev_info.nTLayerType == MV_USB_DEVICE:
-				print("\nu3v device: [%d]" % i)
+				mylog_debug("\nu3v device: [%d]" % i)
 				strModeName = ""
 				for per in mvcc_dev_info.SpecialInfo.stUsb3VInfo.chModelName:
 					if per == 0:
 						break
 					strModeName = strModeName + chr(per)
-				print("device model name: %s" % strModeName)
+				mylog_debug("device model name: %s" % strModeName)
 
 				strSerialNumber = ""
 				for per in mvcc_dev_info.SpecialInfo.stUsb3VInfo.chSerialNumber:
 					if per == 0:
 						break
 					strSerialNumber = strSerialNumber + chr(per)
-				print("user serial number: %s" % strSerialNumber)
+				mylog_debug("user serial number: %s" % strSerialNumber)
 
 	# 开启工业相机
 	def create_camera(self):
@@ -79,12 +80,12 @@ class SdkHandle(object):
 
 		ret = self.cam.MV_CC_CreateHandle(stDeviceList)
 		if ret != 0:
-			print("create handle fail! ret[0x%x]" % ret)
+			mylog_debug("create handle fail! ret[0x%x]" % ret)
 
 		# ch:打开设备 | en:Open device
 		ret = self.cam.MV_CC_OpenDevice(MV_ACCESS_Exclusive, 0)
 		if ret != 0:
-			print("open device fail! ret[0x%x]" % ret)
+			mylog_error("open device fail! ret[0x%x]" % ret)
 
 		# ch:探测网络最f佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
 		if stDeviceList.nTLayerType == MV_GIGE_DEVICE:
@@ -92,14 +93,14 @@ class SdkHandle(object):
 			if int(nPacketSize) > 0:
 				ret = self.cam.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
 				if ret != 0:
-					print("Warning: Set Packet Size fail! ret[0x%x]" % ret)
+					mylog_error("Warning: Set Packet Size fail! ret[0x%x]" % ret)
 			else:
-				print("Warning: Get Packet Size fail! ret[0x%x]" % nPacketSize)
+				mylog_error("Warning: Get Packet Size fail! ret[0x%x]" % nPacketSize)
 
 		# ch:设置触发模式为off | en:Set trigger mode as off
 		ret = self.cam.MV_CC_SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF)
 		if ret != 0:
-			print("set trigger mode fail! ret[0x%x]" % ret)
+			mylog_error("set trigger mode fail! ret[0x%x]" % ret)
 
 		# ch:获取数据包大小 | en:Get payload size
 		self.stParam = MVCC_INTVALUE()
@@ -107,12 +108,12 @@ class SdkHandle(object):
 
 		ret = self.cam.MV_CC_GetIntValue("PayloadSize", self.stParam)
 		if ret != 0:
-			print("get payload size fail! ret[0x%x]" % ret)
+			mylog_error("get payload size fail! ret[0x%x]" % ret)
 			sys.exit()
 
 		ret = self.cam.MV_CC_StartGrabbing()
 		if ret != 0:
-			print("start grabbing fail! ret[0x%x]" % ret)
+			mylog_error("start grabbing fail! ret[0x%x]" % ret)
 			sys.exit()
 
 	def init_all(self):
@@ -128,7 +129,7 @@ class SdkHandle(object):
 		if ret == 0:
 			# Stop = time()
 			# print(Stop - start)
-			print("get one frame: Width[%d], Height[%d], nFrameNum[%d]" % (
+			mylog_debug("get one frame: Width[%d], Height[%d], nFrameNum[%d]" % (
 				stDeviceList.nWidth, stDeviceList.nHeight, stDeviceList.nFrameNum))
 
 			stConvertParam = MV_SAVE_IMAGE_PARAM_EX()
@@ -159,11 +160,11 @@ class SdkHandle(object):
 			bmp_buf = (c_ubyte * bmpsize)()
 			stConvertParam.pImageBuffer = bmp_buf
 
-			ret = self.cam.MV_CC_SaveImageEx2(stConvertParam)
-			if ret != 0:
-				print("save file executed failed0:! ret[0x%x]" % ret)
-				del data_buf
-				sys.exit()
+			# ret = self.cam.MV_CC_SaveImageEx2(stConvertParam)
+			# if ret != 0:
+			# 	mylog_debug("save file executed failed0:! ret[0x%x]" % ret)
+			# 	del data_buf
+			# 	sys.exit()
 			# print(stop - start)
 			# file_open = open(file_path.encode('ascii'), 'wb+')
 			try:

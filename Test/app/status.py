@@ -7,6 +7,6 @@ class HockStatus:
 	DROP_BAG = 4  # 结束
 	REBACK = 5  # 复位
 
-
-class  LocationMode:
-	pass
+class Landmark_Model_Select:
+	CHOOSE_X_SAME=0
+	CHOOSE_Y_SAME=1

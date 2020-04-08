@@ -8,6 +8,7 @@ from PyQt5.QtGui import QImage, QPixmap
 from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
 from app.core.plc.plchandle import PlcHandle
 from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
+from app.log.logtool import mylog_error, mylog_debug
 from app.status import HockStatus
 
 
@@ -68,7 +69,7 @@ class IntelligentThread(QThread):
 	def run(self):
 
 		while self.play:
-			sleep(1)
+			sleep(1/13)
 			frame = self.IMAGE_HANDLE.read()
 			if frame is None:
 				# self.finish = True
@@ -94,15 +95,18 @@ class IntelligentThread(QThread):
 	def process(self):
 		if self.hockstatus == HockStatus.POSITION_NEARESTBAG:
 			try:
-				self.positionservice.computer_landmarks_location()
-				self.positionservice.computer_bags_location()
-				# nearest_bag_position, hockposition = self.positionservice.compute_bag_hock_location()
-				# img_distance, real_distance, real_x_distance, real_y_distance = self.positionservice.compute_distance(
-				# 	nearest_bag_position, hockposition)
-				bagnum = len(self.positionservice.bags)
-				self.bagnums.append(bagnum)
-				if len(self.bagnums) > 7:
-					self.foundbagSignal.emit(max(self.bagnums))
+				locationinfo = self.positionservice.find_nearest_bag()
+				if locationinfo is None:
+					return
+				else:
+					nearest_bag_position, hockposition = locationinfo
+					img_distance, real_distance, real_x_distance, real_y_distance = self.positionservice.compute_distance(
+						nearest_bag_position, hockposition)
+					mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
+					bagnum = len(self.positionservice.bags)
+					self.bagnums.append(bagnum)
+					if len(self.bagnums) > 7:
+						self.foundbagSignal.emit(max(self.bagnums))
 			# print("向PLC中写入需要移动的X、Y轴移动距离")
 			# movex = real_x_distance
 			# movey = real_y_distance
@@ -119,24 +123,25 @@ class IntelligentThread(QThread):
 
 		# TODO 图像检测是否钩住袋子
 		elif self.hockstatus == HockStatus.DROP_HOCK:
-			print("图像检测，钩子向下是否抵达袋子")
+			# print("图像检测，钩子向下是否抵达袋子")
 			self.positionservice.compute_hook_location()
-			print("图像检测，钩子已经挂住袋子，发出拉取袋子命令")
+			# print("图像检测，钩子已经挂住袋子，发出拉取袋子命令")
 			self.pullHockSignal.emit((0, 0, 7))  # 向上拉袋子
 			self.send_positions.append((0, 0, 7))
 		# TODO 图像检测是否拉起袋子
 		elif self.hockstatus == HockStatus.PULL_HOCK:
-			print("图像检测程序检测是否拉起钩子")
+			# print("图像检测程序检测是否拉起钩子")
 			self.positionservice.compute_hook_location()
-			print("图像检测开始检测传送带区域，准备放下袋子")
+			# print("图像检测开始检测传送带区域，准备放下袋子")
 			self.findConveyerBeltSignal.emit((0, 3, 0))
 
 		# TODO 图像检测是否抵达放置区
 		elif self.hockstatus == HockStatus.FIND_CONVEYERBELT:
-			print("定位传送带位置")
+			# print("定位传送带位置")
 			self.findConveyerBeltSignal.emit((0, 3, 0))
 			distance_place = 0
 			if distance_place == 0:
 				self.dropBagSignal.emit((0, 0, 7))
+
 		elif self.hockstatus == HockStatus.DROP_BAG:
 			self.rebackSignal.emit((0, 10, 0))
