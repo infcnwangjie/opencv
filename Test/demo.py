@@ -36,18 +36,18 @@ def sdk_test():
 	cv2.namedWindow("result", 0)
 	cv2.imshow("result", image)
 	cv2.waitKey(0)
-
-def read_num():
-	import pytesseract
-	from PIL import Image
-	#
-	# print(pytesseract.tesseract_version())  # print tesseract-ocr version
-	# print(pytesseract.get_languages())  # prints tessdata path and list of available languages
-
-	image = Image.open(r'C:\work\imgs\test\10.png')
-	print(pytesseract.image_to_string(image))  # print ocr text from image
-	# or
-	# print(pytesseract.file_to_text('sample.jpg'))
+#
+# def read_num():
+# 	import pytesseract
+# 	from PIL import Image
+# 	#
+# 	# print(pytesseract.tesseract_version())  # print tesseract-ocr version
+# 	# print(pytesseract.get_languages())  # prints tessdata path and list of available languages
+#
+# 	image = Image.open(r'C:\work\imgs\test\10.png')
+# 	print(pytesseract.image_to_string(image))  # print ocr text from image
+# 	# or
+# 	# print(pytesseract.file_to_text('sample.jpg'))
 
 if __name__ == '__main__':
-	read_num()
+	comput_test()

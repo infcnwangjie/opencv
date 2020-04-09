@@ -167,16 +167,18 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 # draw_map(template_img=img2, destimg=img5)
 
 def process_landmark():
-	img = cv2.imread("C:/work/imgs/test/test7.jpg")
+	img = cv2.imread("C:/work/imgs/test/final.jpg")
 	# img=cv2.imread("C:/work/imgs/test/2020-04-03-16-15-28test.bmp")
 	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
 	with PointLocationService(img=img) as service:
 		# service.computer_landmarks_location()
 		# service.computer_bags_location()
-		nearest_bag_position, hockposition = service.find_nearest_bag()
-		img_distance, real_distance, real_x_distance, real_y_distance = service.compute_distance(
-			nearest_bag_position, hockposition)
-		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
+		locationinfo = service.find_nearest_bag()
+		if locationinfo is not None:
+			nearest_bag_position, hockposition=locationinfo
+			img_distance, real_distance, real_x_distance, real_y_distance = service.compute_distance(
+				nearest_bag_position, hockposition)
+			mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 	# find_landmark_contours(img3)
 	cv2.namedWindow("landmark", 0)
 	loc = cv2.setMouseCallback("landmark", on_EVENT_LBUTTONDOWN)

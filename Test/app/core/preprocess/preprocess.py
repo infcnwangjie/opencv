@@ -8,12 +8,22 @@ from app.core.target_detect.shapedetect import ShapeDetector
 
 
 class Preprocess(object):
+	'''
+	预处理操作都在这里
+	'''
+
 	def __init__(self, img):
 		if isinstance(img, str):
 			self.img = cv2.imread(img)
 		else:
 			self.img = img
 		self.shapedetector = ShapeDetector()
+
+	@property
+	def shape(self):
+		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
+		return rows, cols
 
 	# 直方图正规化
 	def enhance_histrg(self, img):
@@ -40,7 +50,7 @@ class Preprocess(object):
 		# if not self.shapedetector.detect(c,4):
 		# 	return False
 		x, y, w, h = cv2.boundingRect(c)
-		if w < 20 or h < 20 :
+		if w < 20 or h < 20:
 			return False
 
 		if not 100 < cv2.contourArea(c) < 80000:
@@ -73,6 +83,7 @@ class Preprocess(object):
 	# 普通二值化操作
 	def find_landmark_contours(self):
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		# self.img = self.enhance_histrg(gray)
 		# cv2.namedWindow("gray", 0)
 		# cv2.imshow("gray", gray)
 		# gray = cv2.equalizeHist(gray)
@@ -87,75 +98,11 @@ class Preprocess(object):
 		ret, binary = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
 		# 去噪
 		binary = cv2.medianBlur(binary, 3)
+
+		# cv2.imshow("first",binary)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-		# 行车环境，左侧部分光线较明亮
-		# left_gray = gray[:, 0:round(cols / 2 - 1)]
-		# 110 能检测出06 07 ；40 能检测出05
-		# left_ret, left_binary = cv2.threshold(left_gray, 110, 250, cv2.THRESH_BINARY)  # 灰度阈值
-		# 40
-		# left_ret_support, left_binary_support_40 = cv2.threshold(left_gray, 40, 250, cv2.THRESH_BINARY)  # 灰度阈值
-		# 60
-		# left_ret_support_60, left_binary_support60 = cv2.threshold(left_gray, 60, 250, cv2.THRESH_BINARY)  # 灰度阈值
-		# support_left_contours_40, _drop = cv2.findContours(left_binary_support_40, cv2.RETR_EXTERNAL,
-		#                                                    cv2.CHAIN_APPROX_SIMPLE)
-
-		# support_left_contours_60, _drop = cv2.findContours(left_binary_support60, cv2.RETR_EXTERNAL,
-		#                                                    cv2.CHAIN_APPROX_SIMPLE)
-
-		#
-		# left_binary_firststep = cv2.bitwise_or(left_binary, left_binary_support_40)
-		# left_binary_secondstep = cv2.bitwise_or(left_binary, left_binary_support60)
-
-		# cv2.imshow("left_binary_support60",left_binary_support60)
-
-		# 行车环境，右侧部分光线较暗
-		# right_gray = gray[:, round(cols / 2):]
-		# 60
-
-		# right_ret, right_binary = cv2.threshold(right_gray, 60, 250, cv2.THRESH_BINARY)  # 灰度阈值
-		# right_ret, right_binary_40 = cv2.threshold(right_gray, 40, 250, cv2.THRESH_BINARY)  # 灰度阈值
-		# right_contours_40, _drop = cv2.findContours(right_binary_40, cv2.RETR_EXTERNAL,
-		#                                             cv2.CHAIN_APPROX_SIMPLE)
-
-		# binary = np.zeros_like(gray)
-		# binary[:, 0:round(cols / 2 - 1)] = left_binary
-		# binary[:, round(cols / 2):] = right_binary
-
-		# contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-		# cv2.namedWindow("first_contours", 0)
-		# cv2.imshow("first_contours", self.img)
-
-		# allzero = np.zeros_like(binary)
-		# for contour in contours:
-		# 	x, y, w, h = cv2.boundingRect(contour)
-		# 	allzero[y:y + h, x:x + w] = binary[y:y + h, x:x + w]
-
-		# for support_left_contour in support_left_contours_40:
-		# 	x, y, w, h = cv2.boundingRect(support_left_contour)
-		# 	allzero[y:y + h, x:x + w] = left_binary_support_40[y:y + h, x:x + w]
-
-		# for support_left_contour in support_left_contours_60:
-		# 	x, y, w, h = cv2.boundingRect(support_left_contour)
-		# 	allzero[y:y + h, x:x + w] = left_binary_support60[y:y + h, x:x + w]
-
-		# for support_right_contour in right_contours_40:
-		# 	x, y, w, h = cv2.boundingRect(support_right_contour)
-		# 	allzero[y:y + h, x:x + w] = right_binary_40[y:y + h, x:x + w]
-		#
-		# all_contours = contours + support_left_contours_40 + support_left_contours_60
 		all_contours = list(filter(lambda c: self.filter_landmark_contours(c), contours))
-		#
-		# cv2.namedWindow("final_binary", 0)
-		# cv2.imshow("final_binary", allzero)
-
-		# cv2.namedWindow("temp_contours", 0)
-
-		# cv2.drawContours(self.img, all_contours, -1, (0, 255, 255), 5)
-		# cv2.imshow("temp_contours", self.img)
-
-		# return all_contours, allzero
 		return all_contours, binary
 
 	# 对灰度图像做数据插值运算
@@ -211,7 +158,8 @@ class Preprocess(object):
 	# 获取已处理过的二值化图像
 	@property
 	def processedlandmarkimg(self):
-		img1 = self.img.copy()
+		# img1 = self.img.copy()
+
 		# contours, binary = self.find_contours_bylandmark_colorrange()
 		contours, binary = self.find_landmark_contours()
 		# print("contours num is {}".format(len(contours)))
@@ -234,6 +182,15 @@ class Preprocess(object):
 
 	@property
 	def processed_laster(self):
+		def filter_laster_contour(c):
+			rows,cols=self.shape
+			x, y, w, h = cv2.boundingRect(c)
+			if w<20 or h<20:
+				return False
+			if 0.32 * cols < x+0.5*w < 0.72 * cols:
+				return True
+			else:
+				return False
 		colorlow = [35, 43, 46]
 		colorhigh = [77, 255, 255]
 		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
@@ -246,9 +203,6 @@ class Preprocess(object):
 		# cv2.namedWindow("hockbinaray",0)
 		# cv2.imshow("hockbinaray",binary)
 		contours, _hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		goodcontours = list(filter(filter_laster_contour, contours))
 
-		# 倒叙排序，返回面积最大的轮廓
-		goodcontours = sorted(list(filter(lambda c: cv2.contourArea(c) > 100, contours)),
-		                      key=lambda c: cv2.contourArea(c), reverse=True)
-
-		return binary, goodcontours[0]
+		return binary, goodcontours

@@ -122,12 +122,14 @@ class IntelligentProcess(object):
 		if image:
 			img = cv2.imread(image)
 		else:
-			img = cv2.imread('C:/work/imgs/test/moni.jpg')
+			img = cv2.imread('C:/work/imgs/test/2020-04-09-08-22-55test.bmp')
 		with PointLocationService(img=img) as  a:
-			nearest_bag_position, hockposition = a.find_nearest_bag()
-			img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
-				nearest_bag_position, hockposition)
-			mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
+			locationinfo=a.find_nearest_bag()
+			if locationinfo is not None:
+				nearest_bag_position, hockposition = a.find_nearest_bag()
+				img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
+					nearest_bag_position, hockposition)
+				mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 		# img = a.move()
 		img = cv2.resize(a.img, (800, 800))
 		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

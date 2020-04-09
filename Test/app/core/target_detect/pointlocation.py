@@ -76,12 +76,16 @@ class PointLocationService:
 				self.bags.append(box)
 
 		# 用紫色画轮廓
-		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 0), 1)
+		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
 
 	# 计算地标的坐标
 	def iner_computer_landmarks_location(self):
 		process = Preprocess(self.img)
 		binary_image, contours = process.processedlandmarkimg
+		# kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+		# dilate_img = cv2.dilate(binary_image, kernel)
+		# binary_image = cv2.erode(dilate_img, kernel)
+
 		if contours is None or len(contours) == 0:
 			return
 
@@ -92,10 +96,10 @@ class PointLocationService:
 			x, y, w, h = cv2.boundingRect(countour)
 			cent_x, cent_y = x + round(w * 0.5), y + round(h * 0.5)
 			# if 0 < cent_x < 0.4 * cols or 0.75 * cols < cent_x < cols:#测试
-			if 0 < cent_x < 0.3 * cols or 0.75 * cols < cent_x < cols: #真实
+			if 0 < cent_x < 0.3 * cols or 0.75 * cols < cent_x < cols:  # 真实
 
-				box = LandMark(countour, binary_image, id=boxindex)
-				box.modify_box_content(no_num=False)
+				box = LandMark(countour, binary_image, id=boxindex, ori_img=self.img)
+				box.modify_box_content(no_num=True)
 				boxindex += 1
 				self.landmarks.append(box)
 		# 过滤袋子->将面积较小的袋子移除
@@ -103,13 +107,15 @@ class PointLocationService:
 		good_contours = []
 		for box in self.landmarks:
 			# 标记坐标和值
-			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0]-200, box.boxcenterpoint[1] + 60),
+			cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] - 200, box.boxcenterpoint[1] + 60),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 			good_contours.append(box.contour)
 
 		if len(good_contours) > 0:
 			# 用黄色画轮廓
-			cv2.drawContours(self.img, good_contours, -1, ( 255, 255,0), 5)
+			cv2.drawContours(self.img, good_contours, -1, (255, 255, 0), 5)
+
+	# pass
 
 	# cv2.drawContours(self.img, contours, -1, (0, 255, 255), 5)
 	# cv2.namedWindow("final_contours", 0)
@@ -165,7 +171,7 @@ class PointLocationService:
 		self.nearestbag = nearest_bag  # 计算出离钩子距离最近的袋子
 
 		img_distance, real_distance, move_x, move_y = self.compute_distance(nearest_bag.boxcenterpoint, hockposition)
-		cv2.circle(self.img, nearest_bag.boxcenterpoint, 100, (0, 255, 0), thickness=3)
+		cv2.circle(self.img, nearest_bag.boxcenterpoint, 40, (0, 255, 0), thickness=3)
 		cv2.putText(self.img, "nearest bag,distance is {} pixer".format(img_distance),
 		            (nearest_bag.boxcenterpoint[0] + 50, nearest_bag.boxcenterpoint[1],), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 		            (255, 0, 0), 2)
@@ -221,14 +227,29 @@ class PointLocationService:
 		已知量：灯光的位置、地标间隔实际距离、地标间隔图像距离，摄像头在Y轴上距离是固定的，不用去管
 		:return:
 		'''
+
+
+
+		def distance_middle(contour):
+			rows, cols = self.shape
+			x, y, w, h = cv2.boundingRect(contour)
+			print(x,y,w,h,abs(cols / 2 - x))
+			return abs(cols / 2 - x)
+
 		process = Preprocess(self.img)
-		laster_binary, contour = process.processed_laster
+		laster_binary, contours = process.processed_laster
 		# cv2.imshow("binary1", laster_binary)
-		if contour is None:
+		if contours is None:
 			return None
 
-		cv2.drawContours(self.img, [contour], -1, (0, 255, 0), 1)  # 找到唯一的轮廓就退出即可
-		laster = Laster(contour, laster_binary, id=0)
+
+
+		goodcontours = sorted(contours,
+		                      key=lambda c: distance_middle(c), reverse=False)
+
+		cv2.drawContours(self.img,goodcontours, -1, (255, 0, 0), 3)  # 找到唯一的轮廓就退出即可
+
+		laster = Laster(goodcontours[0], laster_binary, id=0)
 		laster.modify_box_content()
 		self.laster = laster
 
@@ -239,10 +260,10 @@ class PointLocationService:
 		# cv2.circle(self.img, lasterposition, 40, (0, 0, 255), -1)
 		# TODO 实际钩子的距离需要根据灯光的距离计算出来
 		hockposition = lasterposition  # 钩子的坐标
-		# cv2.circle(self.img, hockposition, 60, (65, 105, 225), -1)
-		cv2.putText(self.img, "hock location->({},{})".format(hockposition[0], hockposition[1]),
-		            (hockposition[0] + 100, hockposition[1]),
-		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (65, 105, 225), 2)
+		# cv2.circle(self.img, hockposition, 60, (250, 0, 0), -1)
+		cv2.putText(self.img, "hock->({},{})".format(hockposition[0], hockposition[1]),
+		            (hockposition[0], hockposition[1]),
+		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (250, 0, 0), 2)
 
 		return hockposition
 
@@ -302,8 +323,8 @@ class PointLocationService:
 		img_distance = math.sqrt(
 			math.pow(point2_y - point1_y, 2) + math.pow(point2_x - point1_x, 2))
 
-		if self.landmarkvirtualdistance is None or self.landmarkvirtualdistance==0:
-			self.landmarkvirtualdistance=1000000
+		if self.landmarkvirtualdistance is None or self.landmarkvirtualdistance == 0:
+			self.landmarkvirtualdistance = 1000000
 		# 两个点之间的实际距离
 		land_mark_realspace = DISTANCE_SAMEXLANDMARK_SPACE if self.landmark_select_method == Landmark_Model_Select.CHOOSE_X_SAME else DISTANCE_SAMEYLANDMARK_SPACE
 		real_distance = round(img_distance * land_mark_realspace / self.landmarkvirtualdistance, 2)

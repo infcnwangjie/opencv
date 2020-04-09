@@ -33,7 +33,7 @@ class DigitDetector:
         return retval, results, neigh_resp, dists
 
     def readnum(self, roi):
-        # print(roi.shape)
+        print(roi.shape)
         roismall = cv2.resize(roi, (30, 30))
         roismall = roismall.reshape((1, 900))
         # roismall = cv2.resize(roi, (60, 60))
