@@ -7,7 +7,7 @@ from PyQt5.QtGui import QImage, QPixmap
 
 from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
 from app.core.plc.plchandle import PlcHandle
-from app.core.target_detect.pointlocation import PointLocationService, BAG_AND_LANDMARK
+from app.core.location.locationservice import PointLocationService, BAG_AND_LANDMARK
 from app.log.logtool import mylog_error, mylog_debug
 from app.status import HockStatus
 
@@ -124,14 +124,14 @@ class IntelligentThread(QThread):
 		# TODO 图像检测是否钩住袋子
 		elif self.hockstatus == HockStatus.DROP_HOCK:
 			# print("图像检测，钩子向下是否抵达袋子")
-			self.positionservice.compute_hook_location()
+			self.positionservice.compute_hook_location
 			# print("图像检测，钩子已经挂住袋子，发出拉取袋子命令")
 			self.pullHockSignal.emit((0, 0, 7))  # 向上拉袋子
 			self.send_positions.append((0, 0, 7))
 		# TODO 图像检测是否拉起袋子
 		elif self.hockstatus == HockStatus.PULL_HOCK:
 			# print("图像检测程序检测是否拉起钩子")
-			self.positionservice.compute_hook_location()
+			self.positionservice.compute_hook_location
 			# print("图像检测开始检测传送带区域，准备放下袋子")
 			self.findConveyerBeltSignal.emit((0, 3, 0))
 

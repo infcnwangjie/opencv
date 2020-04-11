@@ -4,7 +4,7 @@ from PyQt5.QtGui import QImage, QPixmap
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.core.autowork.plcthread import PlcThread
 from app.core.plc.plchandle import PlcHandle
-from app.core.target_detect.pointlocation import PointLocationService
+from app.core.location.locationservice import PointLocationService
 from app.log.logtool import mylog_debug
 from app.status import HockStatus
 
@@ -122,11 +122,11 @@ class IntelligentProcess(object):
 		if image:
 			img = cv2.imread(image)
 		else:
-			img = cv2.imread('C:/work/imgs/test/2020-04-09-08-22-55test.bmp')
+			img = cv2.imread('C:/work/imgs/test/2020-04-10-15-26-22test.bmp')
 		with PointLocationService(img=img) as  a:
 			locationinfo=a.find_nearest_bag()
 			if locationinfo is not None:
-				nearest_bag_position, hockposition = a.find_nearest_bag()
+				nearest_bag_position, hockposition = locationinfo
 				img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
 					nearest_bag_position, hockposition)
 				mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))

@@ -1,0 +1,121 @@
+# -*- coding: utf-8 -*-
+import cv2
+import numpy as np
+
+# 发现
+from app.core.support.shapedetect import ShapeDetector
+
+
+class Preprocess(object):
+	'''
+	预处理操作都在这里
+	'''
+
+	def __init__(self, img):
+		if isinstance(img, str):
+			self.img = cv2.imread(img)
+		else:
+			self.img = img
+
+		self.hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+
+	@property
+	def shape(self):
+		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
+		return rows, cols
+
+	# 图像锐化操作
+	def sharper(self, image):
+		kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], np.float32)  # 定义一个核
+		dst = cv2.filter2D(image, -1, kernel=kernel)
+		return dst
+
+	# 对灰度图像做数据插值运算
+	def interpolation_binary_data(self, binary_image):
+		# rows, cols = binary_image.shape
+		destimg = np.zeros_like(binary_image)
+		cv2.resize(binary_image, destimg, interpolation=cv2.INTER_NEAREST)
+		return destimg
+
+	def enhanceimg(self):
+		rows, cols = self.shape
+		self.hsv[:, 0:int(0.5 * cols), 2] += 3
+		self.hsv[:, int(0.5 * cols + 1):cols, 2] += 10
+		self.hsv = self.hsv
+
+	def color_similar_ratio(self, image1, image2):
+		'''两张图片的相似度'''
+		if image1 is None or image2 is None:
+			return 0
+		img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
+		img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2HSV)
+		hist1 = cv2.calcHist([img1], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		# cv2.imshow("hist1",hist1)
+		hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+		# print(degree)
+		# if degree > 0.56:
+		# 	backproject = cv2.calcBackProject([img2], [0, 1], hist1, [0, 180, 0, 255.0], 1)
+		# 	cv2.imshow("backproject", backproject)
+		# 	cv2.waitKey(0)
+		# 	cv2.destroyAllWindows()
+		return degree
+
+	def red_contours(self):
+		'''返回红色轮廓'''
+
+		red_low, red_high = [120, 50, 50], [180, 255, 255]
+
+		red_min, red_max = np.array(red_low), np.array(red_high)
+		# 去除颜色范围外的其余颜色
+		red_mask = cv2.inRange(self.hsv, red_min, red_max)
+
+		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
+		# 去噪
+		red_binary = cv2.medianBlur(red_binary, 3)
+
+		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+		return red_binary, red_contours
+
+	def yellow_contours(self):
+		'''
+		返回黄色轮廓
+		:return:
+		'''
+		yellow_low, yellow_high = [11, 43, 46], [34, 255, 255]
+
+		yellow_min, yellow_max = np.array(yellow_low), np.array(yellow_high)
+		# 去除颜色范围外的其余颜色
+		yellow_mask = cv2.inRange(self.hsv, yellow_min, yellow_max)
+
+		yellow_ret, yellow_binary = cv2.threshold(yellow_mask, 0, 255, cv2.THRESH_BINARY)
+		# 去噪
+		yellow_binary = cv2.medianBlur(yellow_binary, 3)
+
+		yellow_contours, _hierarchy = cv2.findContours(yellow_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+		return yellow_binary, yellow_contours
+
+	def green_contours(self):
+		'''
+		返回黄色轮廓
+		:return:
+		'''
+		green_low, green_high = [35, 43, 46], [77, 255, 255]
+		# green_low, green_high = [17, 43, 46], [77, 255, 255]
+
+		green_min, green_max = np.array(green_low), np.array(green_high)
+		# 去除颜色范围外的其余颜色
+		green_mask = cv2.inRange(self.hsv, green_min, green_max)
+
+		green_ret, green_binary = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
+		# 去噪
+		green_binary = cv2.medianBlur(green_binary, 3)
+
+		green_contours, _hierarchy = cv2.findContours(green_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+		return green_binary, green_contours

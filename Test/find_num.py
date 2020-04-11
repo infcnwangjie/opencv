@@ -17,7 +17,7 @@ def enhance_histrg( img):
 
 def orb_match():
 	img1 = cv2.imread("C:/work/imgs/test/1.jpg")  # 导入灰度图像
-	img2 = cv2.imread("C:/work/imgs/test/final.jpg")
+	img2 = cv2.imread("2020-04-10-15-26-22test.bmp")
 
 	detector = cv2.ORB_create()
 
@@ -44,7 +44,7 @@ def tempate_detect():
 	# 读取模板图片
 	template = cv2.imread("C:/work/imgs/test/1.jpg")
 	# 读取目标图片
-	target = cv2.imread("C:/work/imgs/test/final.jpg")
+	target = cv2.imread("2020-04-10-15-26-22test.bmp")
 	# 获得模板图片的高宽尺寸
 	theight, twidth = template.shape[:2]
 
@@ -87,5 +87,5 @@ def tempate_detect():
 	cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    # orb_match()
-    tempate_detect()
+    orb_match()
+    # tempate_detect()
