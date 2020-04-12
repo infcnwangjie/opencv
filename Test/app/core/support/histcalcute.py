@@ -13,7 +13,7 @@ def color_similar_ratio(image1, image2):
 	hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
 	cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
 	degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
-	print(degree)
+	# print(degree)
 	# if degree > 0.56:
 	# 	backproject = cv2.calcBackProject([img2], [0, 1], hist1, [0, 180, 0, 255.0], 1)
 	# 	cv2.imshow("backproject", backproject)
@@ -26,31 +26,33 @@ def slide():
 	img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	rows, cols = gray.shape
-	for row in range(0,rows):
+	for row in range(0, rows):
 		for col in range(502, 612):
 			# print("-" * 1000)
 			yield (col, row, img[row:row + 80, col:col + 80])
-		# for col in range(2619, 2743):
-		# 	print("-" * 1000)
-		# 	yield (col, row, img[row:row + 80, col:col + 80])
+	# for col in range(2619, 2743):
+	# 	print("-" * 1000)
+	# 	yield (col, row, img[row:row + 80, col:col + 80])
 
 
-
+import numpy as np
+# np.ctypeslib.ndpointer(dtype=np.float64,ndim=1,flags="C_CONTIGUOUS")
 
 def my_testslide():
-	roi_red_img=cv2.imread("D:/roi_red.png")
-	for col,row,img in slide():
+	roi_img = cv2.imread("D:/roi_yr.png")
+	for col, row, img in slide():
 		# print("+"*100)
 		# print("rows:{},cols:{}".format(row,col))
-		roi_red_img=cv2.resize(roi_red_img,(80,80))
-		similar=color_similar_ratio(roi_red_img,img)
+		roi_img = cv2.resize(roi_img, (80, 80))
+		similar = color_similar_ratio(roi_img, img)
 		# print("similar:{}".format(similar))
-		if similar>0.85:
+		if similar > 0.85:
 			print("find red landmark")
+			print("position:({},{})".format(col, row))
 			cv2.namedWindow("roi", 0)
-			cv2.imshow("roi", roi_red_img)
+			cv2.imshow("roi", roi_img)
 			cv2.namedWindow("target")
-			cv2.imshow("target",img)
+			cv2.imshow("target", img)
 
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import cv2
-
+#https://baijiahao.baidu.com/s?id=1615404760897105428&wfr=spider&for=pc
 
 def color_similar_ratio(image1, image2):
 	if image1 is None or image2 is None:
