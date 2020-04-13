@@ -28,6 +28,31 @@ class LandMarkDetector(Preprocess):
 		else:
 			pass
 
+	def similarity(self, image1, image2):
+		if image1 is None or image2 is None:
+			return 0
+		img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
+		img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2HSV)
+		hist1 = cv2.calcHist([img1], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
+		return degree
+
+	def slide(self):
+		img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
+		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
+		for row in range(0, rows):
+			for col in range(502, 612):
+				# print("-" * 1000)
+				yield (col, row, img[row:row + 80, col:col + 80])
+
+	# for col in range(2619, 2743):
+	# 	print("-" * 1000)
+	# 	yield (col, row, img[row:row + 80, col:col + 80])
+
 	# 获取已处理过的二值化图像
 	@property
 	def processedlandmarkimg(self):

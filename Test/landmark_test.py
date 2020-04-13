@@ -169,8 +169,9 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 def process_landmark():
 	# img = cv2.imread("C:/work/imgs/test/final.jpg")
 	img=cv2.imread("2020-04-10-15-26-22test.bmp")
+	dest=cv2.resize(img,(1000,800))
 	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
-	with PointLocationService(img=img) as service:
+	with PointLocationService(img=dest) as service:
 		service.computer_landmarks_location()
 		# service.computer_bags_location()
 		# service.compute_hook_location()
