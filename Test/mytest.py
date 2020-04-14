@@ -17,11 +17,17 @@ class LandMarkRoi:
 	def __init__(self, img, label):
 		self.roi = img
 		self.label = label
-		self.similarity_windows = []
+		self.best_similar_window = None
+		self.best_similar_score = 0
 
-	def best_match_window(self):
-		sorted(self.similarity_windows, key=lambda window: window.similarity, reverse=True)
-		return self.similarity_windows[0] if len(self.similarity_windows) > 0 else None
+	def add_match_slide(self, slide_window: SimilarSlideWindow):
+		if slide_window.similarity > self.best_similar_score:
+			self.best_similar_score
+			self.best_similar_window = slide_window
+
+	@property
+	def match_window(self):
+		return self.best_similar_window if self.best_similar_window else None
 
 
 def tjtime(fun):
@@ -52,12 +58,7 @@ def color_similar_ratio(image1, image2):
 	hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
 	cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
 	degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
-	# print("similar:{}".format(degree))
-	# if degree > 0.56:
-	# 	backproject = cv2.calcBackProject([img2], [0, 1], hist1, [0, 180, 0, 255.0], 1)
-	# 	cv2.imshow("backproject", backproject)
-	# 	cv2.waitKey(0)
-	# 	cv2.destroyAllWindows()
+
 	return degree
 
 
@@ -79,8 +80,6 @@ def slide():
 
 def my_testslide():
 	landmark_rois = []
-	# roi_imgs = [cv2.imread("D:/red.png"), cv2.imread("D:/greenyellow.png"), cv2.imread("D:/yellow_red.png"),
-	#         cv2.imread("D:/red_green.png")]
 	landmark_rois.append(LandMarkRoi(img=cv2.imread("D:/red.png"), label='red'))
 	landmark_rois.append(LandMarkRoi(img=cv2.imread("D:/greenyellow.png"), label='greenyellow'))
 	landmark_rois.append(LandMarkRoi(img=cv2.imread("D:/yellow_red.png"), label='yellow_red'))
@@ -92,51 +91,49 @@ def my_testslide():
 	rows, cols = gray.shape
 
 	for row in range(0, rows):
-		for col in range(156, 213):
+		for left_col in range(156, 213):
 			show_img = dest.copy()
-			cv2.rectangle(show_img, (col, row), (col + 30, row + 30), color=(255, 255, 0), thickness=2)
+			cv2.rectangle(show_img, (left_col, row), (left_col + 30, row + 30), color=(255, 255, 0), thickness=2)
 			# cv2.imshow("img", show_img)
-			print("滑窗位置 x:{},y:{}".format(col, row))
+			print("左侧滑窗位置 x:{},y:{}".format(left_col, row))
 			# index += 1
 			for landmark_roi in landmark_rois:
 				roi = cv2.resize(landmark_roi.roi, (30, 30))
-				img = dest[row:row + 30, col:col + 30]
+				img = dest[row:row + 30, left_col:left_col + 30]
 				similar = color_similar_ratio(roi, img)
 				print("正在匹配roi:{} simailar:{}".format(landmark_roi.label, similar))
 
 				if similar > 0.6:
 					print("find {} roi similar is {}".format(landmark_roi.label, similar))
 
-					landmark_roi.similarity_windows.append(SimilarSlideWindow(col=col, row=row, similarity=similar))
-					cv2.rectangle(show_img, (col, row), (col + 30, row + 30), color=(255, 255, 0), thickness=2)
+					landmark_roi.add_match_slide(SimilarSlideWindow(col=left_col, row=row, similarity=similar))
+					cv2.rectangle(show_img, (left_col, row), (left_col + 30, row + 30), color=(255, 255, 0), thickness=2)
 					cv2.putText(show_img, "find {} roi similar is {}".format(landmark_roi.label, similar),
-					            (col + 15, row + 15),
+					            (left_col + 15, row + 15),
 					            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 					cv2.namedWindow("target")
 					cv2.imshow("target", show_img)
-
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
-		for col in range(850, 890):
+		for right_col in range(860, 894):
 			show_img = dest.copy()
-			cv2.rectangle(show_img, (col, row), (col + 30, row + 30), color=(255, 255, 0), thickness=2)
+			cv2.rectangle(show_img, (right_col, row), (right_col + 30, row + 30), color=(255, 255, 0), thickness=2)
 			# cv2.imshow("img", show_img)
-			print("滑窗位置 x:{},y:{}".format(col, row))
+			print("右侧滑窗位置 x:{},y:{}".format(right_col, row))
 			# index += 1
 			for landmark_roi in landmark_rois:
 				roi = cv2.resize(landmark_roi.roi, (30, 30))
-				img = dest[row:row + 30, col:col + 30]
+				img = dest[row:row + 30, right_col:right_col + 30]
 				similar = color_similar_ratio(roi, img)
 
 				print("正在匹配roi:{} simailar:{}".format(landmark_roi.label, similar))
 
 				if similar > 0.6:
 					print("find {} roi similar is {}".format(landmark_roi.label, similar))
-
-					landmark_roi.similarity_windows.append(SimilarSlideWindow(col=col, row=row, similarity=similar))
-					cv2.rectangle(show_img, (col, row), (col + 30, row + 30), color=(255, 255, 0), thickness=2)
+					landmark_roi.add_match_slide(SimilarSlideWindow(col=right_col, row=row, similarity=similar))
+					cv2.rectangle(show_img, (right_col, row), (right_col + 30, row + 30), color=(255, 255, 0), thickness=2)
 					cv2.putText(show_img, "find {} roi similar is {}".format(landmark_roi.label, similar),
-					            (col + 15, row + 15),
+					            (right_col + 15, row + 15),
 					            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 					cv2.namedWindow("target")
 					cv2.imshow("target", show_img)
@@ -145,9 +142,9 @@ def my_testslide():
 
 	for landmarkroi in landmark_rois:
 		final_img = dest.copy()
-		bestwindow = landmarkroi.best_match_window()
-		if bestwindow is not None:
-			cv2.rectangle(final_img, (bestwindow.col, bestwindow.row), (bestwindow.col + 30, bestwindow.row + 30),
+		if landmarkroi.match_window is not None:
+			cv2.rectangle(final_img, (landmarkroi.match_window.col, landmarkroi.match_window.row),
+			              (landmarkroi.match_window.col + 30, landmarkroi.match_window.row + 30),
 			              color=(255, 255, 0), thickness=2)
 		cv2.namedWindow("final")
 		cv2.imshow("final", final_img)
