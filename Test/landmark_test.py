@@ -169,20 +169,19 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 def process_landmark():
 	# img = cv2.imread("C:/work/imgs/test/final.jpg")
 	img=cv2.imread("2020-04-10-15-26-22test.bmp")
-	dest=cv2.resize(img,(1000,800))
+	dest=cv2.resize(img,(900,700))
 	# img = cv2.imread("C:/work/imgs/test/2020-04-03-16-32-31test.bmp")
-	with PointLocationService(img=dest) as service:
-		service.computer_landmarks_location()
+	# with PointLocationService(img=dest) as service:
+	# 	service.computer_landmarks_location()
 		# service.computer_bags_location()
 		# service.compute_hook_location()
 
 
 	# find_landmark_contours(img3)
-	img = service.img
 	# img = cv2.resize(service.img, (800, 800))
 	cv2.namedWindow("landmark", 0)
 	loc = cv2.setMouseCallback("landmark", on_EVENT_LBUTTONDOWN)
-	cv2.imshow("landmark", img)
+	cv2.imshow("landmark", dest)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
 
