@@ -24,7 +24,7 @@ SLIDE_WIDTH = 20
 SLIDE_HEIGHT = 20
 
 FOND_RECT_WIDTH = 60
-FOND_RECT_HEIGHT = 50
+FOND_RECT_HEIGHT = 60
 
 # tasks = Queue()
 good_rects = []
@@ -148,34 +148,21 @@ def generator_slidewindows():
 	row = 0
 	while row < rows:
 		# for col in chain(range(156, 200), range(850, 890)):
-		left_found = False
-		for col in range(150, 189):
-			if left_found:
-				break
+		for col in chain(range(150, 189),range(766, 800)):
 			for rect in good_rects:
 				if rect.slider_in_rect(slide_col=col, slide_row=row):
-					left_found = True
+					step=10
 					break
 			else:
 				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-		right_found = False
-		for col in range(766, 800):
-			if right_found:
-				break
-			for rect in good_rects:
-				if rect.slider_in_rect(slide_col=col, slide_row=row):
-					right_found = True
-					break
-			else:
-				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-		if fail_time > 450:
+		if fail_time > 400:
 			step += 1
 		else:
 			step = 1
 		row += step
 
 
-# @tjtime
+@tjtime
 def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	col, row, slide_img = slide_window_obj.data
 	roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
@@ -190,12 +177,10 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 		                             (col + FOND_RECT_WIDTH,
 		                              row + FOND_RECT_HEIGHT)))
 		return slide_window_obj
-	elif 0 < similar < 0.6:
-		step = 2
 	else:
 		del slide_window_obj
 		fail_time += 1
-		step += 1
+		# step += 1
 
 
 # @tjtime
