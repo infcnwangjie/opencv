@@ -20,11 +20,11 @@ dest = cv2.resize(img, (900, 700))
 gray = cv2.cvtColor(dest, cv2.COLOR_BGR2GRAY)
 rows, cols = gray.shape
 
-SLIDE_WIDTH = 20
-SLIDE_HEIGHT = 20
+SLIDE_WIDTH = 30
+SLIDE_HEIGHT = 30
 
-FOND_RECT_WIDTH = 60
-FOND_RECT_HEIGHT = 60
+FOND_RECT_WIDTH = 80
+FOND_RECT_HEIGHT = 80
 
 # tasks = Queue()
 good_rects = []
@@ -79,12 +79,12 @@ class NearLandMark:
 
 class TargetRect:
 	'''已经识别到的rect'''
+	__slots__ = ['point1','point2']
 
 	def __init__(self, point1, point2):
 		self.point1 = point1
 		self.point2 = point2
 
-	# @tjtime
 	def slider_in_rect(self, slide_obj: NearLandMark = None, slide_col=None, slide_row=None):
 
 		if slide_col:
@@ -105,11 +105,28 @@ class TargetRect:
 class LandMarkRoi:
 
 	def __init__(self, img, label, id=None):
+		# self.roi  = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		self.roi = img
 		self.id = id
 		self.label = label
 		self._times = 0
 		self.lock = Lock()
+		self.land_marks = []
+
+	def add_slide_window(self, slide_window: NearLandMark):
+		self.lock.acquire()
+		if len(self.land_marks) == 0:
+			self.land_marks.append(slide_window)
+		for land_mark in self.land_marks:
+			col, row, similar = land_mark.col, land_mark.row, land_mark.similarity
+			col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
+			if math.sqrt(math.pow(col - col1, 2) + math.pow(row - row1, 2)) < 50:
+				if similar<similar1:
+					del land_mark
+				break
+		else:
+			self.land_marks.append(slide_window)
+		self.lock.release()
 
 	@property
 	def times(self):
@@ -148,29 +165,29 @@ def generator_slidewindows():
 	row = 0
 	while row < rows:
 		# for col in chain(range(156, 200), range(850, 890)):
-		for col in chain(range(150, 189),range(766, 800)):
+		for col in chain(range(150, 189), range(766, 800)):
 			for rect in good_rects:
 				if rect.slider_in_rect(slide_col=col, slide_row=row):
-					step=10
 					break
 			else:
 				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-		if fail_time > 400:
+		if fail_time >240:
 			step += 1
 		else:
 			step = 1
 		row += step
 
 
-@tjtime
+# @tjtime
 def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	col, row, slide_img = slide_window_obj.data
 	roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 	similar = compare_similar(roi, slide_img)
 	global step, fail_time
-	if similar > 0.60:
+	if similar > 0.54:
 		slide_window_obj.similarity = similar
 		slide_window_obj.roi = landmark_roi
+		landmark_roi.add_slide_window(slide_window_obj)
 		fail_time = 0
 		good_rects.append(TargetRect((col - FOND_RECT_WIDTH,
 		                              row - FOND_RECT_HEIGHT),
@@ -180,7 +197,9 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	else:
 		del slide_window_obj
 		fail_time += 1
-		# step += 1
+
+
+# step += 1
 
 
 # @tjtime
@@ -188,7 +207,7 @@ def main():
 	start = time.clock()
 	global img, dest, good_rects, slide_window_queue
 
-	pool = ThreadPoolExecutor(7)
+	pool = ThreadPoolExecutor(8)
 	for slide_window_obj in generator_slidewindows():
 		# 迭代结束条件
 		need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
@@ -202,36 +221,34 @@ def main():
 
 	pool.shutdown()
 
-	last_window_tuple = None
-	last_direct = None
-	while results.qsize() > 0:
-		future_obj = results.get()
-		if future_obj.result() is None:
-			continue
+	# while results.qsize() > 0:
+	# 	future_obj = results.get()
+	# 	if future_obj.result() is None:
+	# 		continue
+	#
+	# 	slide_window_obj = future_obj.result()
+	# 	col = slide_window_obj.col
+	# 	row = slide_window_obj.row
+	#
+	# 	cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
+	# 	              thickness=1)
+	# 	cv2.putText(dest,
+	# 	            "{}:{}:{}".format(slide_window_obj.direct, landmark_roi.label,
+	# 	                              round(slide_window_obj.similarity, 2)),
+	# 	            (col, row + 30),
+	# 	            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
+	for roiobj in landmark_rois:
+		for slide_window_obj in roiobj.land_marks:
+			col = slide_window_obj.col
+			row = slide_window_obj.row
 
-		slide_window_obj = future_obj.result()
-		col = slide_window_obj.col
-		row = slide_window_obj.row
-		# if last_window_tuple is not None:
-		# 	nearest = math.sqrt(math.pow(col - last_window_tuple[0], 2) + math.pow(
-		# 		row - last_window_tuple[
-		# 			1], 2), 2)
-		# 	print("nearest{}:{}".format(slide_window_obj.roi.label, nearest))
-		# 	if nearest < 60 and last_direct == slide_window_obj.direct:
-		# 		last_window_tuple = (col, row)
-		# 		last_direct = slide_window_obj.direct
-		# 		continue
-		# 	else:
-		# 		last_window_tuple = (col, row)
-		# 		last_direct = slide_window_obj.direct
-
-		cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
-		              thickness=1)
-		cv2.putText(dest,
-		            "{}:{}:{}".format(slide_window_obj.direct, landmark_roi.label,
-		                              round(slide_window_obj.similarity, 2)),
-		            (col, row + 30),
-		            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
+			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
+			              thickness=1)
+			cv2.putText(dest,
+			            "{}:{}:{}".format(slide_window_obj.direct, roiobj.label,
+			                              round(slide_window_obj.similarity, 2)),
+			            (col, row + 30),
+			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
 
 	end = time.clock()
 	print("结束{}".format(end - start))
