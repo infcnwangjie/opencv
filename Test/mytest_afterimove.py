@@ -10,18 +10,18 @@ from threading import Thread, Lock
 from multiprocessing import Lock as PLock
 import numpy as np
 
+import profile
 # https://baijiahao.baidu.com/s?id=1615404760897105428&wfr=spider&for=pc
 cv2.useOptimized()
 img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
 img1 = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 dest = cv2.resize(img, (900, 700))
-# dest = cv2.resize(img, (1000, 800))
 
 gray = cv2.cvtColor(dest, cv2.COLOR_BGR2GRAY)
 rows, cols = gray.shape
 
-SLIDE_WIDTH = 30
-SLIDE_HEIGHT = 30
+SLIDE_WIDTH = 35
+SLIDE_HEIGHT = 35
 
 FOND_RECT_WIDTH = 80
 FOND_RECT_HEIGHT = 80
@@ -31,6 +31,8 @@ good_rects = []
 results = Queue()
 step = 1
 fail_time = 0
+
+
 
 
 def tjtime(fun):
@@ -78,15 +80,13 @@ class NearLandMark:
 
 
 class TargetRect:
-	'''已经识别到的rect'''
-	__slots__ = ['point1','point2']
+	__slots__ = ['point1', 'point2']
 
 	def __init__(self, point1, point2):
 		self.point1 = point1
 		self.point2 = point2
 
 	def slider_in_rect(self, slide_obj: NearLandMark = None, slide_col=None, slide_row=None):
-
 		if slide_col:
 			slide_col, slide_row, _img = slide_obj.data
 			slide_point1 = (slide_col, slide_row)
@@ -94,7 +94,6 @@ class TargetRect:
 		else:
 			slide_point1 = (slide_col, slide_row)
 			slide_point2 = (slide_col + SLIDE_WIDTH, slide_row + SLIDE_HEIGHT)
-		print(self.point1[0], self.point2[0], slide_point1[0], slide_point1[1])
 		if self.point1[0] < slide_point1[0] and self.point1[1] < slide_point1[1] and self.point2[0] > slide_point2[
 			0] and self.point2[1] > slide_point2[1]:
 			return True
@@ -105,7 +104,6 @@ class TargetRect:
 class LandMarkRoi:
 
 	def __init__(self, img, label, id=None):
-		# self.roi  = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		self.roi = img
 		self.id = id
 		self.label = label
@@ -114,19 +112,19 @@ class LandMarkRoi:
 		self.land_marks = []
 
 	def add_slide_window(self, slide_window: NearLandMark):
-		self.lock.acquire()
-		if len(self.land_marks) == 0:
-			self.land_marks.append(slide_window)
-		for land_mark in self.land_marks:
-			col, row, similar = land_mark.col, land_mark.row, land_mark.similarity
-			col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
-			if math.sqrt(math.pow(col - col1, 2) + math.pow(row - row1, 2)) < 50:
-				if similar<similar1:
-					del land_mark
-				break
-		else:
-			self.land_marks.append(slide_window)
-		self.lock.release()
+		with self.lock:
+			if len(self.land_marks) == 0:
+				self.land_marks.append(slide_window)
+			for land_mark in self.land_marks:
+				col, row, similar = land_mark.col, land_mark.row, land_mark.similarity
+				col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
+				if math.sqrt(math.pow(col - col1, 2) + math.pow(row - row1, 2)) < 50:
+					if similar < similar1:
+						del land_mark
+					break
+			else:
+				self.land_marks.append(slide_window)
+		# self.lock.release()
 
 	@property
 	def times(self):
@@ -134,9 +132,13 @@ class LandMarkRoi:
 
 	@times.setter
 	def times(self, value):
-		self.lock.acquire()
-		self._times = value
-		self.lock.release()
+		# self.lock.acquire()
+		with self.lock:
+			self._times = value
+		# self.lock.release()
+
+
+
 
 
 landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
@@ -146,7 +148,6 @@ landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
                  LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
                  LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
                  LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
-
 
 # @tjtime
 def compare_similar(img1, img2):
@@ -163,15 +164,16 @@ def compare_similar(img1, img2):
 def generator_slidewindows():
 	global dest, rows, cols, step
 	row = 0
+	# cols=list(chain(range(150, 175), range(766, 800)))
 	while row < rows:
-		# for col in chain(range(156, 200), range(850, 890)):
-		for col in chain(range(150, 189), range(766, 800)):
+		for col in chain(range(150, 175), range(766, 796)):
 			for rect in good_rects:
 				if rect.slider_in_rect(slide_col=col, slide_row=row):
 					break
 			else:
 				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-		if fail_time >240:
+		# step=1 if fail_time<220 else step+1
+		if fail_time > 220:
 			step += 1
 		else:
 			step = 1
@@ -184,7 +186,7 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 	similar = compare_similar(roi, slide_img)
 	global step, fail_time
-	if similar > 0.54:
+	if similar > 0.45:
 		slide_window_obj.similarity = similar
 		slide_window_obj.roi = landmark_roi
 		landmark_roi.add_slide_window(slide_window_obj)
@@ -199,13 +201,10 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 		fail_time += 1
 
 
-# step += 1
-
-
 # @tjtime
 def main():
 	start = time.clock()
-	global img, dest, good_rects, slide_window_queue
+	global img
 
 	pool = ThreadPoolExecutor(8)
 	for slide_window_obj in generator_slidewindows():
@@ -218,34 +217,17 @@ def main():
 		for landmark_roi in landmark_rois:
 			future = pool.submit(computer_task, landmark_roi, slide_window_obj)
 			results.put(future)
-
 	pool.shutdown()
 
-	# while results.qsize() > 0:
-	# 	future_obj = results.get()
-	# 	if future_obj.result() is None:
-	# 		continue
-	#
-	# 	slide_window_obj = future_obj.result()
-	# 	col = slide_window_obj.col
-	# 	row = slide_window_obj.row
-	#
-	# 	cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
-	# 	              thickness=1)
-	# 	cv2.putText(dest,
-	# 	            "{}:{}:{}".format(slide_window_obj.direct, landmark_roi.label,
-	# 	                              round(slide_window_obj.similarity, 2)),
-	# 	            (col, row + 30),
-	# 	            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
-	for roiobj in landmark_rois:
-		for slide_window_obj in roiobj.land_marks:
+	for landmark_roi in landmark_rois:
+		for slide_window_obj in landmark_roi.land_marks:
 			col = slide_window_obj.col
 			row = slide_window_obj.row
 
 			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
 			              thickness=1)
 			cv2.putText(dest,
-			            "{}:{}:{}".format(slide_window_obj.direct, roiobj.label,
+			            "{}:{}:{}".format(slide_window_obj.direct, landmark_roi.label,
 			                              round(slide_window_obj.similarity, 2)),
 			            (col, row + 30),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
@@ -259,4 +241,5 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	# main()
+	profile.run('main()')
