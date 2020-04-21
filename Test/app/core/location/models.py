@@ -7,7 +7,6 @@ class Box:
 	'''
 	Box(contour，grayimage,id,numdetector)
 	'''
-
 	def __init__(self, contour, img, id=1):
 		if img is None:
 			raise Exception("box img must not none")

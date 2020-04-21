@@ -15,8 +15,8 @@ rows, cols = gray.shape
 SLIDE_WIDTH = 30
 SLIDE_HEIGHT = 30
 
-FOND_RECT_WIDTH = 60
-FOND_RECT_HEIGHT = 60
+FOND_RECT_WIDTH = 80
+FOND_RECT_HEIGHT = 80
 
 
 class SimilarSlideWindow:

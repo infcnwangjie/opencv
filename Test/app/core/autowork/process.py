@@ -25,10 +25,9 @@ class IntelligentProcess(object):
 		return self._IMGHANDLE
 
 	@IMGHANDLE.setter
-	def IMGHANDLE(self,value):
+	def IMGHANDLE(self, value):
 		self._IMGHANDLE = value
-		self.intelligentthread.IMAGE_HANDLE=value
-
+		self.intelligentthread.IMAGE_HANDLE = value
 
 	def check_plc_status(self):
 		'''检测plc状态'''
@@ -124,14 +123,14 @@ class IntelligentProcess(object):
 		else:
 			img = cv2.imread('C:/work/imgs/test/2020-04-10-15-26-22test.bmp')
 		with PointLocationService(img=img) as  a:
-			locationinfo=a.find_nearest_bag()
+			locationinfo = a.find_nearest_bag()
 			if locationinfo is not None:
 				nearest_bag_position, hockposition = locationinfo
 				img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
 					nearest_bag_position, hockposition)
 				mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 		# img = a.move()
-		img = cv2.resize(a.img, (800, 800))
+		img = cv2.resize(a.img, (900, 700))
 		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)

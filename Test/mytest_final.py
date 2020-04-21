@@ -1,16 +1,25 @@
 # -*- coding: utf-8 -*-
+from gevent import monkey;monkey.patch_all()
+
+
 from itertools import chain
 from queue import Queue, LifoQueue
 import cv2
 import time
+import gevent
 
 import math
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from threading import Thread, Lock
 from multiprocessing import Lock as PLock
 import numpy as np
-
+# import asyncio
 import profile
+
+
+# 把程序变成协程的方式运行②
+
+
 # https://baijiahao.baidu.com/s?id=1615404760897105428&wfr=spider&for=pc
 cv2.useOptimized()
 img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
@@ -23,16 +32,14 @@ rows, cols = gray.shape
 SLIDE_WIDTH = 35
 SLIDE_HEIGHT = 35
 
-FOND_RECT_WIDTH = 80
-FOND_RECT_HEIGHT = 80
+FOND_RECT_WIDTH = 90
+FOND_RECT_HEIGHT = 90
 
-# tasks = Queue()
+tasks = Queue()
 good_rects = []
 results = Queue()
-step = 1
+step = 2
 fail_time = 0
-
-
 
 
 def tjtime(fun):
@@ -75,7 +82,7 @@ class NearLandMark:
 
 	@roi.setter
 	def roi(self, value):
-		# value.times += 1
+		value.times += 1
 		self._roi = value
 
 
@@ -108,23 +115,24 @@ class LandMarkRoi:
 		self.id = id
 		self.label = label
 		self._times = 0
-		self.lock = Lock()
+		# self.lock = Lock()
 		self.land_marks = []
 
 	def add_slide_window(self, slide_window: NearLandMark):
-		with self.lock:
-			if len(self.land_marks) == 0:
-				self.land_marks.append(slide_window)
-			for land_mark in self.land_marks:
-				col, row, similar = land_mark.col, land_mark.row, land_mark.similarity
-				col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
-				if math.sqrt(math.pow(col - col1, 2) + math.pow(row - row1, 2)) < 50:
-					if similar < similar1:
-						del land_mark
-					break
-			else:
-				self.land_marks.append(slide_window)
-		# self.lock.release()
+		# with self.lock:
+		if len(self.land_marks) == 0:
+			self.land_marks.append(slide_window)
+		for land_mark in self.land_marks:
+			col, row, similar = land_mark.col, land_mark.row, land_mark.similarity
+			col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
+			if math.sqrt(math.pow(col - col1, 2) + math.pow(row - row1, 2)) < 50:
+				if similar < similar1:
+					del land_mark
+				break
+		else:
+			self.land_marks.append(slide_window)
+
+	# self.lock.release()
 
 	@property
 	def times(self):
@@ -133,12 +141,11 @@ class LandMarkRoi:
 	@times.setter
 	def times(self, value):
 		# self.lock.acquire()
-		with self.lock:
-			self._times = value
-		# self.lock.release()
+		# with self.lock:
+		self._times = value
 
 
-
+# self.lock.release()
 
 
 landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
@@ -148,6 +155,7 @@ landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
                  LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
                  LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
                  LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
+
 
 # @tjtime
 def compare_similar(img1, img2):
@@ -172,21 +180,25 @@ def generator_slidewindows():
 					break
 			else:
 				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-		# step=1 if fail_time<220 else step+1
-		if fail_time > 220:
+		if fail_time > 200:
 			step += 1
+		elif fail_time>10000:
+			step+=300
 		else:
-			step = 1
+			step = 2
 		row += step
 
 
 # @tjtime
 def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
+	# while tasks.qsize()>0:
+	# slide_window_obj = tasks.get()
 	col, row, slide_img = slide_window_obj.data
 	roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 	similar = compare_similar(roi, slide_img)
 	global step, fail_time
-	if similar > 0.5:
+	if similar > 0.56:
+		# print("find")
 		slide_window_obj.similarity = similar
 		slide_window_obj.roi = landmark_roi
 		landmark_roi.add_slide_window(slide_window_obj)
@@ -206,18 +218,17 @@ def main():
 	start = time.clock()
 	global img
 
-	pool = ThreadPoolExecutor(8)
+	# task_list = []
 	for slide_window_obj in generator_slidewindows():
 		# 迭代结束条件
-		# need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
-		# if len(need_find_roi) == 0:
-		# 	print("need find roi is {}".format(len(need_find_roi)))
-		# 	break
+		need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
+		if len(need_find_roi) == 0:
+			print("need find roi is {}".format(len(need_find_roi)))
+			break
 
 		for landmark_roi in landmark_rois:
-			future = pool.submit(computer_task, landmark_roi, slide_window_obj)
-			results.put(future)
-	pool.shutdown()
+			task = gevent.spawn(computer_task, landmark_roi, slide_window_obj)
+			task.join()
 
 	for landmark_roi in landmark_rois:
 		for slide_window_obj in landmark_roi.land_marks:
@@ -241,5 +252,5 @@ def main():
 
 
 if __name__ == '__main__':
-	# main()
-	profile.run('main()')
+	main()
+	# profile.run('main()')
