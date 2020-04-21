@@ -3,6 +3,7 @@ from PyQt5.QtGui import QImage, QPixmap
 
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.core.autowork.plcthread import PlcThread
+from app.core.location.landmarklocation import start_location_landmark
 from app.core.plc.plchandle import PlcHandle
 from app.core.location.locationservice import PointLocationService
 from app.log.logtool import mylog_debug
@@ -117,21 +118,35 @@ class IntelligentProcess(object):
 		self.plcthread.work = True
 		self.intelligentthread.work = False
 
-	def test(self, image=None):
+	def landmark_location(self, image=None):
 		if image:
 			img = cv2.imread(image)
 		else:
-			img = cv2.imread('C:/work/imgs/test/2020-04-10-15-26-22test.bmp')
-		with PointLocationService(img=img) as  a:
-			locationinfo = a.find_nearest_bag()
-			if locationinfo is not None:
-				nearest_bag_position, hockposition = locationinfo
-				img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
-					nearest_bag_position, hockposition)
-				mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
-		# img = a.move()
-		img = cv2.resize(a.img, (900, 700))
-		show = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+			img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
+		# with PointLocationService(img=img) as  a:
+		# 	locationinfo = a.find_nearest_bag()
+		# 	if locationinfo is not None:
+		# 		nearest_bag_position, hockposition = locationinfo
+		# 		img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
+		# 			nearest_bag_position, hockposition)
+		# 		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
+		# # img = a.move()
+		dest = start_location_landmark(img=img)
+
+		# img = cv2.resize(a.img, (900, 700))
+		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
+
+		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+		self.img_play.setPixmap(QPixmap.fromImage(showImage))
+		self.img_play.setScaledContents(True)
+
+	def set_roi(self, image=None):
+		if image:
+			img = cv2.imread(image)
+		else:
+			img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
+		dest=cv2.resize(img, (900, 700))
+		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
 
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
 		self.img_play.setPixmap(QPixmap.fromImage(showImage))

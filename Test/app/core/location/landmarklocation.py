@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from gevent import monkey;monkey.patch_all()
+# from gevent import monkey;
 
+from app.config import IMG_HEIGHT, IMG_WIDTH
+
+# monkey.patch_all()
 
 from itertools import chain
 from queue import Queue, LifoQueue
@@ -9,28 +12,25 @@ import time
 import gevent
 
 import math
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from threading import Thread, Lock
-from multiprocessing import Lock as PLock
-import numpy as np
-# import asyncio
 import profile
 
-
+# 把程序变成协程的方式运行②
 
 cv2.useOptimized()
-img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
-img1 = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-dest = cv2.resize(img, (900, 700))
 
-gray = cv2.cvtColor(dest, cv2.COLOR_BGR2GRAY)
-rows, cols = gray.shape
+rows, cols = IMG_HEIGHT, IMG_WIDTH
 
-SLIDE_WIDTH = 35
+SLIDE_WIDTH = 35;
 SLIDE_HEIGHT = 35
 
 FOND_RECT_WIDTH = 90
 FOND_RECT_HEIGHT = 90
+
+LEFT_START = 150
+LEFT_END = 175
+
+RIGHT_START = 766
+RIGHT_END = 796
 
 tasks = Queue()
 good_rects = []
@@ -166,10 +166,12 @@ def compare_similar(img1, img2):
 	return degree
 
 
-def generator_slidewindows():
-	global dest, rows, cols, step
+def generator_slidewindows(dest=None):
+	global rows, cols, step
 	row = 0
 	# cols=list(chain(range(150, 175), range(766, 800)))
+	x = yield
+	yield x
 	while row < rows:
 		for col in chain(range(150, 175), range(766, 796)):
 			for rect in good_rects:
@@ -179,17 +181,22 @@ def generator_slidewindows():
 				yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
 		if fail_time > 200:
 			step += 1
-		elif fail_time>10000:
-			step+=300
+		elif fail_time > 10000:
+			step += 300
 		else:
 			step = 2
 		row += step
+#
+#
+# gen_slider = generator_slidewindows()
+# gen_slider.send(None)
 
 
 # @tjtime
 def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	# while tasks.qsize()>0:
 	# slide_window_obj = tasks.get()
+	if slide_window_obj is None: return
 	col, row, slide_img = slide_window_obj.data
 	roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 	similar = compare_similar(roi, slide_img)
@@ -204,6 +211,14 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 		                              row - FOND_RECT_HEIGHT),
 		                             (col + FOND_RECT_WIDTH,
 		                              row + FOND_RECT_HEIGHT)))
+
+		# if col < 0.5 * cols:
+		# 	gen_slider.send(
+		# 		NearLandMark(RIGHT_START, row, dest[row:row + SLIDE_HEIGHT, RIGHT_START:RIGHT_START + SLIDE_WIDTH]))
+		# else:
+		# 	gen_slider.send(
+		# 		NearLandMark(LEFT_START, row, dest[row:row + SLIDE_HEIGHT, LEFT_START:LEFT_START + SLIDE_WIDTH]))
+
 		return slide_window_obj
 	else:
 		del slide_window_obj
@@ -211,12 +226,13 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 
 
 # @tjtime
-def main():
+def start_location_landmark(img):
 	start = time.clock()
-	global img
+	# item = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+	dest = cv2.resize(img, (900, 700))
 
 	# task_list = []
-	for slide_window_obj in generator_slidewindows():
+	for slide_window_obj in generator_slidewindows(dest):
 		# 迭代结束条件
 		need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
 		if len(need_find_roi) == 0:
@@ -242,12 +258,17 @@ def main():
 
 	end = time.clock()
 	print("结束{}".format(end - start))
+	# cv2.namedWindow("target")
+	# cv2.imshow("target", dest)
+	# cv2.waitKey(0)
+	# cv2.destroyAllWindows()
+	return dest
+
+
+if __name__ == '__main__':
+	dest = start_location(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp'))
 	cv2.namedWindow("target")
 	cv2.imshow("target", dest)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-	main()
-	# profile.run('main()')
+# profile.run('main()')

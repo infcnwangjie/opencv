@@ -14,6 +14,29 @@ from app.core.autowork.process import IntelligentProcess
 from app.core.video.imageprovider import ImageProvider
 from app.icons import resource
 
+
+class MyLabel(QtWidgets.QLabel):  # 自定义的QLabel类
+	def __init__(self, parent=None):
+		super(MyLabel, self).__init__(parent)
+		self.points = []
+		self.item_x = None
+		self.item_y = None
+
+	def mouseReleaseEvent(self, e):
+		pointX = e.globalX()
+		pointY = e.globalY()
+		self.points.append([(self.item_x, self.item_y), (pointX, pointY)])
+
+	def mousePressEvent(self, e):  ##重载一下鼠标点击事件
+
+		# 左键按下
+		if e.buttons() == QtCore.Qt.LeftButton:
+			# self.setText("左")
+			self.item_x = e.globalX()
+			self.item_y = e.globalY()
+			self.setText("({},{}):".format(self.item_x, self.item_y))
+
+
 class CentWindowUi(object):
 	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
 
@@ -71,8 +94,9 @@ class CentWindowUi(object):
 		self.videoBox.setObjectName("videoBox")
 		all_layout.addWidget(self.videoBox)
 
-		self.picturelabel = QtWidgets.QLabel(self)
+		self.picturelabel = MyLabel(self)
 		self.picturelabel.setObjectName("picturelabel")
+		self.picturelabel.resize(*(900,700))
 		video_layout = QtWidgets.QHBoxLayout()
 		video_layout.addWidget(self.picturelabel)
 		self.videoBox.setLayout(video_layout)
@@ -149,6 +173,7 @@ class CentWindowUi(object):
 		self.stop_button.setText(_translate("MainWindow", "停止"))
 		self.videoBox.setTitle(_translate("MainWindow", "视频区域"))
 
+
 class CenterWindow(QWidget, CentWindowUi):
 	def __init__(self):
 		super().__init__()
@@ -199,6 +224,9 @@ class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
 		self.resize(1289, 1000)
+		self.init_window()
+
+	def init_window(self):
 		self.setWindowIcon(QIcon(":icons/robot.png"))
 		self.centralwidget = CenterWindow()  # 创建一个文本编辑框组件
 		self.setCentralWidget(self.centralwidget)  # 将它设置成QMainWindow的中心组件。中心组件占据了所有剩下的空间。
@@ -235,14 +263,20 @@ class MainWindow(QMainWindow):
 		testAction.setStatusTip('测试模式')
 		testAction.triggered.connect(self._test)
 
+		roisetAction = QAction(QIcon(":icons/set_roi.png"), '选取ROI', self)
+		roisetAction.setShortcut('Ctrl+t')
+		roisetAction.setStatusTip('测试模式')
+		roisetAction.triggered.connect(self.set_roi)
+
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
 		fileMenu.addAction(openFileAction)
-		fileMenu.addAction(exitAction)
 
 		cameraMenu = menubar.addMenu('&摄像头')
 		cameraMenu.addAction(openCameraAction)
-		cameraMenu.addAction(stopCameraAction)
+
+		roiMenu = menubar.addMenu('&设置ROI')
+		roiMenu.addAction(roisetAction)
 
 		openFileToolBar = self.addToolBar('OpenFile')
 		openFileToolBar.addAction(openFileAction)
@@ -262,10 +296,11 @@ class MainWindow(QMainWindow):
 		testToolbar = self.addToolBar("Test")
 		testToolbar.addAction(testAction)
 
+		setRoiToolbar = self.addToolBar("SetRoi")
+		setRoiToolbar.addAction(roisetAction)
+
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
-
-	# self.show()
 
 	def _openCamera(self):
 		# 正常情况读取sdk
@@ -296,7 +331,10 @@ class MainWindow(QMainWindow):
 				self.centralwidget.process.IMGHANDLE = imagehandle
 				self.centralwidget.play()
 			else:
-				self.centralwidget.process.test(image=filename)
+				self._test()
 
 	def _test(self):
-		self.centralwidget.process.test()
+		self.centralwidget.process.landmark_location()
+
+	def set_roi(self):
+		self.centralwidget.process.set_roi()

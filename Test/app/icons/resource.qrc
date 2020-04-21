@@ -11,5 +11,6 @@
         <file>stop.png</file>
         <file>test.png</file>
         <file>video.png</file>
+        <file>set_roi.png</file>
     </qresource>
 </RCC>
