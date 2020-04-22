@@ -3,42 +3,65 @@ import itertools
 import os
 import re
 
+import cv2
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QImage, QPixmap, QIcon
+from PyQt5.QtCore import QSize, Qt, pyqtSignal, QStringListModel
+from PyQt5.QtGui import QImage, QPixmap, QIcon, QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
-	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter
+	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter, QListView, \
+	QListWidgetItem
 
-from app.config import SDK_OPEN, DEBUG
+from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR
 from app.core.autowork.process import IntelligentProcess
 from app.core.video.imageprovider import ImageProvider
 from app.icons import resource
 
+from app.views.roiwindow import SetRoiWidget
+
+SET_ROI = False
+
 
 class MyLabel(QtWidgets.QLabel):  # 自定义的QLabel类
+	left_button_release_signal = pyqtSignal(list)
+
 	def __init__(self, parent=None):
 		super(MyLabel, self).__init__(parent)
 		self.points = []
 		self.item_x = None
 		self.item_y = None
 
+	def set_img(self, img):
+		# self.resize(IMG_WIDTH, IMG_HEIGHT)
+		self.showimg = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+		show = cv2.cvtColor(self.showimg, cv2.COLOR_BGR2RGB)
+		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+
+		self.setPixmap(QPixmap.fromImage(showImage))
+		self.setScaledContents(True)
+
+	def copy_img(self):
+		return self.showimg.copy()
+
 	def mouseReleaseEvent(self, e):
+		'''左键抬起事件'''
 		pointX = e.globalX()
 		pointY = e.globalY()
-		self.points.append([(self.item_x, self.item_y), (pointX, pointY)])
+		print("releasebutton:({},{})".format(pointX, pointY))
+		self.points.append((pointX, pointY))
+		if len(self.points) == 2:
+			self.left_button_release_signal.emit(self.points)
+			self.points.clear()
 
-	def mousePressEvent(self, e):  ##重载一下鼠标点击事件
-
-		# 左键按下
+	def mousePressEvent(self, e):
 		if e.buttons() == QtCore.Qt.LeftButton:
 			# self.setText("左")
-			self.item_x = e.globalX()
-			self.item_y = e.globalY()
-			self.setText("({},{}):".format(self.item_x, self.item_y))
+			self.points.append((e.globalX(), e.globalY()))
+			# self.setText("({},{}):".format(self.item_x, self.item_y))
+			print("CLICKBUTTON({},{}):".format(e.globalX(), e.globalY()))
 
 
 class CentWindowUi(object):
-	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.*")
+	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.mp4")
 
 	def setupUi(self, Form):
 		Form.setObjectName("Form")
@@ -53,12 +76,12 @@ class CentWindowUi(object):
 
 		# days = ['2020-03-26', '2020-03-27']
 		try:
-			if not os.path.exists("c:/video"):
-				os.makedirs("c:/video")
+			if not os.path.exists(VIDEO_DIR):
+				os.makedirs(VIDEO_DIR)
 		except:
 			pass
 		videos = []
-		for file in os.listdir("c:/video"):
+		for file in os.listdir(VIDEO_DIR):
 			# if os.path.isfile(file):
 			matchresult = re.match(self.movie_pattern, file)
 			# print(file)
@@ -70,7 +93,7 @@ class CentWindowUi(object):
 
 		self.tree.setHeaderLabels(['视频录像'])
 		self.tree.setColumnCount(1)
-		self.tree.setColumnWidth(0, 180)
+		self.tree.setColumnWidth(0, 160)
 		for datestr, files in groupinfo:
 			root = QTreeWidgetItem(self.tree)
 			root.setText(0, datestr)
@@ -96,7 +119,7 @@ class CentWindowUi(object):
 
 		self.picturelabel = MyLabel(self)
 		self.picturelabel.setObjectName("picturelabel")
-		self.picturelabel.resize(*(900,700))
+		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
 		video_layout = QtWidgets.QHBoxLayout()
 		video_layout.addWidget(self.picturelabel)
 		self.videoBox.setLayout(video_layout)
@@ -124,8 +147,10 @@ class CentWindowUi(object):
 		self.stop_button.setStyleSheet("border:none")
 		operate_layout.addWidget(self.stop_button, *(0, 1))
 
-		baginfo_layout = QtWidgets.QFormLayout()
 
+		self.info_box=QtWidgets.QGroupBox()
+		self.info_box.setTitle("操作状态")
+		baginfo_layout = QtWidgets.QFormLayout()
 		test_label = QLabel("调试状态：")
 		self.test_status_edit = QLineEdit()
 		self.test_status_edit.setReadOnly(True)
@@ -146,10 +171,29 @@ class CentWindowUi(object):
 		self.currentstatus_edit = QLineEdit()
 		baginfo_layout.addRow(currentStatuslabel, self.currentstatus_edit)
 
-		# 添加袋子信息
+		self.info_box.setLayout(baginfo_layout)
+
+		self.roi_box= QtWidgets.QGroupBox(self)
+		self.roi_box.setTitle("地标ROI模型")
+
+		self.roi_layout=QtWidgets.QVBoxLayout()
+
+		self.roi_img_listview = QListView()
+		self.roilistmodel = QStandardItemModel()
+		self.init_roi_imgs()
+		self.roi_img_listview.setModel(self.roilistmodel)
+		self.roi_layout.addWidget(self.roi_img_listview)
+		self.roi_box.setLayout(self.roi_layout)
+
+
 		right_layout = QtWidgets.QVBoxLayout()
+		# 添加操作信息
 		right_layout.addLayout(operate_layout)
-		right_layout.addLayout(baginfo_layout)
+		# 添加袋子信息
+		right_layout.addWidget(self.info_box)
+
+		# slm = QStringListModel()
+		right_layout.addWidget(self.roi_box)
 
 		self.operatorBox.setLayout(right_layout)
 
@@ -159,11 +203,18 @@ class CentWindowUi(object):
 		                                QLabel{border-radius:10px}
 		                             QLabel{padding:2px 4px}''')
 
-		all_layout.setStretch(0, 2)
-		all_layout.setStretch(1, 6)
-		all_layout.setStretch(2, 2)
+		all_layout.setStretch(0, 1.5)
+		all_layout.setStretch(1, 6.8)
+		all_layout.setStretch(2, 1.7)
 		self.setLayout(all_layout)
 		self.retranslateUi(Form)
+
+	def init_roi_imgs(self):
+
+		for img in os.listdir(ROIS_DIR):
+			imgpath = os.path.join(ROIS_DIR, img)
+			roi = QStandardItem(QIcon(imgpath), img)
+			self.roilistmodel.appendRow(roi)
 
 	def retranslateUi(self, Form):
 		_translate = QtCore.QCoreApplication.translate
@@ -192,7 +243,7 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def onClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
-		filename = os.path.join("D:/video", item.text(0))
+		filename = os.path.join(VIDEO_DIR, item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
 			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
@@ -225,6 +276,8 @@ class MainWindow(QMainWindow):
 		super().__init__()
 		self.resize(1289, 1000)
 		self.init_window()
+		self.set_roi_widget = SetRoiWidget()
+		self.set_roi_widget.update_listmodel_signal.connect(self.centralwidget.init_roi_imgs)
 
 	def init_window(self):
 		self.setWindowIcon(QIcon(":icons/robot.png"))
@@ -337,4 +390,17 @@ class MainWindow(QMainWindow):
 		self.centralwidget.process.landmark_location()
 
 	def set_roi(self):
-		self.centralwidget.process.set_roi()
+
+		# global SET_ROI
+		# SET_ROI = not SET_ROI
+		img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
+		# # self.centralwidget.process.set_roi(img)
+		#
+		# dest = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+		# self.centralwidget.picturelabel.set_img(dest)
+		# show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
+		#
+		# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+		# self.centralwidget.picturelabel.setPixmap(QPixmap.fromImage(showImage))
+		# self.centralwidget.picturelabel.setScaledContents(True)
+		self.set_roi_widget.show()

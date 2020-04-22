@@ -1,6 +1,7 @@
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 
+from app.config import IMG_HEIGHT, IMG_WIDTH
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.core.autowork.plcthread import PlcThread
 from app.core.location.landmarklocation import start_location_landmark
@@ -14,7 +15,7 @@ class IntelligentProcess(object):
 	def __init__(self, IMGHANDLE, img_play, plc_status_show, bag_num_show):
 		self.plchandle = PlcHandle()
 		self._IMGHANDLE = IMGHANDLE
-		self.img_play = img_play
+		self.init_imgplay(img_play)
 		self.plc_status_show = plc_status_show
 		self.bag_num_show = bag_num_show
 		self.init_plc_thread()
@@ -29,6 +30,10 @@ class IntelligentProcess(object):
 	def IMGHANDLE(self, value):
 		self._IMGHANDLE = value
 		self.intelligentthread.IMAGE_HANDLE = value
+
+	def init_imgplay(self, img_play):
+		self.img_play = img_play
+		self.img_play.left_button_release_signal.connect(self.set_roi)
 
 	def check_plc_status(self):
 		'''检测plc状态'''
@@ -135,19 +140,71 @@ class IntelligentProcess(object):
 
 		# img = cv2.resize(a.img, (900, 700))
 		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
-
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
 		self.img_play.setPixmap(QPixmap.fromImage(showImage))
 		self.img_play.setScaledContents(True)
 
-	def set_roi(self, image=None):
-		if image:
-			img = cv2.imread(image)
-		else:
-			img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
-		dest=cv2.resize(img, (900, 700))
-		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
+	def set_roi(self,points):
+		print("ok")
+		print(points)
+		point1, point2 = points
 
-		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-		self.img_play.setPixmap(QPixmap.fromImage(showImage))
-		self.img_play.setScaledContents(True)
+		# print('first:({}{})'.format(point1[0], point1[1]))
+		# print('second:({}{})'.format(point2[0], point2[1]))
+
+		def img_roi_position(label_x, label_y):
+			label_w, label_h = self.img_play.size().width(), self.img_play.size().height()
+			raio = min(IMG_WIDTH / label_w, IMG_HEIGHT / label_h)
+			img_w = int(raio * label_x) - 50
+			img_h = int(raio * label_y) - 50
+			# img_w=label_x
+			# img_h=label_y
+			return img_w, img_h
+
+		# 必须是经过放射变换的
+		image = self.img_play.copy_img()
+		#
+		#
+		point1_modify = img_roi_position(point1[0], point1[1])
+		point2_modify = img_roi_position(point2[0], point2[1])
+		cv2.rectangle(image, point1_modify, point2_modify, (0, 255, 0), 2)
+		self.img_play.set_img(image)
+
+		# refPt = []
+		# image = img
+		#
+		# def mouse_click(event, x, y, flags, param):
+		# 	# grab references to the global variables
+		# 	global refPt
+		# 	if event == cv2.EVENT_LBUTTONDOWN:
+		# 		refPt = [(x, y)]
+		# 		cv2.circle(img=img, center=(x, y), color=(0, 255, 127), radius=3, thickness=2)
+		# 	elif event == cv2.EVENT_MOUSEMOVE and event == cv2.EVENT_LBUTTONDOWN:
+		# 		cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+		# 	elif event == cv2.EVENT_LBUTTONUP:
+		# 		refPt.append((x, y))
+		# 		# drawing == False
+		# 		cv2.rectangle(image, refPt[0], refPt[1], (0, 255, 0), 2)
+		# 		cv2.circle(img=image, center=(refPt[0][0], refPt[1][1]), color=(0, 255, 127), radius=3, thickness=2)
+		# 		cv2.circle(img=image, center=(refPt[1][0], refPt[1][1]), color=(0, 255, 127), radius=3, thickness=2)
+		# 		cv2.circle(img=image, center=(refPt[1][0], refPt[0][1]), color=(0, 255, 127), radius=3, thickness=2)
+		# 		cv2.imshow("image", image)
+		#
+		# def set_roi(image):
+		# 	clone = image.copy()
+		# 	cv2.namedWindow("image", 0)
+		# 	cv2.setMouseCallback("image", mouse_click)
+		# 	# keep looping until the 'q' key is pressed
+		# 	cv2.imshow("image", image)
+		# 	# if there are two reference points, then crop the region of interest
+		# 	# from teh image and display it
+		# 	if len(refPt) > 1:
+		# 		roi = clone[refPt[0][1]:refPt[1][1], refPt[-1][0]:refPt[-1][0]]
+		# 		cv2.imshow("ROI", roi)
+		#
+		# 	cv2.waitKey(0)
+		# 	cv2.destroyAllWindows()
+		#
+		# set_roi(image)
+
+
