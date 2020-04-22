@@ -167,7 +167,6 @@ class SetRoiWidget(QWidget):
 		# self.move((screen.width() - size.width()) / 2,
 		#           (screen.height() - size.height()) / 2)
 
-
 	def pushButton_cut_clicked(self):
 		if self.graphicsView.image_item.is_start_cut:
 			self.graphicsView.image_item.is_start_cut = False
