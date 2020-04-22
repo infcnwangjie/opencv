@@ -37,7 +37,7 @@ class GraphicsView(QGraphicsView):
 	def __init__(self, picture, parent=None):
 		super(GraphicsView, self).__init__(parent)
 		# 设置放大缩小时跟随鼠标
-		self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+		# self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 		self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
 
 		self.scene = QGraphicsScene()
@@ -52,6 +52,7 @@ class GraphicsView(QGraphicsView):
 
 		self.image_item.setFlag(QGraphicsItem.ItemIsMovable)
 		self.scene.addItem(self.image_item)
+		# self.scene.addItem(self.image_item)
 
 		size = self.image_item.pixmap().size()
 		# 调整图片在中间
