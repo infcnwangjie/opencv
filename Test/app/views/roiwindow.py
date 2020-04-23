@@ -22,11 +22,19 @@ class LabelNameDialog(QDialog):
 		self.setWindowIcon(QIcon(":icons/set_roi.png"))
 		self.setWindowTitle("设置地标")
 		self.form_layout = QFormLayout()
-		test_label = QLabel("标签名称：")
-		self.label_name_edit = QLineEdit()
-		self.label_name_edit.setReadOnly(False)
+
+		no_label = QLabel("编号：")
+		self.no_edit = QLineEdit()
+		self.no_edit.setPlaceholderText(r"例如:2,从上到下2号位，左右对称位置同编号")
+		self.form_layout.addRow(no_label, self.no_edit)
+
+		direct_label = QLabel("左侧还是右侧：")
+		self.direct_edit = QLineEdit()
+		self.direct_edit.setPlaceholderText('L:左侧，R:右侧')
+		self.form_layout.addRow(direct_label, self.direct_edit)
+
 		self.save_button = QPushButton('保存')
-		self.form_layout.addRow(test_label, self.label_name_edit)
+
 		self.form_layout.addWidget(self.save_button)
 		self.setLayout(self.form_layout)
 
@@ -39,7 +47,6 @@ class GraphicsView(QGraphicsView):
 		# 设置放大缩小时跟随鼠标
 		# self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 		self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-
 		self.scene = QGraphicsScene()
 		self.setScene(self.scene)
 
@@ -179,7 +186,7 @@ class SetRoiWidget(QWidget):
 		rect = QRect(self.graphicsView.image_item.start_point.toPoint(),
 		             self.graphicsView.image_item.end_point.toPoint())
 		new_pixmap = self.graphicsView.image_item.pixmap().copy(rect)
-		imgname = self.label_save_dialog.label_name_edit.text()
+		imgname = "{no}_{direct}".format(no=self.label_save_dialog.no_edit.text(),direct=self.label_save_dialog.direct_edit.text())
 		new_pixmap.save(r'{dir}/{imgname}.png'.format(dir=ROIS_DIR,imgname=imgname))
 		self.label_save_dialog.hide()
 		self.pushButton_save.setEnabled(False)

@@ -33,7 +33,7 @@ class IntelligentProcess(object):
 
 	def init_imgplay(self, img_play):
 		self.img_play = img_play
-		self.img_play.left_button_release_signal.connect(self.set_roi)
+		# self.img_play.left_button_release_signal.connect(self.set_roi)
 
 	def check_plc_status(self):
 		'''检测plc状态'''
@@ -146,29 +146,29 @@ class IntelligentProcess(object):
 
 	def set_roi(self,points):
 		print("ok")
-		print(points)
-		point1, point2 = points
+		# print(points)
+		# point1, point2 = points
 
 		# print('first:({}{})'.format(point1[0], point1[1]))
 		# print('second:({}{})'.format(point2[0], point2[1]))
 
-		def img_roi_position(label_x, label_y):
-			label_w, label_h = self.img_play.size().width(), self.img_play.size().height()
-			raio = min(IMG_WIDTH / label_w, IMG_HEIGHT / label_h)
-			img_w = int(raio * label_x) - 50
-			img_h = int(raio * label_y) - 50
-			# img_w=label_x
-			# img_h=label_y
-			return img_w, img_h
+		# def img_roi_position(label_x, label_y):
+		# 	label_w, label_h = self.img_play.size().width(), self.img_play.size().height()
+		# 	raio = min(IMG_WIDTH / label_w, IMG_HEIGHT / label_h)
+		# 	img_w = int(raio * label_x) - 50
+		# 	img_h = int(raio * label_y) - 50
+		# 	# img_w=label_x
+		# 	# img_h=label_y
+		# 	return img_w, img_h
 
 		# 必须是经过放射变换的
-		image = self.img_play.copy_img()
+		# image = self.img_play.copy_img()
 		#
 		#
-		point1_modify = img_roi_position(point1[0], point1[1])
-		point2_modify = img_roi_position(point2[0], point2[1])
-		cv2.rectangle(image, point1_modify, point2_modify, (0, 255, 0), 2)
-		self.img_play.set_img(image)
+		# point1_modify = img_roi_position(point1[0], point1[1])
+		# point2_modify = img_roi_position(point2[0], point2[1])
+		# cv2.rectangle(image, point1_modify, point2_modify, (0, 255, 0), 2)
+		# self.img_play.set_img(image)
 
 		# refPt = []
 		# image = img

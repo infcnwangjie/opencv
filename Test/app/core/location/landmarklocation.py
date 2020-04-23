@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 # from gevent import monkey;
-
-from app.config import IMG_HEIGHT, IMG_WIDTH
-
+import os
+import numpy as np
+from app.config import IMG_HEIGHT, IMG_WIDTH, ROIS_DIR, LEFT_MARK_FROM, LEFT_MARK_TO, RIGHT_MARK_FROM, RIGHT_MARK_TO
 # monkey.patch_all()
-
 from itertools import chain
 from queue import Queue, LifoQueue
 import cv2
 import time
 import gevent
-
 import math
 import profile
 
@@ -20,11 +18,11 @@ cv2.useOptimized()
 
 rows, cols = IMG_HEIGHT, IMG_WIDTH
 
-SLIDE_WIDTH = 35;
-SLIDE_HEIGHT = 35
+SLIDE_WIDTH = 25
+SLIDE_HEIGHT = 25
 
-FOND_RECT_WIDTH = 90
-FOND_RECT_HEIGHT = 90
+FOND_RECT_WIDTH = 70
+FOND_RECT_HEIGHT = 70
 
 LEFT_START = 150
 LEFT_END = 175
@@ -143,15 +141,20 @@ class LandMarkRoi:
 
 
 # self.lock.release()
+#
+landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1) for
+                 roi_img in
+                 os.listdir(ROIS_DIR)]
 
 
-landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
-                 LandMarkRoi(img=cv2.imread("D:/greenyellow.png"), label='greenyellow', id=2),
-                 LandMarkRoi(img=cv2.imread("D:/yellow_red.png"), label='yellow_red', id=3),
-                 LandMarkRoi(img=cv2.imread("D:/red_green.png"), label='red_green', id=4),
-                 LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
-                 LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
-                 LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
+#
+# landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
+#                  LandMarkRoi(img=cv2.imread("D:/greenyellow.png"), label='greenyellow', id=2),
+#                  LandMarkRoi(img=cv2.imread("D:/yellow_red.png"), label='yellow_red', id=3),
+#                  LandMarkRoi(img=cv2.imread("D:/red_green.png"), label='red_green', id=4),
+#                  LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
+#                  LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
+#                  LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
 
 
 # @tjtime
@@ -172,8 +175,9 @@ def generator_slidewindows(dest=None):
 	# cols=list(chain(range(150, 175), range(766, 800)))
 	x = yield
 	yield x
+	# IMG_WIDTH*
 	while row < rows:
-		for col in chain(range(150, 175), range(766, 796)):
+		for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(RIGHT_MARK_FROM, RIGHT_MARK_TO)):
 			for rect in good_rects:
 				if rect.slider_in_rect(slide_col=col, slide_row=row):
 					break
@@ -186,6 +190,8 @@ def generator_slidewindows(dest=None):
 		else:
 			step = 2
 		row += step
+
+
 #
 #
 # gen_slider = generator_slidewindows()
@@ -248,13 +254,13 @@ def start_location_landmark(img):
 			col = slide_window_obj.col
 			row = slide_window_obj.row
 
-			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(255, 255, 0),
+			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(0, 255, 255  ),
 			              thickness=1)
 			cv2.putText(dest,
-			            "{}:{}:{}".format(slide_window_obj.direct, landmark_roi.label,
-			                              round(slide_window_obj.similarity, 2)),
-			            (col, row + 30),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 1)
+			            "{}:{}:{}".format(landmark_roi.label, slide_window_obj.direct,
+			                              round(slide_window_obj.similarity, 3)),
+			            (col - 50, row + 30),
+			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 1)
 
 	end = time.clock()
 	print("结束{}".format(end - start))
@@ -265,10 +271,26 @@ def start_location_landmark(img):
 	return dest
 
 
+def perspective_transform(src, dest):
+	H_rows, W_cols = src.shape[:2]
+	print(H_rows, W_cols)
+
+	# 原图中书本的四个角点(左上、右上、左下、右下),与变换后矩阵位置
+	pts1 = np.float32([[161, 80], [449, 12], [1, 430], [480, 394]])
+	pts2 = np.float32([[0, 0], [W_cols, 0], [0, H_rows], [H_rows, W_cols], ])
+
+	# 生成透视变换矩阵；进行透视变换
+	M = cv2.getPerspectiveTransform(pts1, pts2)
+	dst = cv2.warpPerspective(src, M, (500, 470))
+	return dst
+
+
 if __name__ == '__main__':
-	dest = start_location(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp'))
+	# cv2.set
+	dest = start_location_landmark(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp'))
+	# print(dest)
 	cv2.namedWindow("target")
 	cv2.imshow("target", dest)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
-# profile.run('main()')
+	# profile.run('main()')

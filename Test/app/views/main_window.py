@@ -88,12 +88,12 @@ class CentWindowUi(object):
 			if matchresult:
 				videos.append(matchresult.group(0))
 
-		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
-		self.tree = QTreeWidget()
 
+		self.tree = QTreeWidget()
 		self.tree.setHeaderLabels(['视频录像'])
 		self.tree.setColumnCount(1)
 		self.tree.setColumnWidth(0, 160)
+		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
 		for datestr, files in groupinfo:
 			root = QTreeWidgetItem(self.tree)
 			root.setText(0, datestr)
@@ -117,7 +117,7 @@ class CentWindowUi(object):
 		self.videoBox.setObjectName("videoBox")
 		all_layout.addWidget(self.videoBox)
 
-		self.picturelabel = MyLabel(self)
+		self.picturelabel = QLabel(self)
 		self.picturelabel.setObjectName("picturelabel")
 		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
 		video_layout = QtWidgets.QHBoxLayout()
@@ -210,7 +210,7 @@ class CentWindowUi(object):
 		self.retranslateUi(Form)
 
 	def init_roi_imgs(self):
-
+		self.roilistmodel.clear()
 		for img in os.listdir(ROIS_DIR):
 			imgpath = os.path.join(ROIS_DIR, img)
 			roi = QStandardItem(QIcon(imgpath), img)
@@ -262,6 +262,7 @@ class CenterWindow(QWidget, CentWindowUi):
 			print("关闭")
 
 	def autowork(self):
+		self.process.intelligentthread.play = True
 		self.process.intelligentthread.work = True
 		self.process.plcthread.work = True
 

@@ -27,6 +27,10 @@ DISTANCE_SAMEYLANDMARK_SPACE = 400  # 地标与地标之间间隔大概2米
 #######################################################################################
 IMG_WIDTH = 900
 IMG_HEIGHT = 700
+LEFT_MARK_FROM=int(0.168*IMG_WIDTH)
+LEFT_MARK_TO=int(0.195*IMG_WIDTH)
+RIGHT_MARK_FROM=int(0.848*IMG_WIDTH)
+RIGHT_MARK_TO=int(0.876*IMG_WIDTH)
 
 #####海康威视图像动态连接库#############################################################
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
@@ -52,3 +56,7 @@ HOCK_STATUS_MOVE = 4
 
 VIDEO_DIR='C:/NTY_IMG_PROCESS/VIDEO'
 ROIS_DIR='C:/NTY_IMG_PROCESS/ROIS'
+PROGRAM_DATA_DIR='C:/NTY_IMG_PROCESS/DATA'
+
+
+#
