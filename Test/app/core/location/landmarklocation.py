@@ -103,7 +103,6 @@ class TargetRect:
 		if self.point1[0] < slide_point1[0] and self.point1[1] < slide_point1[1] and self.point2[0] > slide_point2[
 			0] and self.point2[1] > slide_point2[1]:
 			return True
-
 		return False
 
 
@@ -150,15 +149,6 @@ landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), la
                  roi_img in
                  os.listdir(ROIS_DIR)]
 
-
-#
-# landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
-#                  LandMarkRoi(img=cv2.imread("D:/greenyellow.png"), label='greenyellow', id=2),
-#                  LandMarkRoi(img=cv2.imread("D:/yellow_red.png"), label='yellow_red', id=3),
-#                  LandMarkRoi(img=cv2.imread("D:/red_green.png"), label='red_green', id=4),
-#                  LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
-#                  LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
-#                  LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
 
 
 # @tjtime
