@@ -296,10 +296,20 @@ def perspective_transform(src, position_dic):
 
 	# 生成透视变换矩阵；进行透视变换
 	M = cv2.getPerspectiveTransform(pts1, pts2)
+
 	dst = cv2.warpPerspective(src, M, (W_cols, H_rows))
 
 	return dst, real_position_dic
 
+
+def draw_grid_lines(img):
+	H_rows, W_cols = img.shape[:2]
+	for row in range(0,H_rows):
+		if row % 50==0:
+			cv2.line(img,(0,row),(W_cols,row),color=(191,62,255),thickness=1,lineType=cv2.LINE_8)
+	for col in range(0,W_cols):
+		if col %50 ==0:
+			cv2.line(img,(col,0),(col,H_rows),color=(191,62,255),thickness=1,lineType=cv2.LINE_8)
 
 if __name__ == '__main__':
 	src, position_dic = start_location_landmark(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp'))
@@ -309,6 +319,7 @@ if __name__ == '__main__':
 	b = BagDetector(dest)
 	print(b.processed_bag)
 
+	draw_grid_lines(dest)
 	cv2.namedWindow("dest")
 	cv2.imshow("dest", dest)
 	cv2.waitKey(0)

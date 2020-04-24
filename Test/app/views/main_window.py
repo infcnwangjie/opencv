@@ -161,12 +161,12 @@ class CentWindowUi(object):
 		self.plc_status_edit = QLineEdit()
 		self.plc_status_edit.setReadOnly(True)
 		baginfo_layout.addRow(plc_label, self.plc_status_edit)
-		bagnum_label = QLabel("袋子总数：")
-		self.bagnum_edit = QLineEdit()
-		baginfo_layout.addRow(bagnum_label, self.bagnum_edit)
-		restbaglabel = QLabel("剩余袋子：")
-		self.restbagnum_edit = QLineEdit()
-		baginfo_layout.addRow(restbaglabel, self.restbagnum_edit)
+		# bagnum_label = QLabel("袋子总数：")
+		# self.bagnum_edit = QLineEdit()
+		# baginfo_layout.addRow(bagnum_label, self.bagnum_edit)
+		# restbaglabel = QLabel("剩余袋子：")
+		# self.restbagnum_edit = QLineEdit()
+		# baginfo_layout.addRow(restbaglabel, self.restbagnum_edit)
 
 		currentStatuslabel = QLabel("当前状态：")
 		self.currentstatus_edit = QLineEdit()
@@ -232,7 +232,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
 		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.picturelabel,
-		                                  plc_status_show=self.plc_status_edit, bag_num_show=self.bagnum_edit)
+		                                  plc_status_show=self.plc_status_edit)
 		self.check_test_status()
 
 	def init_button(self):
