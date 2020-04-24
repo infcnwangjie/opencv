@@ -28,7 +28,8 @@ class BagDetector(Preprocess):
 
 			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
 
-			if cv2.contourArea(countour) > 500 and rect_h < 300 and 0.32 * cols < center_x < 0.72 * cols:
+			# cv2.contourArea(countour) > 500 and rect_h < 300 and
+			if  0.32 * cols < center_x < 0.62 * cols:
 				moderatesize_countours.append(countour)
 				box = Bag(countour, bag_binary, id=boxindex)
 				boxindex += 1

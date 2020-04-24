@@ -136,7 +136,7 @@ class IntelligentProcess(object):
 		# 			nearest_bag_position, hockposition)
 		# 		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 		# # img = a.move()
-		dest = start_location_landmark(img=img)
+		dest,_ = start_location_landmark(img=img)
 
 		# img = cv2.resize(a.img, (900, 700))
 		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)

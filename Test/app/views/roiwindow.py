@@ -59,8 +59,6 @@ class GraphicsView(QGraphicsView):
 
 		self.image_item.setFlag(QGraphicsItem.ItemIsMovable)
 		self.scene.addItem(self.image_item)
-		# self.scene.addItem(self.image_item)
-
 		size = self.image_item.pixmap().size()
 		# 调整图片在中间
 		self.image_item.setPos(-size.width() / 2, -size.height() / 2)

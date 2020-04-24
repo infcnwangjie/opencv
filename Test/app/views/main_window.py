@@ -15,6 +15,7 @@ from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_D
 from app.core.autowork.process import IntelligentProcess
 from app.core.video.imageprovider import ImageProvider
 from app.icons import resource
+from app.views.landmark_window import SetCoordinateWidget
 
 from app.views.roiwindow import SetRoiWidget
 
@@ -280,10 +281,13 @@ class MainWindow(QMainWindow):
 		self.set_roi_widget = SetRoiWidget()
 		self.set_roi_widget.update_listmodel_signal.connect(self.centralwidget.init_roi_imgs)
 
+		self.coordinate_widget=SetCoordinateWidget()
+
 	def init_window(self):
 		self.setWindowIcon(QIcon(":icons/robot.png"))
 		self.centralwidget = CenterWindow()  # 创建一个文本编辑框组件
 		self.setCentralWidget(self.centralwidget)  # 将它设置成QMainWindow的中心组件。中心组件占据了所有剩下的空间。
+		self.showMaximized()
 		self.init_menu_toolbar()
 
 	def init_menu_toolbar(self):
@@ -319,8 +323,14 @@ class MainWindow(QMainWindow):
 
 		roisetAction = QAction(QIcon(":icons/set_roi.png"), '选取ROI', self)
 		roisetAction.setShortcut('Ctrl+t')
-		roisetAction.setStatusTip('测试模式')
+		roisetAction.setStatusTip('选取ROI')
 		roisetAction.triggered.connect(self.set_roi)
+
+
+		setCooridnateAction = QAction(QIcon(":icons/instruct.png"), '设置地标', self)
+		setCooridnateAction.setShortcut('Ctrl+t')
+		setCooridnateAction.setStatusTip('设置地标')
+		setCooridnateAction.triggered.connect(self.set_cooridnate)
 
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
@@ -331,6 +341,11 @@ class MainWindow(QMainWindow):
 
 		roiMenu = menubar.addMenu('&设置ROI')
 		roiMenu.addAction(roisetAction)
+		cooridnateMenu=menubar.addMenu("&设置坐标系")
+		cooridnateMenu.addAction(setCooridnateAction)
+
+
+
 
 		openFileToolBar = self.addToolBar('OpenFile')
 		openFileToolBar.addAction(openFileAction)
@@ -352,6 +367,9 @@ class MainWindow(QMainWindow):
 
 		setRoiToolbar = self.addToolBar("SetRoi")
 		setRoiToolbar.addAction(roisetAction)
+
+		setCooridnateToolBar=self.addToolBar("SetCooridnate")
+		setCooridnateToolBar.addAction(setCooridnateAction)
 
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
@@ -394,7 +412,7 @@ class MainWindow(QMainWindow):
 
 		# global SET_ROI
 		# SET_ROI = not SET_ROI
-		img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
+		# img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
 		# # self.centralwidget.process.set_roi(img)
 		#
 		# dest = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
@@ -404,4 +422,12 @@ class MainWindow(QMainWindow):
 		# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
 		# self.centralwidget.picturelabel.setPixmap(QPixmap.fromImage(showImage))
 		# self.centralwidget.picturelabel.setScaledContents(True)
+		self.set_roi_widget.move(260,120)
+		# self.set_roi_widget.showMaximized()
 		self.set_roi_widget.show()
+
+
+	def set_cooridnate(self):
+		self.coordinate_widget.move(260, 120)
+		# self.coordinate_widget.showMaximized()
+		self.coordinate_widget.show()
