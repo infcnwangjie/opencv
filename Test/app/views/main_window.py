@@ -32,33 +32,14 @@ class MyLabel(QtWidgets.QLabel):  # 自定义的QLabel类
 		self.item_y = None
 
 	def set_img(self, img):
-		# self.resize(IMG_WIDTH, IMG_HEIGHT)
-		self.showimg = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
-		show = cv2.cvtColor(self.showimg, cv2.COLOR_BGR2RGB)
-		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+		self.img = img
+		showImage = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
 
 		self.setPixmap(QPixmap.fromImage(showImage))
 		self.setScaledContents(True)
 
 	def copy_img(self):
-		return self.showimg.copy()
-
-	def mouseReleaseEvent(self, e):
-		'''左键抬起事件'''
-		pointX = e.globalX()
-		pointY = e.globalY()
-		print("releasebutton:({},{})".format(pointX, pointY))
-		self.points.append((pointX, pointY))
-		if len(self.points) == 2:
-			self.left_button_release_signal.emit(self.points)
-			self.points.clear()
-
-	def mousePressEvent(self, e):
-		if e.buttons() == QtCore.Qt.LeftButton:
-			# self.setText("左")
-			self.points.append((e.globalX(), e.globalY()))
-			# self.setText("({},{}):".format(self.item_x, self.item_y))
-			print("CLICKBUTTON({},{}):".format(e.globalX(), e.globalY()))
+		return self.img.copy()
 
 
 class CentWindowUi(object):
@@ -89,7 +70,6 @@ class CentWindowUi(object):
 			if matchresult:
 				videos.append(matchresult.group(0))
 
-
 		self.tree = QTreeWidget()
 		self.tree.setHeaderLabels(['视频录像'])
 		self.tree.setColumnCount(1)
@@ -118,7 +98,7 @@ class CentWindowUi(object):
 		self.videoBox.setObjectName("videoBox")
 		all_layout.addWidget(self.videoBox)
 
-		self.picturelabel = QLabel(self)
+		self.picturelabel = MyLabel(self)
 		self.picturelabel.setObjectName("picturelabel")
 		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
 		video_layout = QtWidgets.QHBoxLayout()
@@ -148,8 +128,7 @@ class CentWindowUi(object):
 		self.stop_button.setStyleSheet("border:none")
 		operate_layout.addWidget(self.stop_button, *(0, 1))
 
-
-		self.info_box=QtWidgets.QGroupBox()
+		self.info_box = QtWidgets.QGroupBox()
 		self.info_box.setTitle("操作状态")
 		baginfo_layout = QtWidgets.QFormLayout()
 		test_label = QLabel("调试状态：")
@@ -174,10 +153,10 @@ class CentWindowUi(object):
 
 		self.info_box.setLayout(baginfo_layout)
 
-		self.roi_box= QtWidgets.QGroupBox(self)
+		self.roi_box = QtWidgets.QGroupBox(self)
 		self.roi_box.setTitle("地标ROI模型")
 
-		self.roi_layout=QtWidgets.QVBoxLayout()
+		self.roi_layout = QtWidgets.QVBoxLayout()
 
 		self.roi_img_listview = QListView()
 		self.roilistmodel = QStandardItemModel()
@@ -185,7 +164,6 @@ class CentWindowUi(object):
 		self.roi_img_listview.setModel(self.roilistmodel)
 		self.roi_layout.addWidget(self.roi_img_listview)
 		self.roi_box.setLayout(self.roi_layout)
-
 
 		right_layout = QtWidgets.QVBoxLayout()
 		# 添加操作信息
@@ -281,7 +259,7 @@ class MainWindow(QMainWindow):
 		self.set_roi_widget = SetRoiWidget()
 		self.set_roi_widget.update_listmodel_signal.connect(self.centralwidget.init_roi_imgs)
 
-		self.coordinate_widget=SetCoordinateWidget()
+		self.coordinate_widget = SetCoordinateWidget()
 
 	def init_window(self):
 		self.setWindowIcon(QIcon(":icons/robot.png"))
@@ -326,7 +304,6 @@ class MainWindow(QMainWindow):
 		roisetAction.setStatusTip('选取ROI')
 		roisetAction.triggered.connect(self.set_roi)
 
-
 		setCooridnateAction = QAction(QIcon(":icons/instruct.png"), '设置地标', self)
 		setCooridnateAction.setShortcut('Ctrl+t')
 		setCooridnateAction.setStatusTip('设置地标')
@@ -341,11 +318,8 @@ class MainWindow(QMainWindow):
 
 		roiMenu = menubar.addMenu('&设置ROI')
 		roiMenu.addAction(roisetAction)
-		cooridnateMenu=menubar.addMenu("&设置坐标系")
+		cooridnateMenu = menubar.addMenu("&设置坐标系")
 		cooridnateMenu.addAction(setCooridnateAction)
-
-
-
 
 		openFileToolBar = self.addToolBar('OpenFile')
 		openFileToolBar.addAction(openFileAction)
@@ -368,7 +342,7 @@ class MainWindow(QMainWindow):
 		setRoiToolbar = self.addToolBar("SetRoi")
 		setRoiToolbar.addAction(roisetAction)
 
-		setCooridnateToolBar=self.addToolBar("SetCooridnate")
+		setCooridnateToolBar = self.addToolBar("SetCooridnate")
 		setCooridnateToolBar.addAction(setCooridnateAction)
 
 		self.setWindowTitle('Main window')
@@ -422,10 +396,9 @@ class MainWindow(QMainWindow):
 		# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
 		# self.centralwidget.picturelabel.setPixmap(QPixmap.fromImage(showImage))
 		# self.centralwidget.picturelabel.setScaledContents(True)
-		self.set_roi_widget.move(260,120)
+		self.set_roi_widget.move(260, 120)
 		# self.set_roi_widget.showMaximized()
 		self.set_roi_widget.show()
-
 
 	def set_cooridnate(self):
 		self.coordinate_widget.move(260, 120)

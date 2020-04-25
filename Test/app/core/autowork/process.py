@@ -1,14 +1,13 @@
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 
-from app.config import IMG_HEIGHT, IMG_WIDTH
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.core.autowork.plcthread import PlcThread
-from app.core.location.landmarklocation import start_location_landmark, perspective_transform, draw_grid_lines
+from app.core.processers.landmark_detector import perspective_transform, draw_grid_lines, \
+	location_landmark
 from app.core.plc.plchandle import PlcHandle
 from app.core.location.locationservice import PointLocationService
 from app.core.processers.bag_detector import BagDetector
-from app.log.logtool import mylog_debug
 from app.status import HockStatus
 
 
@@ -34,7 +33,8 @@ class IntelligentProcess(object):
 
 	def init_imgplay(self, img_play):
 		self.img_play = img_play
-		# self.img_play.left_button_release_signal.connect(self.set_roi)
+
+	# self.img_play.left_button_release_signal.connect(self.set_roi)
 
 	def check_plc_status(self):
 		'''检测plc状态'''
@@ -137,9 +137,8 @@ class IntelligentProcess(object):
 		# 			nearest_bag_position, hockposition)
 		# 		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
 		# # img = a.move()
-		src,position_dic = start_location_landmark(img=img)
+		dest = location_landmark(img=img)
 
-		dest, real_position_dic = perspective_transform(src, position_dic)
 		b = BagDetector(dest)
 		print(b.processed_bag)
 		draw_grid_lines(dest)
@@ -148,6 +147,3 @@ class IntelligentProcess(object):
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
 		self.img_play.setPixmap(QPixmap.fromImage(showImage))
 		self.img_play.setScaledContents(True)
-
-
-

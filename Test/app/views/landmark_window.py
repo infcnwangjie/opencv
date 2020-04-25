@@ -42,15 +42,15 @@ class SetCoordinateWidget(QWidget):
 	def setupUi(self, CoordirateWidget):
 
 		CoordirateWidget.setObjectName("CoordirateWidget")
-		# self.scroll_area = QScrollArea(self)  # 2
+		self.scroll_area = QScrollArea(self)  # 2
 
 		self.groupBox = QtWidgets.QGroupBox(CoordirateWidget)
-		self.groupBox.setGeometry(QtCore.QRect(100, 100, 961, 731))
+		self.groupBox.setGeometry(QtCore.QRect(100, 100, 1000, 870))
 		self.groupBox.setObjectName("groupBox")
 		#
-		# self.scroll_area.setWidget(self.groupBox)
-		# self.scroll_area.setMinimumSize(QSize(1000, 680))
-		# self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.scroll_area.setWidget(self.groupBox)
+		self.scroll_area.setMinimumSize(QSize(1000, 800))
+		self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
 		self.left_toolButton1 = QtWidgets.QToolButton(self.groupBox)
 		self.left_toolButton1.setGeometry(QtCore.QRect(120, 50, 81, 101))
@@ -77,6 +77,13 @@ class SetCoordinateWidget(QWidget):
 		self.right_toolButton4 = QtWidgets.QToolButton(self.groupBox)
 		self.right_toolButton4.setGeometry(QtCore.QRect(670, 570, 81, 101))
 		self.right_toolButton4.setObjectName("right_toolButton4")
+
+		self.left_toolButton5 = QtWidgets.QToolButton(self.groupBox)
+		self.left_toolButton5.setGeometry(QtCore.QRect(120, 760, 81, 101))
+		self.left_toolButton5.setObjectName("left_toolButton5")
+		self.right_toolButton5 = QtWidgets.QToolButton(self.groupBox)
+		self.right_toolButton5.setGeometry(QtCore.QRect(670, 760, 81, 101))
+		self.right_toolButton5.setObjectName("right_toolButton5")
 
 		self.lineEditL1 = QtWidgets.QLineEdit(self.groupBox)
 		self.lineEditL1.setGeometry(QtCore.QRect(210, 110, 151, 41))
@@ -112,6 +119,16 @@ class SetCoordinateWidget(QWidget):
 		self.lineEditR4.setObjectName("lineEditR4")
 		self.lineEditR4.setText("574.3,370")
 
+		self.lineEditL5 = QtWidgets.QLineEdit(self.groupBox)
+		self.lineEditL5.setGeometry(QtCore.QRect(210, 810, 151, 41))
+		self.lineEditL5.setObjectName("lineEditL5")
+		self.lineEditL5.setText("0,570")
+		self.lineEditR5 = QtWidgets.QLineEdit(self.groupBox)
+		self.lineEditR5.setGeometry(QtCore.QRect(760, 810, 151, 41))
+		self.lineEditR5.setObjectName("lineEditR5")
+		self.lineEditR5.setText("574.3,570")
+
+
 		self.save_coordirate_button = QtWidgets.QPushButton(CoordirateWidget)
 		self.save_coordirate_button.setGeometry(QtCore.QRect(100, 840, 241, 51))
 		self.save_coordirate_button.setObjectName("save_coordirate_button")
@@ -131,6 +148,8 @@ class SetCoordinateWidget(QWidget):
 		self.right_toolButton3.setText(_translate("CoordirateWidget", "NO3_R"))
 		self.left_toolButton4.setText(_translate("CoordirateWidget", "NO4_L"))
 		self.right_toolButton4.setText(_translate("CoordirateWidget", "NO4_R"))
+		self.left_toolButton5.setText(_translate("CoordirateWidget", "NO5_L"))
+		self.right_toolButton5.setText(_translate("CoordirateWidget", "NO5_R"))
 		self.groupBox.setTitle(_translate("CoordirateWidget", "车间实景坐标"))
 		self.save_coordirate_button.setText(_translate("CoordirateWidget", "保存"))
 
@@ -138,11 +157,14 @@ class SetCoordinateWidget(QWidget):
 		info = dict(NO1_L=self.lineEditL1.text(), NO1_R=self.lineEditR1.text(),
 		            NO2_L=self.lineEditL2.text(), NO2_R=self.lineEditR2.text(),
 		            NO3_L=self.lineEditL3.text(), NO3_R=self.lineEditR3.text(),
-		            NO4_L=self.lineEditL4.text(), NO4_R=self.lineEditR4.text()
+		            NO4_L=self.lineEditL4.text(), NO4_R=self.lineEditR4.text(),
+		            NO5_L=self.lineEditL5.text(), NO5_R=self.lineEditR5.text()
 		            )
 		# print(info)
 		with open(os.path.join(PROGRAM_DATA_DIR, 'coordinate_data.txt'), 'wb') as coordinate:
 			pickle.dump(info, coordinate, 0)
+
+		self.hide()
 
 
 if __name__ == '__main__':
