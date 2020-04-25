@@ -107,13 +107,11 @@ class TargetRect:
 
 
 class LandMarkRoi:
-
 	def __init__(self, img, label, id=None):
 		self.roi = img
 		self.id = id
 		self.label = label
 		self._times = 0
-		# self.lock = Lock()
 		self.land_marks = []
 
 	def add_slide_window(self, slide_window: NearLandMark):
@@ -130,7 +128,6 @@ class LandMarkRoi:
 		else:
 			self.land_marks.append(slide_window)
 
-	# self.lock.release()
 
 	@property
 	def times(self):
@@ -138,20 +135,14 @@ class LandMarkRoi:
 
 	@times.setter
 	def times(self, value):
-		# self.lock.acquire()
-		# with self.lock:
 		self._times = value
 
-
-# self.lock.release()
-#
 landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1) for
                  roi_img in
                  os.listdir(ROIS_DIR)]
 
 
 
-# @tjtime
 def compare_similar(img1, img2):
 	if img1 is None or img2 is None:
 		return 0
@@ -196,7 +187,6 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 	similar = compare_similar(roi, slide_img)
 	global step, fail_time
 	if similar > 0.56:
-		# print("find")
 		slide_window_obj.similarity = similar
 		slide_window_obj.roi = landmark_roi
 		landmark_roi.add_slide_window(slide_window_obj)
@@ -222,10 +212,8 @@ def computer_task(landmark_roi: LandMarkRoi, slide_window_obj):
 # @tjtime
 def start_location_landmark(img):
 	start = time.clock()
-	# item = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-	dest = cv2.resize(img, (900, 700))
+	dest = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
 
-	# task_list = []
 	for slide_window_obj in generator_slidewindows(dest):
 		# 迭代结束条件
 		need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
@@ -254,10 +242,6 @@ def start_location_landmark(img):
 
 	end = time.clock()
 	print("结束{}".format(end - start))
-	# cv2.namedWindow("target")
-	# cv2.imshow("target", dest)
-	# cv2.waitKey(0)
-	# cv2.destroyAllWindows()
 	return dest, position_dic
 
 
