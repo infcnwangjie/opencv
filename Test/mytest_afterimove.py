@@ -12,7 +12,7 @@ import numpy as np
 
 # https://baijiahao.baidu.com/s?id=1615404760897105428&wfr=spider&for=pc
 cv2.useOptimized()
-img = cv2.imread("D:/2020-04-10-15-26-22test.bmp")
+img = cv2.imread("H:/2020-04-10-15-26-22test.bmp")
 img1 = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 dest = cv2.resize(img, (900, 700))
 # dest = cv2.resize(img, (1000, 800))
@@ -122,13 +122,13 @@ class LandMarkRoi:
 		self.lock.release()
 
 
-landmark_rois = [LandMarkRoi(img=cv2.imread("D:/red.png"), label='red2', id=1),
-                 LandMarkRoi(img=cv2.imread("D:/greenyellow.png"), label='greenyellow', id=2),
-                 LandMarkRoi(img=cv2.imread("D:/yellow_red.png"), label='yellow_red', id=3),
-                 LandMarkRoi(img=cv2.imread("D:/red_green.png"), label='red_green', id=4),
-                 LandMarkRoi(img=cv2.imread("D:/dark_red_green.png"), label='dark_red_green', id=5),
-                 LandMarkRoi(img=cv2.imread("D:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
-                 LandMarkRoi(img=cv2.imread("D:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
+landmark_rois = [LandMarkRoi(img=cv2.imread("H:/red.png"), label='red2', id=1),
+                 LandMarkRoi(img=cv2.imread("H:/greenyellow.png"), label='greenyellow', id=2),
+                 LandMarkRoi(img=cv2.imread("H:/yellow_red.png"), label='yellow_red', id=3),
+                 LandMarkRoi(img=cv2.imread("H:/red_green.png"), label='red_green', id=4),
+                 LandMarkRoi(img=cv2.imread("H:/dark_red_green.png"), label='dark_red_green', id=5),
+                 LandMarkRoi(img=cv2.imread("H:/dark_red_yellow.png"), label='dark_red_yellow', id=6),
+                 LandMarkRoi(img=cv2.imread("H:/dark_green_yellow.png"), label='dark_yellow_green', id=7)]
 
 
 # @tjtime
