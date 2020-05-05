@@ -16,8 +16,6 @@ DISTANCE_LASTER_HOCK_X = 60  # 灯与钩子X轴误差距离60cm
 
 DISTANCE_LASTER_HOCK_Y = 60  # 灯与钩子Y轴误差距离60cm
 
-
-
 DEBUG = True
 SDK_OPEN = False
 PLC_OPEN = False
@@ -25,6 +23,14 @@ PLC_OPEN = False
 DISTANCE_SAMEXLANDMARK_SPACE = 200 if not DEBUG else 20  # 地标与地标之间间隔大概2米
 
 DISTANCE_SAMEYLANDMARK_SPACE = 400  # 地标与地标之间间隔大概2米
+
+#######################################################################################
+IMG_WIDTH = 900
+IMG_HEIGHT = 700
+LEFT_MARK_FROM=int(0.168*IMG_WIDTH)
+LEFT_MARK_TO=int(0.195*IMG_WIDTH)
+RIGHT_MARK_FROM=int(0.848*IMG_WIDTH)
+RIGHT_MARK_TO=int(0.876*IMG_WIDTH)
 
 #####海康威视图像动态连接库#############################################################
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
@@ -46,3 +52,11 @@ HOCK_STATUS_READY = 3
 HOCK_STATUS_MOVE = 4
 
 # print(NEG_TEMPLATES_PATH)
+
+
+VIDEO_DIR='C:/NTY_IMG_PROCESS/VIDEO'
+ROIS_DIR='C:/NTY_IMG_PROCESS/ROIS'
+PROGRAM_DATA_DIR='C:/NTY_IMG_PROCESS/DATA'
+
+
+#

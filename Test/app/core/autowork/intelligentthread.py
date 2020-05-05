@@ -5,6 +5,7 @@ import cv2
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
 
+from app.config import IMG_WIDTH, IMG_HEIGHT
 from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
 from app.core.plc.plchandle import PlcHandle
 from app.core.location.locationservice import PointLocationService, BAG_AND_LANDMARK
@@ -69,7 +70,7 @@ class IntelligentThread(QThread):
 	def run(self):
 
 		while self.play and self.IMAGE_HANDLE:
-			sleep(1/13)
+			sleep(1 / 13)
 			frame = self.IMAGE_HANDLE.read()
 			if frame is None:
 				# self.finish = True
@@ -86,11 +87,7 @@ class IntelligentThread(QThread):
 				self.positionservice.img = show
 				self.process()
 				show = self.positionservice.img
-
-			show = cv2.resize(show, (800, 800))
-			showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-			self.video_player.setPixmap(QPixmap.fromImage(showImage))
-			self.video_player.setScaledContents(True)
+			self.video_player.set_img(show)
 
 	def process(self):
 		if self.hockstatus == HockStatus.POSITION_NEARESTBAG:

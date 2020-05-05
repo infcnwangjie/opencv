@@ -9,10 +9,9 @@ from PyQt5.QtWidgets import QMessageBox
 from app.config import SDK_OPEN, DISTANCE_SAMEXLANDMARK_SPACE, DISTANCE_SAMEYLANDMARK_SPACE
 from app.core.exceptions.allexception import NotFoundBagException, NotFoundHockException
 from app.core.processers.bag_detector import BagDetector
-from app.core.processers.landmark_detector import LandMarkDetector
 from app.core.processers.laster_detector import LasterDetector
 from app.core.processers.preprocess import Preprocess
-from app.core.location.models import Box, LandMark, Bag, Laster, Hock
+from app.core.location.models import Box, Bag, Laster, Hock
 from app.log.logtool import mylog_debug, mylog_error
 from app.status import Landmark_Model_Select
 
@@ -136,8 +135,7 @@ class PointLocationService:
 		return self.img
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
-		del self.bags,self.laster,self.hock,self.landmarks
-
+		del self.bags, self.laster, self.hock, self.landmarks
 
 	@property
 	def compute_hook_location(self):
@@ -147,11 +145,10 @@ class PointLocationService:
 		:return:
 		'''
 
-		processor=LasterDetector(self.img)
-		self.laster=processor.processed_laster
+		processor = LasterDetector(self.img)
+		self.laster = processor.processed_laster
 		lasterposition = self.laster.boxcenterpoint  # 激光灯位置X轴较钩子小
 		hockposition = lasterposition  # 钩子的坐标
-		# cv2.circle(self.img, hockposition, 60, (250, 0, 0), -1)
 		cv2.putText(self.img, "hock->({},{})".format(hockposition[0], hockposition[1]),
 		            (hockposition[0], hockposition[1]),
 		            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (250, 0, 0), 2)
