@@ -351,22 +351,6 @@ def perspective_transform(src, position_dic):
 		return dst
 
 
-# img_left_1, img_right_2, img_left_3, img_right_4 = position_dic.get('NO2_L'), position_dic.get(
-# 	'NO2_R'), position_dic.get('NO4_L'), position_dic.get('NO4_R')
-# real_left_1, real_right_2, real_left_3, real_right_4 = real_position_dic.get('NO2_L'), real_position_dic.get(
-# 	'NO2_R'), real_position_dic.get('NO4_L'), real_position_dic.get('NO4_R')
-#
-# # 原图中四个角点(左上、右上、左下、右下),与变换后矩阵位置
-# pts1 = np.float32([img_left_1, img_right_2, img_left_3, img_right_4])
-# pts2 = np.float32([real_left_1, real_right_2, real_left_3, real_right_4])
-#
-# # 生成透视变换矩阵；进行透视变换
-# M = cv2.getPerspectiveTransform(pts1, pts2)
-#
-# dst = cv2.warpPerspective(src, M, (W_cols, H_rows))
-#
-# return dst, real_position_dic
-
 
 # @tjtime
 def location_landmark(img):
@@ -401,9 +385,7 @@ def location_landmark(img):
 
 	end = time.clock()
 	print("结束{}".format(end - start))
-
 	dest = perspective_transform(dest, position_dic)
-
 	return dest
 
 
@@ -411,10 +393,10 @@ def draw_grid_lines(img):
 	H_rows, W_cols = img.shape[:2]
 	for row in range(0, H_rows):
 		if row % 50 == 0:
-			cv2.line(img, (0, row), (W_cols, row), color=(191, 62, 255), thickness=1, lineType=cv2.LINE_8)
+			cv2.line(img, (0, row), (W_cols, row), color=(0, 255, 0), thickness=1, lineType=cv2.LINE_8)
 	for col in range(0, W_cols):
 		if col % 50 == 0:
-			cv2.line(img, (col, 0), (col, H_rows), color=(191, 62, 255), thickness=1, lineType=cv2.LINE_8)
+			cv2.line(img, (col, 0), (col, H_rows), color=(0, 255, 0), thickness=1, lineType=cv2.LINE_8)
 
 
 if __name__ == '__main__':

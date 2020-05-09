@@ -28,9 +28,10 @@ class LasterDetector(Preprocess):
 		def filter_laster_contour(c):
 			rows, cols = self.shape
 			x, y, w, h = cv2.boundingRect(c)
-			if w < 20 or h < 20:
+			center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
+			if w < 10 or h < 15:
 				return False
-			if 0.32 * cols < x + 0.5 * w < 0.72 * cols:
+			if  0.2 * cols < center_x < 0.7 * cols:
 				return True
 			else:
 				return False

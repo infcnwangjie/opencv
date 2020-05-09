@@ -25,9 +25,7 @@ class BagDetector(Preprocess):
 		for countour in contours:
 			countour_rect = cv2.boundingRect(countour)
 			rect_x, rect_y, rect_w, rect_h = countour_rect
-
 			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
-
 			# cv2.contourArea(countour) > 500 and rect_h < 300 and
 			if  0.32 * cols < center_x < 0.62 * cols:
 				moderatesize_countours.append(countour)
@@ -37,6 +35,5 @@ class BagDetector(Preprocess):
 				cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
 				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 				self.bags.append(box)
-			# 用紫色画轮廓
 		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
 		return self.bags

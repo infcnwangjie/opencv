@@ -8,6 +8,7 @@ from app.core.processers.landmark_detector import perspective_transform, draw_gr
 from app.core.plc.plchandle import PlcHandle
 from app.core.location.locationservice import PointLocationService
 from app.core.processers.bag_detector import BagDetector
+from app.core.processers.laster_detector import LasterDetector
 from app.status import HockStatus
 
 
@@ -139,8 +140,10 @@ class IntelligentProcess(object):
 		# # img = a.move()
 		dest = location_landmark(img=img)
 
-		b = BagDetector(dest)
-		print(b.processed_bag)
+		bag_detector = BagDetector(dest)
+		print(bag_detector.processed_bag)
+		laster_detector = LasterDetector(img=dest)
+		print(laster_detector.processed_laster)
 		draw_grid_lines(dest)
 
 		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
