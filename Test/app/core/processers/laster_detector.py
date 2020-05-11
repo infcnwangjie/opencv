@@ -17,8 +17,7 @@ class LasterDetector(Preprocess):
 		super().__init__(img)
 		self.laster = None
 
-	@property
-	def processed_laster(self):
+	def location_laster(self):
 		def distance_middle(contour):
 			rows, cols = self.shape
 			x, y, w, h = cv2.boundingRect(contour)
@@ -26,12 +25,14 @@ class LasterDetector(Preprocess):
 			return abs(cols / 2 - x)
 
 		def filter_laster_contour(c):
-			rows, cols = self.shape
+			# print(cols)
 			x, y, w, h = cv2.boundingRect(c)
 			center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			if w < 10 or h < 15:
+
+			if w < 10 or h < 10 or w > 100 or h > 100:
 				return False
-			if  0.2 * cols < center_x < 0.7 * cols:
+			if 160 < center_x < 500:
+				# 这里的坐标已经经过标定，数据会比较准确
 				return True
 			else:
 				return False
@@ -39,20 +40,14 @@ class LasterDetector(Preprocess):
 		binary, contours = self.green_contours()
 		goodcontours = list(filter(filter_laster_contour, contours))
 
-		#
-		# process = Preprocess(self.img)
-		# laster_binary, contours = process.processed_laster
-		# cv2.imshow("binary1", laster_binary)
 		if goodcontours is None:
 			return None
 
-		goodcontours = sorted(goodcontours,
-		                      key=lambda c: distance_middle(c), reverse=False)
-
-		cv2.drawContours(self.img, goodcontours, -1, (255, 0, 0), 3)  # 找到唯一的轮廓就退出即可
+		cv2.drawContours(self.img, goodcontours, -1, (255, 0, 0), 3)
 
 		laster = Laster(goodcontours[0], binary, id=0)
 		laster.modify_box_content()
 		self.laster = laster
 
+		print(self.laster.x, self.laster.y)
 		return self.laster

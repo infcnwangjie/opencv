@@ -22,6 +22,7 @@ ALL = 3
 
 
 class PointLocationService:
+	'''已废弃'''
 	def __init__(self, img=None, print_or_no=True):
 		self._img = img
 		self.bags = []  # 识别出来的袋子

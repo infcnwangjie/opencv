@@ -87,7 +87,7 @@ class CentWindowUi(object):
 				# child1.setCheckState(0, Qt.Checked)
 				root.addChild(child)
 
-		self.tree.clicked.connect(self.onClicked)
+		self.tree.clicked.connect(self.onTreeClicked)
 		self.tree.expandAll()
 		layout.addWidget(self.tree)
 		self.storedbox.setLayout(layout)
@@ -220,7 +220,8 @@ class CenterWindow(QWidget, CentWindowUi):
 	def check_test_status(self):
 		self.test_status_edit.setText('测试状态开启' if DEBUG else "测试状态关闭")
 
-	def onClicked(self, qmodeLindex):
+
+	def onTreeClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
 		filename = os.path.join(VIDEO_DIR, item.text(0))
 
@@ -230,6 +231,7 @@ class CenterWindow(QWidget, CentWindowUi):
 			self.play()
 
 	def play(self):
+		'''开始播放'''
 		if self.process.IMGHANDLE:
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
@@ -380,7 +382,7 @@ class MainWindow(QMainWindow):
 				self._test()
 
 	def _test(self):
-		self.centralwidget.process.landmark_location()
+		self.centralwidget.process.monitor_all_once()
 
 	def set_roi(self):
 

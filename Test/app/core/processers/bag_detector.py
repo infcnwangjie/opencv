@@ -12,8 +12,8 @@ class BagDetector(Preprocess):
 		super().__init__(img)
 		self.bags = []
 
-	@property
-	def processed_bag(self):
+
+	def location_bag(self):
 		bag_binary,contours=self.red_contours()
 
 		if contours is None or len(contours) == 0:
@@ -29,11 +29,13 @@ class BagDetector(Preprocess):
 			# cv2.contourArea(countour) > 500 and rect_h < 300 and
 			if  0.32 * cols < center_x < 0.62 * cols:
 				moderatesize_countours.append(countour)
-				box = Bag(countour, bag_binary, id=boxindex)
 				boxindex += 1
+				box = Bag(countour, bag_binary, id=boxindex)
+
 				box.modify_box_content(no_num=True)
 				cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
 				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 				self.bags.append(box)
+
 		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
 		return self.bags

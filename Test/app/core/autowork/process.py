@@ -3,8 +3,7 @@ from PyQt5.QtGui import QImage, QPixmap
 
 from app.core.autowork.intelligentthread import IntelligentThread
 from app.core.autowork.plcthread import PlcThread
-from app.core.processers.landmark_detector import perspective_transform, draw_grid_lines, \
-	location_landmark
+from app.core.processers.landmark_detector import LandMarkDetecotr
 from app.core.plc.plchandle import PlcHandle
 from app.core.location.locationservice import PointLocationService
 from app.core.processers.bag_detector import BagDetector
@@ -18,7 +17,6 @@ class IntelligentProcess(object):
 		self._IMGHANDLE = IMGHANDLE
 		self.init_imgplay(img_play)
 		self.plc_status_show = plc_status_show
-		# self.bag_num_show = bag_num_show
 		self.init_plc_thread()
 		self.init_imgdetector_thread()
 		self.check_plc_status()
@@ -125,26 +123,31 @@ class IntelligentProcess(object):
 		self.plcthread.work = True
 		self.intelligentthread.work = False
 
-	def landmark_location(self, image=None):
+	def monitor_all_once(self, image=None):
 		if image:
 			img = cv2.imread(image)
 		else:
 			img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
-		# with PointLocationService(img=img) as  a:
-		# 	locationinfo = a.find_nearest_bag()
-		# 	if locationinfo is not None:
-		# 		nearest_bag_position, hockposition = locationinfo
-		# 		img_distance, real_distance, real_x_distance, real_y_distance = a.compute_distance(
-		# 			nearest_bag_position, hockposition)
-		# 		mylog_debug("最近的袋子距离钩子:{}公分".format(real_distance))
-		# # img = a.move()
-		dest = location_landmark(img=img)
 
+		# 定位地标
+		dest = LandMarkDetecotr(img=img).position_remark()
+
+		# 定位袋子
 		bag_detector = BagDetector(dest)
-		print(bag_detector.processed_bag)
+		bags = bag_detector.location_bag()
+
+		# 定位激光灯
 		laster_detector = LasterDetector(img=dest)
-		print(laster_detector.processed_laster)
-		draw_grid_lines(dest)
+		print(laster_detector.location_laster())
+
+		while len([bag for bag in bags if bag.finish_move == False]) > 0:
+			for bag in bags:
+				print(
+					"################################################################################################")
+				print("move bag {NO} to train".format(NO=bag.id))
+				print("bag position is ({x},{y})".format(x=bag.x, y=bag.y))
+				bag.finish_move = True
+				print("命令plc复位")
 
 		show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
 		showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
