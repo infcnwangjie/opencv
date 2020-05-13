@@ -25,9 +25,9 @@ cv2.useOptimized()
 
 rows, cols = IMG_HEIGHT, IMG_WIDTH
 
-SLIDE_WIDTH, SLIDE_HEIGHT = 25, 25
+SLIDE_WIDTH, SLIDE_HEIGHT = 24, 26
 
-FOND_RECT_WIDTH, FOND_RECT_HEIGHT = 70, 70
+FOND_RECT_WIDTH, FOND_RECT_HEIGHT = 50, 50
 
 LEFT_START, LEFT_END = 150, 175
 
@@ -98,7 +98,7 @@ class LandMarkDetecotr:
 	def __init__(self, img):
 		self.img = img
 
-	def position_remark(self):
+	def position_landmark(self):
 		start = time.clock()
 		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
 		landmark_rois = self.__get_landmark_rois()
@@ -133,14 +133,16 @@ class LandMarkDetecotr:
 		end = time.clock()
 		print("结束{}".format(end - start))
 		dest = self.__perspective_transform(dest, position_dic)
-		self.__draw_grid_lines(dest)
+		# self.__draw_grid_lines(dest)
 		return dest
 
 	def __get_landmark_rois(self):
-		landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1)
-		                 for
-		                 roi_img in
-		                 os.listdir(ROIS_DIR)]
+		# landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1)
+		#                  for
+		#                  roi_img in
+		#                  os.listdir(ROIS_DIR)]
+		landmark_rois = [LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1),
+		                 LandMarkRoi(img=cv2.imread("d:/NO_R.png"), label="red", id=2)]
 		return landmark_rois
 
 	def __draw_grid_lines(self, img):
@@ -243,11 +245,12 @@ class LandMarkDetecotr:
 	def __compare_similar(self, img1, img2):
 		if img1 is None or img2 is None:
 			return 0
-		# img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
-		# img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
-		hist1 = cv2.calcHist([img1], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+
+		img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
+		img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
+		hist1 = cv2.calcHist([img1], [0], None, [256], [0, 255.0])
 		cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
-		hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		hist2 = cv2.calcHist([img2], [0], None, [256], [0, 255.0])
 		cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
 		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
 		return degree
@@ -257,8 +260,10 @@ class LandMarkDetecotr:
 		col, row, slide_img = slide_window_obj.data
 		roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 		similar = self.__compare_similar(roi, slide_img)
+		# print(similar,col,row)
+
 		global step, fail_time
-		if similar > 0.56:
+		if similar > 0.51:
 			slide_window_obj.similarity = similar
 			slide_window_obj.roi = landmark_roi
 			landmark_roi.add_slide_window(slide_window_obj)
@@ -285,30 +290,132 @@ class LandMarkDetecotr:
 		x = yield
 		yield x
 		while row < rows:
-			for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(RIGHT_MARK_FROM, RIGHT_MARK_TO)):
+			# for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(RIGHT_MARK_FROM, RIGHT_MARK_TO)):
+			for col in range(660, 690):
+				# for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(660,690)):
 				for rect in good_rects:
 					if rect.slider_in_rect(slide_col=col, slide_row=row):
 						break
 				else:
+					# cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(0, 255, 255),
+					#               thickness=1)
 					yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-			if fail_time > 200:
+			if fail_time > 100:
 				step += 1
-			elif fail_time > 10000:
-				step += 300
+			elif fail_time > 1000:
+				step += 50
 			else:
-				step = 2
+				step = 1
 			row += step
 
 
-if __name__ == '__main__':
-
-	src = LandMarkDetecotr(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp')).position_remark()
-	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-12-10-53-30test.bmp')).position_remark()
+def test1():
+	# src = LandMarkDetecotr(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp')).position_remark()
+	src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-12-10-53-30test.bmp')).position_landmark()  # 0.72
+	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-12-10-52-56test.bmp')).position_remark() #0.916
+	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-12-10-52-56test.bmp')).position_remark()  # 0.916
 	b = BagDetector(src)
 	print(b.location_bag())
-
 	# __draw_grid_lines(src)
 	cv2.namedWindow("dest")
 	cv2.imshow("dest", src)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
+
+
+def test2():
+	def compute_hist(img):
+		img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		hist = cv2.calcHist([img], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		# hist = cv2.calcHist([img], [0], None, [256], [0, 255.0])
+		# cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
+		return hist
+
+	# def __compare_similar(img1, img2):
+	# 	if img1 is None or img2 is None:
+	# 		return 0
+	#
+	# 	img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
+	# 	img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
+	# 	hist1 = cv2.calcHist([img1], [0], None, [256], [0, 255.0])
+	# 	cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+	# 	hist2 = cv2.calcHist([img2], [0], None, [256], [0, 255.0])
+	# 	cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+	# 	degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
+	# 	return degree
+
+	img = cv2.imread('d:/2020-05-12-10-53-30test.bmp')
+	img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+	hsvt = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+	cv2.namedWindow("img")
+	cv2.imshow("img", img)
+	img_roi = cv2.imread("d:/T_G_R_.png")
+	img_roi = cv2.resize(img_roi, (40, 40))
+	img_roi_hsvt = cv2.cvtColor(img_roi, cv2.COLOR_BGR2HSV)
+	cv2.namedWindow("img_roi")
+	cv2.imshow("img_roi",img_roi)
+	# landmarkroi = LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1)
+	roihist=compute_hist(img_roi_hsvt)
+	cv2.namedWindow("roihist")
+	cv2.imshow("roihist",roihist)
+	dst = cv2.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+	cv2.namedWindow("back")
+	cv2.imshow("back",dst)
+	cv2.waitKey(0)
+
+def test3():
+	import cv2
+	import numpy as np
+
+	# 目标搜索图片
+	target = cv2.imread('d:/2020-05-12-10-53-30test.bmp')
+	target = cv2.resize(target, (IMG_WIDTH, IMG_HEIGHT))
+	hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
+
+
+	# roi图片，就想要找的的图片
+	roi = cv2.imread('d:/T_G_R_.png')
+	hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+
+	# 计算目标直方图
+	roihist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+	# 归一化，参数为原图像和输出图像，归一化后值全部在2到255范围
+	cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
+	dst = cv2.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+
+	# 卷积连接分散的点
+	disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+	dst = cv2.filter2D(dst, -1, disc)
+
+	ret, thresh = cv2.threshold(dst, 50, 255, 0)
+	# 使用merge变成通道图像
+	# thresh = cv2.merge((thresh, thresh, thresh))
+	thresh = cv2.medianBlur(thresh, 3)
+
+	contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	for contour in contours:
+		area=cv2.contourArea(contour)
+		if area<100:continue
+		rect = cv2.boundingRect(contour)
+		rect_x, rect_y, rect_w, rect_h = rect
+		cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
+		              thickness=1)
+
+	# 蒙板
+	# res = cv2.bitwise_and(target, thresh)
+	# 矩阵按列合并,就是把target,thresh和res三个图片横着拼在一起
+	# cv2.imwrite('res.jpg', res)
+	# 显示图像
+	cv2.imshow('1', thresh)
+	cv2.imshow('target', target)
+	cv2.waitKey(0)
+
+
+
+
+if __name__ == '__main__':
+	# test1()
+	test3()
