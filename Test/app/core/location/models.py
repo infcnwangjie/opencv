@@ -78,7 +78,6 @@ class NearLandMark:
 		self._slide_img = slide_img
 		self._similarity = similarity
 		self._roi = None
-
 		self.direct = 'left' if self.col < 0.5 * cols else 'right'  # 0 :L 1:R
 
 	@property
@@ -137,7 +136,7 @@ class LandMarkRoi:
 		if self.landmark is None:
 			self.landmark = slide_window
 		else:
-			col, row, similar = self.land_mark.col, self.land_mark.row, self.land_mark.similarity
+			col, row, similar = self.landmark.col, self.landmark.row, self.landmark.similarity
 			col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
 			if similar < similar1:
 				self.landmark = slide_window

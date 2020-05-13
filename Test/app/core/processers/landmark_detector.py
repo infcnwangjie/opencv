@@ -50,16 +50,27 @@ def tjtime(fun):
 	return inner
 
 
+
 def landmarkname_cmp(a, b):
 	result_a = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', a[0])
-	a_no = int(result_a.group(1))
 
 	result_b = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', b[0])
-	b_no = int(result_b.group(1))
-	if a_no > b_no:
+
+	if result_a is None and result_b is None:
+		return 0
+	elif result_a is not None:
+		return -1
+	elif result_b is not None:
 		return 1
 	else:
-		return -1
+		a_no = int(result_a.group(1))
+		b_no = int(result_b.group(1))
+		if a_no > b_no:
+			return 1
+		elif a_no == b_no:
+			return 0
+		else:
+			return -1
 
 
 def get_next_no(landmark_name):
@@ -69,7 +80,6 @@ def get_next_no(landmark_name):
 		return landmark_name
 
 	current_no = int(result.group(1))
-
 	if current_no > 6:
 		next_no = current_no - 1
 	else:
@@ -97,6 +107,48 @@ class LandMarkDetecotr:
 
 	def __init__(self, img):
 		self.img = img
+
+	def position_landmark(self):
+		start = time.clock()
+		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
+		landmark_rois = self.__get_landmark_rois()
+		for slide_window_obj in self.__generat_rect(dest):
+			# 迭代结束条件
+			need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
+			if len(need_find_roi) == 0:
+				print("need find roi is {}".format(len(need_find_roi)))
+				break
+
+			for landmark_roi in landmark_rois:
+				task = gevent.spawn(self.__check_slide_window, landmark_roi, slide_window_obj)
+				task.join()
+
+		position_dic = {}
+		for landmark_roi in landmark_rois:
+			landmark = landmark_roi.landmark
+			if landmark is None:
+				continue
+			print("############################{}################################################".format(landmark_roi.label))
+
+			col = landmark.col
+			row = landmark.row
+
+			print(col,row)
+
+			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(0, 255, 255),
+			              thickness=1)
+			position_dic[landmark_roi.label] = [col, row]
+			cv2.putText(dest,
+			            "{}:{}:{}".format(landmark_roi.label, landmark.direct,
+			                              round(landmark.similarity, 3)),
+			            (col - 50, row + 30),
+			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 1)
+
+		end = time.clock()
+		print("结束{}".format(end - start))
+		# dest = self.__perspective_transform(dest, position_dic)
+		self.__draw_grid_lines(dest)
+		return dest
 
 	def position_remark(self):
 		start = time.clock()
@@ -132,7 +184,7 @@ class LandMarkDetecotr:
 
 		end = time.clock()
 		print("结束{}".format(end - start))
-		dest = self.__perspective_transform(dest, position_dic)
+		# dest = self.__perspective_transform(dest, position_dic)
 		self.__draw_grid_lines(dest)
 		return dest
 
@@ -278,10 +330,8 @@ class LandMarkDetecotr:
 			real_positions = pickle.load(coordinate)
 		return real_positions
 
-	def __spawn(self, dest=None):
-		global rows, cols, step
+	def __spawn(self,dest=None):
 		row = 0
-		# cols=list(chain(range(150, 175), range(766, 800)))
 		x = yield
 		yield x
 		while row < rows:
@@ -298,11 +348,45 @@ class LandMarkDetecotr:
 			else:
 				step = 2
 			row += step
+	def __generat_rect(self, dest=None):
+		global rows, cols, step
+		landmark_rois = self.__get_landmark_rois()
+
+		target = cv2.resize(dest, (IMG_WIDTH, IMG_HEIGHT))
+		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
+
+		# roi图片，就想要找的的图片
+		for roi_template in landmark_rois:
+			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
+			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+			# 归一化，参数为原图像和输出图像，归一化后值全部在2到255范围
+			cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
+			backproject = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+
+			# 卷积连接分散的点
+			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+			backproject = cv2.filter2D(backproject, -1, disc)
+			cv2.imshow("backproject", backproject)
+			ret, thresh = cv2.threshold(backproject, 40, 255, 0)
+			# 使用merge变成通道图像
+			# thresh = cv2.merge((thresh, thresh, thresh))
+			thresh = cv2.medianBlur(thresh, 3)
+			cv2.imshow("thresh",thresh)
+
+			contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+			if contours is None or len(contours) == 0:
+				continue
+			contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
+			best_contour = contours[0]
+			rect = cv2.boundingRect(best_contour)
+			rect_x, rect_y, rect_w, rect_h = rect
+			cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
+			              thickness=1)
+			yield NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w])
 
 
 if __name__ == '__main__':
-
-	src = LandMarkDetecotr(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp')).position_remark()
+	src = LandMarkDetecotr(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp')).position_landmark()
 	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-12-10-53-30test.bmp')).position_remark()
 	b = BagDetector(src)
 	print(b.location_bag())

@@ -52,14 +52,24 @@ def tjtime(fun):
 
 def landmarkname_cmp(a, b):
 	result_a = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', a[0])
-	a_no = int(result_a.group(1))
 
 	result_b = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', b[0])
-	b_no = int(result_b.group(1))
-	if a_no > b_no:
+
+	if result_a is None and result_b is None:
+		return 0
+	elif result_a is not None:
+		return -1
+	elif result_b is not None:
 		return 1
 	else:
-		return -1
+		a_no = int(result_a.group(1))
+		b_no = int(result_b.group(1))
+		if a_no > b_no:
+			return 1
+		elif a_no == b_no:
+			return 0
+		else:
+			return -1
 
 
 def get_next_no(landmark_name):
@@ -141,8 +151,11 @@ class LandMarkDetecotr:
 		#                  for
 		#                  roi_img in
 		#                  os.listdir(ROIS_DIR)]
-		landmark_rois = [LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1),
-		                 LandMarkRoi(img=cv2.imread("d:/NO_R.png"), label="red", id=2)]
+		# landmark_rois = [LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1)]
+		landmark_rois = [
+		LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1),
+		LandMarkRoi(img=cv2.imread("C:/NTY_IMG_PROCESS/ROIS/NO1_L.png"), label="NO1_L", id=2)
+		]
 		return landmark_rois
 
 	def __draw_grid_lines(self, img):
@@ -285,28 +298,39 @@ class LandMarkDetecotr:
 
 	def __spawn(self, dest=None):
 		global rows, cols, step
-		row = 0
-		# cols=list(chain(range(150, 175), range(766, 800)))
-		x = yield
-		yield x
-		while row < rows:
-			# for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(RIGHT_MARK_FROM, RIGHT_MARK_TO)):
-			for col in range(660, 690):
-				# for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(660,690)):
-				for rect in good_rects:
-					if rect.slider_in_rect(slide_col=col, slide_row=row):
-						break
-				else:
-					# cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(0, 255, 255),
-					#               thickness=1)
-					yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-			if fail_time > 100:
-				step += 1
-			elif fail_time > 1000:
-				step += 50
-			else:
-				step = 1
-			row += step
+
+		landmark_rois = self.__get_landmark_rois()
+
+		target = cv2.resize(dest, (IMG_WIDTH, IMG_HEIGHT))
+		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
+
+		# roi图片，就想要找的的图片
+		for roi_template in landmark_rois:
+			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
+			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+			# 归一化，参数为原图像和输出图像，归一化后值全部在2到255范围
+			cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
+			backproject = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+
+			# 卷积连接分散的点
+			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+			backproject = cv2.filter2D(backproject, -1, disc)
+			cv2.imshow("backproject", backproject)
+			ret, thresh = cv2.threshold(backproject, 40, 255, 0)
+			# 使用merge变成通道图像
+			# thresh = cv2.merge((thresh, thresh, thresh))
+			thresh = cv2.medianBlur(thresh, 3)
+
+			contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+			if contours is None or len(contours) == 0:
+				continue
+			contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
+			best_contour = contours[0]
+			rect = cv2.boundingRect(best_contour)
+			rect_x, rect_y, rect_w, rect_h = rect
+			cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
+			              thickness=1)
+			yield NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w])
 
 
 def test1():
@@ -355,30 +379,29 @@ def test2():
 	img_roi = cv2.resize(img_roi, (40, 40))
 	img_roi_hsvt = cv2.cvtColor(img_roi, cv2.COLOR_BGR2HSV)
 	cv2.namedWindow("img_roi")
-	cv2.imshow("img_roi",img_roi)
+	cv2.imshow("img_roi", img_roi)
 	# landmarkroi = LandMarkRoi(img=cv2.imread("d:/T_G_R_.png"), label="T_G_R_", id=1)
-	roihist=compute_hist(img_roi_hsvt)
+	roihist = compute_hist(img_roi_hsvt)
 	cv2.namedWindow("roihist")
-	cv2.imshow("roihist",roihist)
+	cv2.imshow("roihist", roihist)
 	dst = cv2.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 	cv2.namedWindow("back")
-	cv2.imshow("back",dst)
+	cv2.imshow("back", dst)
 	cv2.waitKey(0)
+
 
 def test3():
 	import cv2
 	import numpy as np
 
 	# 目标搜索图片
-	target = cv2.imread('d:/2020-05-12-10-53-30test.bmp')
+	target = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
 	target = cv2.resize(target, (IMG_WIDTH, IMG_HEIGHT))
 	hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 
-
 	# roi图片，就想要找的的图片
-	roi = cv2.imread('d:/T_G_R_.png')
+	roi = cv2.imread('C:/NTY_IMG_PROCESS/ROIS/NO4_L.png')
 	hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-
 
 	# 计算目标直方图
 	roihist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
@@ -387,7 +410,7 @@ def test3():
 	dst = cv2.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 
 	# 卷积连接分散的点
-	disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+	disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
 	dst = cv2.filter2D(dst, -1, disc)
 
 	ret, thresh = cv2.threshold(dst, 50, 255, 0)
@@ -397,8 +420,8 @@ def test3():
 
 	contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	for contour in contours:
-		area=cv2.contourArea(contour)
-		if area<100:continue
+		area = cv2.contourArea(contour)
+		if area < 100: continue
 		rect = cv2.boundingRect(contour)
 		rect_x, rect_y, rect_w, rect_h = rect
 		cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
@@ -414,8 +437,10 @@ def test3():
 	cv2.waitKey(0)
 
 
+def test4():
+	pass
 
 
 if __name__ == '__main__':
-	# test1()
-	test3()
+	test1()
+# test3()

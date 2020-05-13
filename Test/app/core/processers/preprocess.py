@@ -10,7 +10,6 @@ class Preprocess(object):
 	'''
 	预处理操作都在这里
 	'''
-
 	def __init__(self, img):
 		if isinstance(img, str):
 			self.img = cv2.imread(img)
@@ -107,15 +106,9 @@ class Preprocess(object):
 		'''
 		green_low, green_high = [35, 43, 46], [77, 255, 255]
 		# green_low, green_high = [17, 43, 46], [77, 255, 255]
-
 		green_min, green_max = np.array(green_low), np.array(green_high)
-		# 去除颜色范围外的其余颜色
 		green_mask = cv2.inRange(self.hsv, green_min, green_max)
-
 		green_ret, green_binary = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
-		# 去噪
 		green_binary = cv2.medianBlur(green_binary, 3)
-
 		green_contours, _hierarchy = cv2.findContours(green_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
 		return green_binary, green_contours
