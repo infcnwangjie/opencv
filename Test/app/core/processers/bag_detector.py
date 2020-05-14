@@ -4,7 +4,7 @@ import numpy as np
 
 # 发现
 from app.core.processers.preprocess import Preprocess
-from app.core.location.models import Bag
+from app.core.beans.models import Bag
 
 
 class BagDetector(Preprocess):

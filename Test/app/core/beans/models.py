@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import re
+from collections import defaultdict
+
 import cv2
 
 from app.config import IMG_HEIGHT, IMG_WIDTH
@@ -70,7 +73,7 @@ class Hock(Box):
 
 
 class NearLandMark:
-	__slots__ = ['col', 'row', '_slide_img', '_similarity', '_roi', 'direct']
+	# __slots__ = ['col', 'row', '_slide_img', '_similarity', '_roi', 'direct']
 
 	def __init__(self, col, row, slide_img, similarity=0):
 		self.col = col
@@ -79,9 +82,11 @@ class NearLandMark:
 		self._similarity = similarity
 		self._roi = None
 		self.direct = 'left' if self.col < 0.5 * cols else 'right'  # 0 :L 1:R
+		self.landmark_name = None  # 在被识别的时候被赋值
+
 
 	@property
-	def data(self):
+	def positioninfo(self):
 		return self.col, self.row, self._slide_img
 
 	@property
@@ -92,14 +97,18 @@ class NearLandMark:
 	def similarity(self, value):
 		self._similarity = value
 
-	@property
-	def roi(self):
-		return self._roi
+	def __str__(self):
+		return "{}:({},{})".format(self.landmark_name,self.col,self.row)
 
-	@roi.setter
-	def roi(self, value):
-		value.times += 1
-		self._roi = value
+
+# @property
+# def roi(self):
+# 	return self._roi
+#
+# @roi.setter
+# def roi(self, value):
+# 	value.times += 1
+# 	self._roi = value
 
 
 class TargetRect:

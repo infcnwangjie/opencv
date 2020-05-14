@@ -11,7 +11,7 @@ from app.core.exceptions.allexception import NotFoundBagException, NotFoundHockE
 from app.core.processers.bag_detector import BagDetector
 from app.core.processers.laster_detector import LasterDetector
 from app.core.processers.preprocess import Preprocess
-from app.core.location.models import Box, Bag, Laster, Hock
+from app.core.beans.models import Box, Bag, Laster, Hock
 from app.log.logtool import mylog_debug, mylog_error
 from app.status import Landmark_Model_Select
 
