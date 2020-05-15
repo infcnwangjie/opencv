@@ -137,7 +137,7 @@ class GraphicsPixmapItem(QGraphicsPixmapItem):
 class SetRoiWidget(QWidget):
 	update_listmodel_signal=pyqtSignal(bool)
 	# def __init__(self, img=r'D:/2020-04-10-15-26-22test.bmp'):
-	def __init__(self, img=r'd:/2020-05-14-12-50-58test.bmp'):
+	def __init__(self, img=r'd:/2020-05-15-15-59-16test.bmp'):
 		super(SetRoiWidget, self).__init__()
 		self.setWindowIcon(QIcon(":icons/set_roi.png"))
 		self.setWindowTitle("选择ROI")

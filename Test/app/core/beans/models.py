@@ -82,8 +82,15 @@ class NearLandMark:
 		self._similarity = similarity
 		self._roi = None
 		self.direct = 'left' if self.col < 0.5 * cols else 'right'  # 0 :L 1:R
-		self.landmark_name = None  # 在被识别的时候被赋值
+		self.landmark_name = None  # 当识别是不是某个地标ROI的时候调用
+		self.maybe_labels = []
+		self.width = 0
+		self.height = 0
 
+	def add_maybe_label(self, label):
+		'''颜色相近的地标有时候仅仅根据近似程度无法区分，
+		这时候对于某地标区域来说无法界定所属标签'''
+		self.maybe_labels.append(label)
 
 	@property
 	def positioninfo(self):
@@ -98,7 +105,7 @@ class NearLandMark:
 		self._similarity = value
 
 	def __str__(self):
-		return "{}:({},{})".format(self.landmark_name,self.col,self.row)
+		return "{}:({},{})".format(self.landmark_name, self.col, self.row)
 
 
 # @property
@@ -140,15 +147,16 @@ class LandMarkRoi:
 		self._times = 0
 		self.landmark = None
 
-	def add_slide_window(self, slide_window: NearLandMark):
+	def set_match_obj(self, slide_window: NearLandMark):
 		# with self.lock:
-		if self.landmark is None:
-			self.landmark = slide_window
-		else:
-			col, row, similar = self.landmark.col, self.landmark.row, self.landmark.similarity
-			col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
-			if similar < similar1:
-				self.landmark = slide_window
+		# if self.landmark is None:
+		# 	self.landmark = slide_window
+		# else:
+		# 	col, row, similar = self.landmark.col, self.landmark.row, self.landmark.similarity
+		# 	col1, row1, similar1 = slide_window.col, slide_window.row, slide_window.similarity
+		# 	if similar <= similar1:
+		# 		self.landmark = slide_window
+		self.landmark = slide_window
 
 	@property
 	def times(self):
