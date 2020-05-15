@@ -227,7 +227,6 @@ class LandMarkDetecotr:
 		print(positiondict)
 		return positiondict
 
-
 	def position_landmark(self):
 		start = time.clock()
 		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
@@ -267,46 +266,8 @@ class LandMarkDetecotr:
 
 		end = time.clock()
 		print("结束{}".format(end - start))
-		position_dic=self.choose_best_cornors()
+		position_dic = self.choose_best_cornors()
 		dest = self.__perspective_transform(dest, position_dic)
-		self.__draw_grid_lines(dest)
-		return dest
-
-	def position_remark(self):
-		start = time.clock()
-		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
-		landmark_rois = self.__get_landmark_rois()
-		for slide_window_obj in self.__spawn(dest):
-			# 迭代结束条件
-			need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
-			if len(need_find_roi) == 0:
-				print("need find roi is {}".format(len(need_find_roi)))
-				break
-
-			for landmark_roi in landmark_rois:
-				task = gevent.spawn(self.__check_slide_window, landmark_roi, slide_window_obj)
-				task.join()
-
-		position_dic = {}
-		for landmark_roi in landmark_rois:
-			landmark = landmark_roi.landmark
-			if landmark is None:
-				continue
-			col = landmark.col
-			row = landmark.row
-
-			cv2.rectangle(dest, (col, row), (col + SLIDE_WIDTH, row + SLIDE_HEIGHT), color=(0, 255, 255),
-			              thickness=1)
-			position_dic[landmark_roi.label] = [col, row]
-			cv2.putText(dest,
-			            "{}:{}:{}".format(landmark_roi.label, landmark.direct,
-			                              round(landmark.similarity, 3)),
-			            (col - 50, row + 30),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 1)
-
-		end = time.clock()
-		print("结束{}".format(end - start))
-		# dest = self.__perspective_transform(dest, position_dic)
 		self.__draw_grid_lines(dest)
 		return dest
 
@@ -352,9 +313,9 @@ class LandMarkDetecotr:
 		right_points = []
 		for label, [x, y] in position_dic.items():
 			if "L" in label:
-				left_points.append((label,[x, y]))
+				left_points.append((label, [x, y]))
 			else:
-				right_points.append((label,[x, y]))
+				right_points.append((label, [x, y]))
 		left_points.sort(key=lambda point: point[1][1])
 		right_points.sort(key=lambda point: point[1][1])
 
@@ -363,7 +324,7 @@ class LandMarkDetecotr:
 		p3 = left_points[1][1]
 		p4 = right_points[1][1]
 
-		pts1 = np.float32([p1,p3,p2,p4])
+		pts1 = np.float32([p1, p3, p2, p4])
 		pts2 = np.float32([real_position_dic.get(left_points[0][0]), real_position_dic.get(left_points[1][0]),
 		                   real_position_dic.get(right_points[0][0]), real_position_dic.get(right_points[1][0])])
 
@@ -390,7 +351,7 @@ class LandMarkDetecotr:
 		roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 		similar = self.__compare_similar(roi, slide_img)
 		global step, fail_time, ALL_LANDMARKS_DICT
-		if similar > 0.56:
+		if similar > 0.55:
 			slide_window_obj.similarity = similar
 			# slide_window_obj.roi = landmark_roi
 			landmark_roi.add_slide_window(slide_window_obj)
@@ -403,34 +364,11 @@ class LandMarkDetecotr:
 			                              row + FOND_RECT_HEIGHT)))
 			return slide_window_obj
 
-	# else:
-	# del slide_window_obj
-	# fail_time += 1
-
 	def __landmark_position_dic(self):
 		'''获取所有的地标标定位置'''
 		with open(os.path.join(PROGRAM_DATA_DIR, 'coordinate_data.txt'), 'rb') as coordinate:
 			real_positions = pickle.load(coordinate)
 		return real_positions
-
-	def __spawn(self, dest=None):
-		row = 0
-		x = yield
-		yield x
-		while row < rows:
-			for col in chain(range(LEFT_MARK_FROM, LEFT_MARK_TO), range(RIGHT_MARK_FROM, RIGHT_MARK_TO)):
-				for rect in good_rects:
-					if rect.slider_in_rect(slide_col=col, slide_row=row):
-						break
-				else:
-					yield NearLandMark(col, row, dest[row:row + SLIDE_HEIGHT, col:col + SLIDE_WIDTH])
-			if fail_time > 200:
-				step += 1
-			elif fail_time > 10000:
-				step += 300
-			else:
-				step = 2
-			row += step
 
 	def __generat_rect(self, dest=None):
 		global rows, cols, step
@@ -438,36 +376,45 @@ class LandMarkDetecotr:
 
 		target = cv2.resize(dest, (IMG_WIDTH, IMG_HEIGHT))
 		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
+		cv2.imshow("target_binary",target)
 
-		# roi图片，就想要找的的图片
+		#思路：通过阈值化缩小比对图像区域
 		for roi_template in landmark_rois:
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
+			# img_roi_hsvt = roi_template.roi
 			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
-			# 归一化，参数为原图像和输出图像，归一化后值全部在2到255范围
+
 			cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
 			backproject = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 
-			# 卷积连接分散的点
-			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
 			backproject = cv2.filter2D(backproject, -1, disc)
-			# cv2.imshow("backproject", backproject)
-			ret, thresh = cv2.threshold(backproject, 78, 255, 0)
+			cv2.imshow("backproject", backproject)
+			ret, thresh = cv2.threshold(backproject, 60, 255, 0)
 			# 使用merge变成通道图像
 			# thresh = cv2.merge((thresh, thresh, thresh))
-			thresh = cv2.medianBlur(thresh, 3)
+			thresh = cv2.medianBlur(thresh, 7)
 			# cv2.imshow("thresh", thresh)
 
 			contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+			# cv2.drawContours(target, contours, -1, (0, 255, 255), 3)
 			if contours is None or len(contours) == 0:
 				continue
-			contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
-			best_contour = contours[0]
-			rect = cv2.boundingRect(best_contour)
-			rect_x, rect_y, rect_w, rect_h = rect
-			cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
-			              thickness=1)
-			self.landmarks.append(NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w]))
-			yield NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w])
+
+			# Z轴无论再怎么变化，灯的面积也大于100
+			contours = filter(lambda c: cv2.contourArea(c) >= 100, contours)
+
+			for c in contours:
+				rect = cv2.boundingRect(c)
+				rect_x, rect_y, rect_w, rect_h = rect
+
+				cv2.rectangle(target, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), color=(0, 255, 255),
+				              thickness=1)
+
+				self.landmarks.append(
+					NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w]))
+				yield NearLandMark(rect_x, rect_y, dest[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w])
 
 
 if __name__ == '__main__':

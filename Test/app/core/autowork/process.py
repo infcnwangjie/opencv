@@ -130,7 +130,7 @@ class IntelligentProcess(object):
 			img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
 
 		# 定位地标
-		dest = LandMarkDetecotr(img=img).position_remark()
+		dest = LandMarkDetecotr(img=img).position_landmark()
 
 		# 定位袋子
 		bag_detector = BagDetector(dest)
