@@ -270,7 +270,7 @@ class LandMarkDetecotr:
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 1)
 		position_dic = self.choose_best_cornors()
 		# print("#" * 100)
-		print(position_dic)
+		# print(position_dic)
 		# dest = self.__perspective_transform(dest, position_dic)
 
 		self.__draw_grid_lines(dest)
@@ -357,9 +357,10 @@ class LandMarkDetecotr:
 		col, row, slide_img = slide_window_obj.positioninfo
 		roi = cv2.resize(landmark_roi.roi, (SLIDE_WIDTH, SLIDE_HEIGHT))
 		similar = self.__compare_similar(roi, slide_img)
-		# print("{}  ({},{}) similar is {}".format(landmark_roi.label, col, row, similar))
+		if landmark_roi.label=="NO3_R":
+			print("{}  ({},{}) similar is {}".format(landmark_roi.label, col, row, similar))
 		global step, fail_time, ALL_LANDMARKS_DICT
-		if similar > 0.5:
+		if similar >= 0.5:
 			slide_window_obj.similarity = similar
 			slide_window_obj.land_name = landmark_roi.label
 
@@ -388,7 +389,7 @@ class LandMarkDetecotr:
 	def __generat_rect(self, dest=None):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
-			isbig = cv2.contourArea(c) >= 100
+			isbig = 100<=cv2.contourArea(c) < 300
 			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
 			return isbig and 10 < rect_w <= 30 and 10 < rect_h <= 30
 
@@ -403,35 +404,39 @@ class LandMarkDetecotr:
 		for roi_template in landmark_rois:
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
 			# img_roi_hsvt = roi_template.roi
-			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [256, 256], [0, 256, 0, 256])
+			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
 
 			cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
-			bk = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 256, 0, 256], 1)
+			bk = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 			#
 			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 			# backproject = cv2.filter2D(backproject, -1, disc)
-			kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
+			kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
-			bk=cv2.dilate(bk,kernel)
-			ret, thresh = cv2.threshold(bk, 60, 255, cv2.THRESH_BINARY)
+			thresh=cv2.dilate(bk,kernel)
+			# if roi_template.label=="NO3_R":
+			# 	cv2.imshow("bk", thresh)
+			ret, thresh = cv2.threshold(thresh, 100, 255, cv2.THRESH_BINARY)
+			# thresh=cv2.fastNlMeansDenoisingMulti(thresh,2,5,None,4,7,35)
+
 			# 使用merge变成通道图像
 			# thresh = cv2.merge((thresh, thresh, thresh))
 
-			thresh = cv2.medianBlur(thresh, 3)
-			if roi_template.label == 'NO1_R':
+			# thresh = cv2.medianBlur(thresh, 3)
+			# thresh=cv2.bilateralFilter(thresh,d=0,sigmaColor=90,sigmaSpace=7)
+			if roi_template.label == 'NO3_R':
 				cv2.imshow("thresh", thresh)
-				cv2.imshow("bk", bk)
+
 
 			contours, _hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 			print("{} contours size {}".format(roi_template.label, len(contours)))
 			# cv2.drawContours(target, contours, -1, (0, 255, 255), 3)
-			if contours is None or len(contours) == 0:
+			if contours is None or len(contours) == 0 :
 				continue
 
 			# Z轴无论再怎么变化，灯的面积也大于100
 			contours = filter(lambda c: warp_filter(c), contours)
-
 			for c in contours:
 				rect = cv2.boundingRect(c)
 				rect_x, rect_y, rect_w, rect_h = rect
