@@ -27,7 +27,7 @@ class BagDetector(Preprocess):
 			rect_x, rect_y, rect_w, rect_h = countour_rect
 			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
 			# cv2.contourArea(countour) > 500 and rect_h < 300 and
-			if  0.32 * cols < center_x < 0.62 * cols:
+			if  200 < center_x < 500:
 				moderatesize_countours.append(countour)
 				boxindex += 1
 				box = Bag(countour, bag_binary, id=boxindex)
@@ -38,4 +38,5 @@ class BagDetector(Preprocess):
 				self.bags.append(box)
 
 		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
+		print("i have  try my best")
 		return self.bags

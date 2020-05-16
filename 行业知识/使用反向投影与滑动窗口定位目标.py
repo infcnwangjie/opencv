@@ -228,7 +228,7 @@ class LandMarkDetecotr:
 		return positiondict
 
 
-	def position_landmark(self):
+	def position_landmark_bybackproject(self):
 		start = time.clock()
 		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
 		landmark_rois = self.__get_landmark_rois()
@@ -272,7 +272,7 @@ class LandMarkDetecotr:
 		self.__draw_grid_lines(dest)
 		return dest
 
-	def position_remark(self):
+	def position_landmark_byslidewindow(self):
 		start = time.clock()
 		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
 		landmark_rois = self.__get_landmark_rois()
@@ -472,7 +472,7 @@ class LandMarkDetecotr:
 
 if __name__ == '__main__':
 	# src = LandMarkDetecotr(img=cv2.imread('D:/2020-04-10-15-26-22test.bmp')).position_landmark()
-	src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
+	src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark_bybackproject()
 	b = BagDetector(src)
 	print(b.location_bag())
 

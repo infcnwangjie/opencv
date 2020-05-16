@@ -1,0 +1,29 @@
+在做图像检测的过程中，在图像中你检测的目标在左侧，但是在右侧却有一个与之相近的目标，尤其是 使用颜色滑窗与颜色直方图比较   或者使用颜色直方图结合反向投影图定位目标的时候更是如此；
+
+在这里推荐使用掩模：
+        gray=cv2.cvtColor(target,cv2.COLOR_BGR2GRAY)
+
+        left_open_mask = np.zeros_like(gray)
+        left_open_mask[0:IMG_HEIGHT, 0:200] = 255
+
+        right_open_mask = np.zeros_like(gray)
+        right_open_mask[0:IMG_HEIGHT, 700:IMG_WIDTH] = 255
+
+        cv2.imshow("left_open_mask", left_open_mask)
+        cv2.imshow("right_open_mask", right_open_mask)
+
+
+            img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
+            # cv2.imshow("roihist",img_roi_hsvt)
+            img_roi_hsvt = img_roi_hsvt
+            roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+
+            cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
+            bk = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+
+            if "L" in roi_template.label:
+                bk = cv2.bitwise_and(bk, bk, mask=left_open_mask)
+            if "R" in roi_template.label:
+                bk = cv2.bitwise_and(bk, bk, mask=right_open_mask)
+
+这样得到的bk就不会出现与逻辑不符合的噪声了
