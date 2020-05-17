@@ -207,22 +207,24 @@ class LandMarkDetecotr:
         if loss[best_four_label_choose]['4'] < loss[best_six_label_choose]['6']:
             labels = self.corners_levelfour(best_four_label_choose)
             find_nums = sum([find[label] for label in labels])
-        # print("best landmark is {},level four loss is {},level six loss is {}".format(best_four_label_choose,
-        #                                                                               loss[best_four_label_choose][
-        # 	                                                                              '4'],
-        #                                                                               loss[best_four_label_choose][
-        # 	                                                                              '6']))
+            print("best landmark is {},level four loss is {},level six loss is {},choose level 4".format(best_four_label_choose,
+                                                                                      loss[best_four_label_choose][
+        	                                                                              '4'],
+                                                                                      loss[best_four_label_choose][
+        	                                                                              '6']))
 
         else:
             labels = self.corners_levelsix(best_six_label_choose)
             find_nums = sum([find[label] for label in labels])
+
+            print("best landmark is {},level four loss is {},level six loss is {},and choose level 6".format(
+                best_six_label_choose,
+                loss[best_six_label_choose][
+                    '4'],
+                loss[best_six_label_choose][
+                    '6']))
         # assert find_nums >= 3, "landmark cornors must bigger than 3,only has {}".format(find_nums)
-        # print("best landmark is {},level four loss is {},level six loss is {},and choose level 6".format(
-        # 	best_six_label_choose,
-        # 	loss[best_six_label_choose][
-        # 		'4'],
-        # 	loss[best_six_label_choose][
-        # 		'6']))
+
         compensate_label = ""
         for label in labels:
             if label not in ALL_LANDMARKS_DICT:
@@ -435,7 +437,7 @@ class LandMarkDetecotr:
         # cv2.imshow("left_top_mask", left_open_mask)
         # cv2.imshow("right_bottom_mask", right_open_mask)
 
-        # 思路：通过阈值化缩小比对图像区域
+
         must_unique_window = {}
         for roi_template in landmark_rois:
             img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
@@ -474,7 +476,7 @@ class LandMarkDetecotr:
             if contours is None or len(contours) == 0:
                 continue
 
-            # Z轴无论再怎么变化，灯的面积也大于100
+            # Z轴无论再怎么变化，灯的面积也大于90
             contours = filter(lambda c: warp_filter(c), contours)
 
             for c in contours:
