@@ -4,7 +4,7 @@ import time
 
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(pathname)s %(message)s "  # 配置输出日志格式
 DATE_FORMAT = '%Y-%m-%d  %H:%M:%S %a '  # 配置输出时间的格式，注意月份和天数不要搞乱了
-log_path=r"c:\machine_vision_logs"
+log_path = r"c:\machine_vision_logs"
 try:
 	if os.path.exists(log_path):
 		pass
@@ -18,7 +18,7 @@ today_str = time.strftime("%Y-%m-%d", time.localtime())
 logging.basicConfig(level=logging.DEBUG,
                     format=LOG_FORMAT,
                     datefmt=DATE_FORMAT,
-                    filename=os.path.join(log_path,today_str+".log")  # 有了filename参数就不会直接输出显示到控制台，而是直接写入文件
+                    filename=os.path.join(log_path, today_str + ".log")  # 有了filename参数就不会直接输出显示到控制台，而是直接写入文件
                     )
 
 
@@ -38,5 +38,12 @@ def mylog_critical(msg):
 	logging.critical(msg)
 
 
+method_dict = dict(debug=mylog_debug, warn=mylog_warning, error=mylog_error, serious=mylog_critical)
 
-# mylog_error("wocao")
+
+def logger(self, msg, level: str):
+	if level in method_dict:
+		method = method_dict[level]
+	else:
+		method = mylog_warning
+	method(msg)

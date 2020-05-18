@@ -4,15 +4,12 @@ import numpy as np
 
 # 发现
 from app.core.beans.models import Laster
-from app.core.processers.preprocess import Preprocess
+from app.core.processers.preprocess import AbstractDetector
 from app.core.support.shapedetect import ShapeDetector
-
-
-class LasterDetector(Preprocess):
+class LasterDetector(AbstractDetector):
 	'''
 	预处理操作都在这里
 	'''
-
 	def __init__(self, img):
 		super().__init__(img)
 		self.laster = None

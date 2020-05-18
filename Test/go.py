@@ -4,11 +4,9 @@ from ctypes import cdll, c_uint, c_void_p, c_int, c_float, c_char_p,POINTER,byre
 import cv2
 import numpy as np
 
-#调用库
+MWORKDLL = cdll.LoadLibrary("E:/cpp_workspace/FINDROI/Debug/FINDROI.dll")
 
-MWORKDLL = cdll.LoadLibrary("c:/libfind_roi.dll")
-
-
+print(MWORKDLL.add(4,5))
 def c_array(ctype, values):  # 把图像的数据转化为内存连续的列表使c++能使用这块内存
 	arr = (ctype * len(values))()
 	arr[:] = values

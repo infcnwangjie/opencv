@@ -3,20 +3,24 @@ import cv2
 import numpy as np
 
 # 发现
+from app.core.processers import SmallWords
 from app.core.support.shapedetect import ShapeDetector
 
 
-class Preprocess(object):
+class AbstractDetector(metaclass=SmallWords):
 	'''
-	预处理操作都在这里
+	AbstractDetector
+	：used freequently
 	'''
+
 	def __init__(self, img):
 		if isinstance(img, str):
 			self.img = cv2.imread(img)
 		else:
 			self.img = img
-
 		self.hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		self.img_after_modify=None
+
 
 	@property
 	def shape(self):
@@ -32,7 +36,6 @@ class Preprocess(object):
 
 	# 对灰度图像做数据插值运算
 	def interpolation_binary_data(self, binary_image):
-		# rows, cols = binary_image.shape
 		destimg = np.zeros_like(binary_image)
 		cv2.resize(binary_image, destimg, interpolation=cv2.INTER_NEAREST)
 		return destimg
@@ -55,29 +58,17 @@ class Preprocess(object):
 		hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
 		cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
 		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
-		# print(degree)
-		# if degree > 0.56:
-		# 	backproject = cv2.calcBackProject([img2], [0, 1], hist1, [0, 180, 0, 255.0], 1)
-		# 	cv2.imshow("backproject", backproject)
-		# 	cv2.waitKey(0)
-		# 	cv2.destroyAllWindows()
 		return degree
 
 	def red_contours(self):
 		'''返回红色轮廓'''
-
 		red_low, red_high = [120, 50, 50], [180, 255, 255]
-
 		red_min, red_max = np.array(red_low), np.array(red_high)
 		# 去除颜色范围外的其余颜色
 		red_mask = cv2.inRange(self.hsv, red_min, red_max)
-
 		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
-		# 去噪
 		red_binary = cv2.medianBlur(red_binary, 3)
-
 		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
 		return red_binary, red_contours
 
 	def yellow_contours(self):
@@ -112,3 +103,30 @@ class Preprocess(object):
 		green_binary = cv2.medianBlur(green_binary, 3)
 		green_contours, _hierarchy = cv2.findContours(green_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return green_binary, green_contours
+
+	def modify_x(self,img):
+		'''
+		行车中有两条平行的线，这两个平行的线的x轴可以用来更好的标注袋子的X轴坐标
+		:return:
+		'''
+
+		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+		edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+
+		cv2.imshow("canny",edges)
+
+		minLineLength = 200
+		maxLineGap = 15
+		lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 80, minLineLength, maxLineGap)
+
+		targetimg = img.copy()
+
+		for x1, y1, x2, y2 in lines[0]:
+			cv2.line(targetimg, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+
+
+		cv2.imshow('targetimg', targetimg)
+		cv2.waitKey(0)
+

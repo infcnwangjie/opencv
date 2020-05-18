@@ -1,42 +1,52 @@
 # -*- coding: utf-8 -*-
+import os
+
 import cv2
 import numpy as np
 
 # 发现
-from app.core.processers.preprocess import Preprocess
-from app.core.beans.models import Bag
+from app.config import BAGROI_DIR
+from app.core.processers.preprocess import AbstractDetector
+from app.core.beans.models import Bag, LandMarkRoi, BagRoi
 
 
-class BagDetector(Preprocess):
+class BagDetector(AbstractDetector):
 	def __init__(self, img):
 		super().__init__(img)
 		self.bags = []
 
+	def bagroi_templates(self):
+		landmark_rois = [BagRoi(img=cv2.imread(os.path.join(BAGROI_DIR, roi_img)), id=index)
+		                 for
+		                 index, roi_img in
+		                 enumerate(os.listdir(BAGROI_DIR))]
+		return landmark_rois
 
 	def location_bag(self):
-		bag_binary,contours=self.red_contours()
-
-		if contours is None or len(contours) == 0:
-			return
-		# 大小适中的轮廓，过小的轮廓被去除了
+		'''
+		location_bag
+		:return [Bag]
+		袋子检测不能完全依赖于透视变换，地标检测也不能完全的作为袋子的参照物;
+		从摄像头垂直向下的时候，袋子多出来的X轴误差，就是摄像头中的地标并不是完全垂直于地面造成的
+		'''
 		moderatesize_countours = []
-		boxindex = 0
-		rows, cols = bag_binary.shape
-		for countour in contours:
-			countour_rect = cv2.boundingRect(countour)
-			rect_x, rect_y, rect_w, rect_h = countour_rect
-			center_x, center_y = (rect_x + round(rect_w * 0.5), rect_y + round(rect_h * 0.5))
-			# cv2.contourArea(countour) > 500 and rect_h < 300 and
-			if  200 < center_x < 500:
-				moderatesize_countours.append(countour)
-				boxindex += 1
-				box = Bag(countour, bag_binary, id=boxindex)
-
-				box.modify_box_content(no_num=True)
-				cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0] + 50, box.boxcenterpoint[1] + 10),
-				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
-				self.bags.append(box)
+		for bag_template in self.bagroi_templates():
+			contours = self.find_it(self.img, bag_template)
+			if contours is None or len(contours) == 0:
+				continue
+			else:
+				# contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=False)
+				moderatesize_countours.extend(contours)
+				for increased_id, c in enumerate(contours):
+					box = Bag(c, img=None, id=increased_id)
+					# TODO 记录袋子的位置
+					box.modify_box_content(no_num=True)
+					cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0], box.boxcenterpoint[1] + 10),
+					            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
+					self.bags.append(box)
 
 		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
-		print("i have  try my best")
+		# print("i have  try my best")
+		# self.modify_x(self.img)
+
 		return self.bags
