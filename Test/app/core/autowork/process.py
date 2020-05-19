@@ -47,7 +47,7 @@ class IntelligentProcess(object):
 
 	def init_imgdetector_thread(self):
 		'''初始化图像处理线程'''
-		self.intelligentthread = IntelligentThread(IMGHANDLE=self.IMGHANDLE, positionservice=PointLocationService(),
+		self.intelligentthread = IntelligentThread(IMGHANDLE=self.IMGHANDLE,
 		                                           video_player=self.img_play)
 		self.intelligentthread.hockstatus = HockStatus.POSITION_NEARESTBAG
 		self.intelligentthread.positionSignal.connect(self.writetoplc_imgsignal_process)  # 发送移动位置

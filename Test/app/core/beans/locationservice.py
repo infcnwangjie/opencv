@@ -10,7 +10,7 @@ from app.config import SDK_OPEN, DISTANCE_SAMEXLANDMARK_SPACE, DISTANCE_SAMEYLAN
 from app.core.exceptions.allexception import NotFoundBagException, NotFoundHockException
 from app.core.processers.bag_detector import BagDetector
 from app.core.processers.laster_detector import LasterDetector
-from app.core.processers.preprocess import Preprocess
+from app.core.processers.preprocess import *
 from app.core.beans.models import Box, Bag, Laster, Hock
 from app.log.logtool import mylog_debug, mylog_error
 from app.status import Landmark_Model_Select
@@ -61,8 +61,9 @@ class PointLocationService:
 
 	# 计算地标的坐标
 	def computer_landmarks_location(self):
-		processor = LandMarkDetector(self.img)
-		self.landmarks = processor.processedlandmarkimg
+		# processor = LandMarkDetector(self.img)
+		# self.landmarks = processor.processedlandmarkimg
+		pass
 
 	def find_nearest_bag(self):
 		'''找到离钩子最近的袋子'''

@@ -195,10 +195,10 @@ class SetRoiWidget(QWidget):
 		self.label_save_dialog.show()
 
 
-# if __name__ == '__main__':
-# 	import sys
-#
-# 	app = QApplication(sys.argv)
-# 	form = SetRoiWidget(img="d:/2020-04-10-15-26-22test.bmp")
-# 	form.show()
-# 	app.exec_()
+if __name__ == '__main__':
+	import sys
+
+	app = QApplication(sys.argv)
+	form = SetRoiWidget(img="C:/work/nty/hangche/hangche1.png")
+	form.show()
+	app.exec_()

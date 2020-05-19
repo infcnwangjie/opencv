@@ -31,7 +31,6 @@ class LandMarkDetecotr(AbstractDetector):
 	def __init__(self, img):
 		self.img = img
 		self.img_after_modify = None
-		self._rois = None
 
 	def landmarkname_cmp(self, a, b):
 		result_a = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', a[0])
@@ -122,7 +121,7 @@ class LandMarkDetecotr(AbstractDetector):
 
 		y = ALL_LANDMARKS_DICT[opposite].row
 
-		rows = int(len(self.rois) / 2)
+		rows = int(len(self.__get_landmark_rois()) / 2)
 		x = 0
 		index = -rows
 		while index < rows:
@@ -147,7 +146,7 @@ class LandMarkDetecotr(AbstractDetector):
 		global ALL_LANDMARKS_DICT
 
 		# print(ALL_LANDMARKS_DICT)
-		for roi_item in self.rois:
+		for roi_item in self.__get_landmark_rois():
 			label = roi_item.label
 			if label in ALL_LANDMARKS_DICT:
 				find[label] = 1
@@ -159,7 +158,7 @@ class LandMarkDetecotr(AbstractDetector):
 		best_four_label_choose = None
 		best_six_label_choose = None
 
-		for roi_item in self.rois:
+		for roi_item in self.__get_landmark_rois():
 			loss_info = {}
 			for level in levels:
 				label = roi_item.label
@@ -227,13 +226,20 @@ class LandMarkDetecotr(AbstractDetector):
 
 	def position_landmark(self):
 		start = time.perf_counter()
-		rows, cols, channels = self.img.shape
-		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
-			dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
-		else:
-			dest = self.img
+		dest = cv2.resize(self.img, (IMG_WIDTH, IMG_HEIGHT))
+		landmark_rois = self.__get_landmark_rois()
+		for slide_window_obj in self.candidate_landmarks(dest):
+			# 迭代结束条件
+			need_find_roi = [landmark_roi for landmark_roi in landmark_rois if landmark_roi.times == 0]
+			if len(need_find_roi) == 0:
+				# print("need find roi is {}".format(len(need_find_roi)))
+				break
 
-		self.candidate_landmarks(dest)
+			for landmark_roi in landmark_rois:
+				if landmark_roi.label in slide_window_obj.maybe_labels:
+					task = gevent.spawn(self.__final_recognize, landmark_roi, slide_window_obj)
+					task.join()
+
 		# position_dic = {}
 		real_positions = self.__landmark_position_dic()
 		real_position_dic = {key: [int(float(value.split(',')[0])), int(float(value.split(',')[1]))] for key, value in
@@ -243,7 +249,7 @@ class LandMarkDetecotr(AbstractDetector):
 		# print("#" * 100)
 		print(position_dic)
 
-		for landmark_roi in self.rois:
+		for landmark_roi in landmark_rois:
 			landmark = landmark_roi.landmark
 			if landmark is None:
 				self.logger("{} miss landmark".format(landmark_roi.label), "warn")
@@ -251,22 +257,22 @@ class LandMarkDetecotr(AbstractDetector):
 			# print("############################{}################################################".format(
 			# 	landmark_roi.label))
 
-			col = landmark.col
-			row = landmark.row
+			# col = landmark.col
+			# row = landmark.row
+			if landmark_roi.label in position_dic:
+				col, row = position_dic[landmark_roi.label]
 
-			real_col, real_row = real_position_dic[landmark_roi.label]
+				cv2.rectangle(dest, (col, row), (col + landmark.width, row + landmark.height), color=(0, 255, 255),
+				              thickness=2)
 
-			cv2.rectangle(dest, (col, row), (col + landmark.width, row + landmark.height), color=(0, 255, 255),
-			              thickness=2)
-
-			cv2.putText(dest,
-			            "({},{})".format(real_col, real_row),
-			            (col, row + 90),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-			cv2.putText(dest,
-			            "{}".format(landmark_roi.label),
-			            (col, row + 60),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+				cv2.putText(dest,
+				            "({},{})".format(col, row),
+				            (col, row + 90),
+				            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+				cv2.putText(dest,
+				            "{}".format(landmark_roi.label),
+				            (col, row + 60),
+				            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
 		dest = self.__perspective_transform(dest, position_dic)
 
@@ -277,16 +283,12 @@ class LandMarkDetecotr(AbstractDetector):
 		print("结束{}".format(end - start))
 		return dest
 
-	@property
-	def rois(self):
-		if self._rois is None or len(self._rois) == 0:
-			landmark_rois = [
-				LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1)
-				for
-				roi_img in
-				os.listdir(ROIS_DIR) if roi_img.find('_L') != -1 or roi_img.find("_R") != -1]
-			self._rois = landmark_rois
-		return self._rois
+	def __get_landmark_rois(self):
+		landmark_rois = [LandMarkRoi(img=cv2.imread(os.path.join(ROIS_DIR, roi_img)), label=roi_img.split('.')[0], id=1)
+		                 for
+		                 roi_img in
+		                 os.listdir(ROIS_DIR) if roi_img.find('_L') != -1 or roi_img.find("_R") != -1]
+		return landmark_rois
 
 	def __draw_grid_lines(self, img):
 		H_rows, W_cols = img.shape[:2]
@@ -403,7 +405,14 @@ class LandMarkDetecotr(AbstractDetector):
 		return real_positions
 
 	def candidate_landmarks(self, dest=None):
-		global rows, cols, step, ALL_LANDMARKS_DICT
+		def warp_filter(c):
+			'''内部过滤轮廓'''
+			isbig = 10 <= cv2.contourArea(c) < 300
+			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
+			return isbig and 3< rect_w <= 30 and 3 < rect_h <= 30
+
+		global rows, cols, step
+		landmark_rois = self.__get_landmark_rois()
 
 		# 不要忽略缩小图片尺寸的重要性，减小尺寸，较少像素数就可以最大限度的减少无用操作；
 		# 限制程序速度的最主要因素就是无用操作，无用操作越少，程序执行速度就越高。
@@ -411,54 +420,38 @@ class LandMarkDetecotr(AbstractDetector):
 		# HSV对光线较RGB有更好的抗干扰能力
 		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 		# cv2.imshow("target", target)
+
 		gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
-		img_world = np.ones_like(gray)
-		ret, img_world = cv2.threshold(img_world, 0, 255, cv2.THRESH_BINARY)
-
-		# cv2.imshow("first", img_world)
-
-		def warp_filter(c):
-			'''内部过滤轮廓'''
-			isbig = 10 <= cv2.contourArea(c) < 3600
-			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
-			return isbig and 3 < rect_w <= 60 and 3 < rect_h <= 60
-
-		def set_mask_area(x: int, y: int, width: int, height: int):
-			img_world[y:y + height, x:x + width] = 0
 
 		left_open_mask = np.zeros_like(gray)
-		left_open_mask[0:IMG_HEIGHT, 0:170] = 255
+		left_open_mask[0:IMG_HEIGHT, 0:300] = 255
 
 		right_open_mask = np.zeros_like(gray)
 		right_open_mask[0:IMG_HEIGHT, 700:IMG_WIDTH] = 255
 
-		bigest_h, bigest_w = 0, 0
-
-		for roi_template in self.rois:
+		must_unique_window = {}
+		for roi_template in landmark_rois:
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
 			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
 
-			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
-			foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+			cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
+			bk = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+
+			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+			# bk = cv2.filter2D(bk, -1, disc)
 
 			if roi_template.label.find("L") > 0:
-				foreground = cv2.bitwise_and(foreground, foreground, mask=left_open_mask)
+				bk = cv2.bitwise_and(bk, bk, mask=left_open_mask)
 			if roi_template.label.find("R") > 0:
-				foreground = cv2.bitwise_and(foreground, foreground, mask=right_open_mask)
-
-			foreground = cv2.bitwise_and(foreground, foreground, mask=img_world)
-
-			# kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-			# bk = cv2.dilate(bk, kernel)
-			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-			# foreground = cv2.filter2D(foreground, -1, disc)
-			ret, foreground = cv2.threshold(foreground, 110, 255, cv2.THRESH_BINARY)
-
-			# if roi_template.label == "NO3_L":
-			# 	cv2.imshow("NO3_L", foreground)
-			# 	cv2.imshow("imgworld", img_world)
+				bk = cv2.bitwise_and(bk, bk, mask=right_open_mask)
+			kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+			bk = cv2.dilate(bk, kernel)
+			ret, bk = cv2.threshold(bk, 170, 255, cv2.THRESH_BINARY)
+			if roi_template.label == "NO3_L":
+				cv2.imshow("bk", bk)
+			# print(np.where(bk>200))
 
 			# thresh=cv2.fastNlMeansDenoisingMulti(thresh,2,5,None,4,7,35)
 
@@ -470,89 +463,39 @@ class LandMarkDetecotr(AbstractDetector):
 			# if roi_template.label == 'NO1_R':
 			# 	cv2.imshow("missed_landmark", bk)
 
-			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-			# if contours is None or len(contours)==0:
-			# 	# 前景图有白影 但是检测不到轮廓
-			# 	pass
+			contours, _hierarchy = cv2.findContours(bk, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+			contours = list(filter(lambda c: warp_filter(c), contours))
 
-			contours = list(filter(lambda c: warp_filter(c), contours)) if len(contours) > 1 else contours
-
+			# print("{} contours size {}".format(roi_template.label, len(contours)))
+			# cv2.drawContours(target, contours, -1, (0, 255, 255), 3)
 			if contours is None or len(contours) == 0:
-				locs = np.where(foreground >= 200)
-				if len(locs[0]) > 0:
-					for row, col in zip(locs[0], locs[1]):
-						print(img_world[row, col])
-				else:
-					continue
+				continue
 
 			# Z轴无论再怎么变化，灯的面积也大于90
 
 			max_area = 0
 			best_match_contour = None
-
 			for c in contours:
-				area = cv2.contourArea(c)
-				if area > max_area:
-					max_area = area
+				current_area = cv2.contourArea(c)
+				if max_area < current_area:
+					max_area = current_area
 					best_match_contour = c
+			#
+			# rect = cv2.boundingRect(c)
+			# rect_x, rect_y, rect_w, rect_h = rect
+			# must_unique_key = "{}_{}".format(rect_x, rect_y)
+			# if must_unique_key in must_unique_window:
+			# 	continue
+			# else:
+			# 	must_unique_window[must_unique_key] = 1
 
-				M = cv2.moments(c)
-				try:
-					center_x = int(M["m10"] / M["m00"])
-					center_y = int(M["m01"] / M["m00"])
-				except:
-					continue
-				# print(roi_template.label,center_x,center_y)
-
-				rect = cv2.boundingRect(c)
-				x, y, w, h = rect
-				if h > bigest_h: bigest_h = h
-				if w > bigest_w: bigest_w = w
-				neighbours = [('for_row', self.get_opposite_landmark(roi_template.label)),
-				              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=1)),
-				              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=2)),
-				              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-1)),
-				              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-2))]
-				for flag, ref_label in neighbours:
-					if flag == 'for_col' and ref_label in ALL_LANDMARKS_DICT:
-						ref_landmark = ALL_LANDMARKS_DICT[ref_label]
-						if abs(ref_landmark.col - x) <= 50:
-							landmark_obj = NearLandMark(x, y,
-							                            target[y:y + h, x:x + w])
-							landmark_obj.width = max(bigest_w, w)
-							landmark_obj.height = max(bigest_h, h)
-							set_mask_area(center_x-100, center_y-100, 300, 200)
-							landmark_obj.add_maybe_label(roi_template.label)
-							roi_template.set_match_obj(landmark_obj)
-							ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
-							break
-					elif flag == 'for_row' and ref_label in ALL_LANDMARKS_DICT:
-						ref_landmark = ALL_LANDMARKS_DICT[ref_label]
-						if abs(ref_landmark.row - y) <= 50:
-							landmark_obj = NearLandMark(x, y,
-							                            target[y:y + h, x:x + w])
-							landmark_obj.width = max(bigest_w, w)
-							landmark_obj.height = max(bigest_h, h)
-							set_mask_area(center_x - 100, center_y - 100, 300, 200)
-							landmark_obj.add_maybe_label(roi_template.label)
-							roi_template.set_match_obj(landmark_obj)
-							ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
-							break
-				else:
-					# for _else   not if else
-					# 这类最难处理，处理一对多的情况
-
-					rect = cv2.boundingRect(best_match_contour)
-					best_x, best_y, best_w, best_h = rect
-					landmark_obj = NearLandMark(best_x, best_y,
-					                            target[best_y:best_y + best_h, best_x:best_x + best_w])
-					landmark_obj.width = max(bigest_w, best_w)
-					landmark_obj.height = max(bigest_h, best_h)
-					landmark_obj.add_maybe_label(roi_template.label)
-					if len(contours) == 1:
-						set_mask_area(center_x - 100, center_y - 100, 300, 200)
-					roi_template.set_match_obj(landmark_obj)
-					ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
+			best_rect = cv2.boundingRect(best_match_contour)
+			best_x, best_y, best_w, best_h = best_rect
+			landmark_obj = NearLandMark(best_x, best_y, target[best_y:best_y + best_h, best_x:best_x + best_w])
+			landmark_obj.width = best_w
+			landmark_obj.height = best_h
+			landmark_obj.add_maybe_label(roi_template.label)
+			yield landmark_obj
 
 
 if __name__ == '__main__':
@@ -565,11 +508,11 @@ if __name__ == '__main__':
 	# 2020-05-18-16-25-43test.bmp
 	# 2020-05-18-16-31-25test.bmp
 	# 2020-05-18-16-36-18test.bmp
-	a = LandMarkDetecotr(img=cv2.imread('c:/work/nty/hangche/2020-05-19-16-38-46test.bmp'))
+	a = LandMarkDetecotr(img=cv2.imread('c:/work/nty/hangche/2020-05-18-16-36-18test.bmp'))
 	dest = a.position_landmark()
 	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
 	b = BagDetector(dest)
-	for bag in b.location_bags():
+	for bag in b.location_bag():
 		print(bag)
 
 	# __draw_grid_lines(src)

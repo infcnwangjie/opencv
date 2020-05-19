@@ -35,15 +35,13 @@ class IntelligentThread(QThread):
 	finishSignal = pyqtSignal(str)
 	foundbagSignal = pyqtSignal(int)
 
-	def __init__(self, video_player, IMGHANDLE=None,
-	             positionservice: PointLocationService = None, parent=None):
+	def __init__(self, video_player, IMGHANDLE=None, parent=None):
 		super().__init__(parent=parent)
 		self._playing = True
 		self._finish = False
 		self._working = False
 		self.video_player = video_player
 		self.IMAGE_HANDLE = IMGHANDLE  # 从skd中获取图像
-		self.positionservice = positionservice  # 指令处理器
 		self._hockstatus = HockStatus.POSITION_NEARESTBAG  # 钩子状态会影响定位程序
 		self.bags = []
 		self.send_positions = []
@@ -85,52 +83,56 @@ class IntelligentThread(QThread):
 			frame = self.IMAGE_HANDLE.read()
 			if frame is None:
 				break
+			frame = cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT))
 			if frame.ndim == 3:
 				show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			elif frame.ndim == 2:
 				show = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
+
 			if self.work:
-				self.positionservice.img = show
-				self.core_process(show)
-				show = self.positionservice.img
+				show = LandMarkDetecotr(img=show).position_landmark()
+				bag_detector = BagDetector(show)
+				bags = bag_detector.location_bags()
 			self.video_player.set_img(show)
 
-	def core_process(self, img):
-		'''
-		核心处理程序：检测地标、定位灯光、寻找袋子
 
-		需要验证的问题，当钩子移动的时候，是不是得实时检测地标位置，好做图像校正；
-
-		袋子的坐标应该是固定不变的，如果袋子坐标变化，则是误差。
-
-
-
-		:return:
-		'''
-
-		# 定位地标
-		dest = LandMarkDetecotr(img=img).position_remark()
-
-		# 定位袋子
-		bag_detector = BagDetector(dest)
-		bags = bag_detector.location_bag()
-
-
-
-		while len([bag for bag in bags if bag.finish_move == False]) > 0:
-			# 定位激光灯
-			laster_detector = LasterDetector(img=dest)
-			laster = laster_detector.location_laster()
-
-
-			for bag in bags:
-				print(
-					"################################################################################################")
-				print("move bag {NO} to train".format(NO=bag.id))
-				print("bag position is ({x},{y})".format(x=bag.x, y=bag.y))
-				bag.finish_move = True
-				print("命令plc复位")
+	# not used
+	# def core_process(self, img):
+	# 	'''
+	# 	核心处理程序：检测地标、定位灯光、寻找袋子
+	#
+	# 	需要验证的问题，当钩子移动的时候，是不是得实时检测地标位置，好做图像校正；
+	#
+	# 	袋子的坐标应该是固定不变的，如果袋子坐标变化，则是误差。
+	#
+	#
+	#
+	# 	:return:
+	# 	'''
+	#
+	# 	# 定位地标
+	# 	dest = LandMarkDetecotr(img=img).position_landmark()
+	#
+	# 	# 定位袋子
+	# 	bag_detector = BagDetector(dest)
+	# 	bags = bag_detector.location_bag()
+	#
+	#
+	#
+	# 	while len([bag for bag in bags if bag.finish_move == False]) > 0:
+	# 		# 定位激光灯
+	# 		laster_detector = LasterDetector(img=dest)
+	# 		laster = laster_detector.location_laster()
+	#
+	#
+	# 		for bag in bags:
+	# 			print(
+	# 				"################################################################################################")
+	# 			print("move bag {NO} to train".format(NO=bag.id))
+	# 			print("bag position is ({x},{y})".format(x=bag.x, y=bag.y))
+	# 			bag.finish_move = True
+	# 			print("命令plc复位")
 
 # if self.hockstatus == HockStatus.POSITION_NEARESTBAG:
 # 	try:

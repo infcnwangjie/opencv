@@ -45,5 +45,6 @@ def logger(self, msg, level: str):
 	if level in method_dict:
 		method = method_dict[level]
 	else:
-		method = mylog_warning
+		method = mylog_debug
+	# method=mylog_debug
 	method(msg)

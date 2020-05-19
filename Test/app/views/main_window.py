@@ -43,7 +43,8 @@ class MyLabel(QtWidgets.QLabel):  # 自定义的QLabel类
 
 
 class CentWindowUi(object):
-	movie_pattern = re.compile("\d{4}-\d{2}-\d{2}-\d{2}.mp4")
+	# Video_20200519093635911.avi
+	movie_pattern = re.compile("Video_(?P<time>\d+).avi")
 
 	def setupUi(self, Form):
 		Form.setObjectName("Form")
@@ -232,6 +233,7 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def play(self):
 		'''开始播放'''
+		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
 		if self.process.IMGHANDLE:
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
