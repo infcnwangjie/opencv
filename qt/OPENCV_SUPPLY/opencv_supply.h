@@ -31,4 +31,11 @@ extern "C"   OPENCV_SUPPLY_EXPORT   unsigned char * find_it( unsigned char * ima
                                                              int src_w ,int src_h,
                                                              int model_w,int model_h);
 
+extern "C"   OPENCV_SUPPLY_EXPORT uchar* cpp_canny(int height, int width, uchar* data) ;
+
+extern "C"   OPENCV_SUPPLY_EXPORT void release(uchar* data) {
+    free(data);
+}
+
+
 #endif // OPENCV_SUPPLY_H

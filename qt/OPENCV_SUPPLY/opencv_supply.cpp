@@ -14,17 +14,14 @@ void helloWorld(){
 int add(int a , int b){
     return a+b;
 }
-unsigned char * find_it( unsigned char * image_meta , unsigned char * model_data,
+unsigned char  *  find_it( unsigned char * image_meta , unsigned char * model_data,
                                                             int src_w ,int src_h,
                          int model_w,int model_h)
 {
-//    Mat image = Mat::zeros(Size(src_w,src_h),CV_8UC3);
-//    image.data=image_meta;
 
     cv::Mat image(src_h, src_w, CV_8UC3, image_meta);
 
-//    Mat model = Mat::zeros(Size(model_w,model_h),CV_8UC3);
-//    model.data=model_data;
+
 
     cv::Mat model(model_h, model_w, CV_8UC3, model_data);
 
@@ -43,12 +40,25 @@ unsigned char * find_it( unsigned char * image_meta , unsigned char * model_data
     Mat roiHist;
 
     calcHist(&model_hsv, 1, channels, Mat(), roiHist, 2, histSize, ranges, true, false);
-    normalize(roiHist, roiHist, 0, 255, NORM_MINMAX, -1, Mat());
+    normalize(roiHist, roiHist, 0, 256, NORM_MINMAX, -1, Mat());
 
     //计算反向投影
     Mat backproj;
     calcBackProject(&image_hsv, 1, channels, roiHist, backproj, ranges, 1.0);
 
+   uchar* buffer = (uchar*)malloc(sizeof(uchar)*src_h*src_w);
+   memcpy(buffer, backproj.data, src_h*src_w);
+   return buffer;
+}
 
-   return  backproj.data;
+
+uchar* cpp_canny(int height, int width, uchar* data) {
+   cv::Mat src(height, width, CV_8UC1, data);
+   cv::Mat dst;
+   Canny(src, dst, 100, 200);
+
+   uchar* buffer = (uchar*)malloc(sizeof(uchar)*height*width);
+   memcpy(buffer, dst.data, height*width);
+   return buffer;
+
 }
