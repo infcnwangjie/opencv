@@ -51,9 +51,9 @@ class Bag(Box):
 		self.finish_move = False
 
 	def modify_box_content(self, no_num=True):
-		# 如果box内部没有内部轮廓，就直接退出循环
-		self.box_content = "(" + str(self.boxcenterpoint[0]) + "," + str(
-			self.boxcenterpoint[1]) + ")"
+
+		self.box_content = "(" + str(self.x) + "," + str(
+			self.y) + ")"
 
 	def __str__(self):
 		return "(" + str(self.boxcenterpoint[0]) + "," + str(
@@ -64,8 +64,8 @@ class Bag(Box):
 class Laster(Box):
 	def modify_box_content(self):
 		# 如果box内部没有内部轮廓，就直接退出循环
-		self.box_content = "laster:" + "(" + str(self.boxcenterpoint[0]) + "," + str(
-			self.boxcenterpoint[1]) + ")"
+		self.box_content = "laster:" + "(" + str(self.x) + "," + str(
+			self.y) + ")"
 
 
 # 钩子
@@ -144,6 +144,19 @@ class TargetRect:
 
 
 class BagRoi:
+	def __init__(self, img, id=1):
+		self.roi = img
+		self.x, self.y = 0, 0
+		self.id = id
+
+	def set_position(self, x, y):
+		self.x, self.y = x, y
+
+	def get_position(self):
+		return self.x, self.y
+
+
+class SupportRefRoi:
 	def __init__(self, img, id=1):
 		self.roi = img
 		self.x, self.y = 0, 0

@@ -45,6 +45,8 @@ class IntelligentThread(QThread):
 		self._hockstatus = HockStatus.POSITION_NEARESTBAG  # 钩子状态会影响定位程序
 		self.bags = []
 		self.send_positions = []
+		self.landmark_detect=LandMarkDetecotr()
+		self.bag_detect=BagDetector()
 
 	def __del__(self):
 		self._working = False
@@ -79,7 +81,7 @@ class IntelligentThread(QThread):
 	def run(self):
 
 		while self.play and self.IMAGE_HANDLE:
-			sleep(1 / 13)
+			sleep(1/8)
 			frame = self.IMAGE_HANDLE.read()
 			if frame is None:
 				break
@@ -89,12 +91,15 @@ class IntelligentThread(QThread):
 			elif frame.ndim == 2:
 				show = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
-
 			if self.work:
-				show = LandMarkDetecotr(img=show).position_landmark()
-				bag_detector = BagDetector(show)
-				bags = bag_detector.location_bags()
-			self.video_player.set_img(show)
+				dest,success = self.landmark_detect.position_landmark(show)
+				if success:
+					bags = self.bag_detect.location_bags(dest)
+					self.landmark_detect.draw_grid_lines(dest)
+				show = dest.copy()
+				self.video_player.set_img(show)
+
+
 
 
 	# not used

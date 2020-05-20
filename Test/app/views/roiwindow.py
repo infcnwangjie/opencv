@@ -199,6 +199,6 @@ if __name__ == '__main__':
 	import sys
 
 	app = QApplication(sys.argv)
-	form = SetRoiWidget(img="C:/work/nty/hangche/hangche1.png")
+	form = SetRoiWidget(img="C:/work/nty/hangche/Image_20200520143122652.bmp")
 	form.show()
 	app.exec_()

@@ -11,8 +11,8 @@ from app.core.beans.models import Bag, LandMarkRoi, BagRoi
 
 
 class BagDetector(AbstractDetector):
-	def __init__(self, img):
-		super().__init__(img)
+	def __init__(self, img=None):
+		super().__init__()
 		self.bags = []
 
 	def bagroi_templates(self):
@@ -22,10 +22,13 @@ class BagDetector(AbstractDetector):
 		                 enumerate(os.listdir(BAGROI_DIR)) if roi_img.find('bag') !=-1]
 		return landmark_rois
 
-	def findit(self, target=None, roi_template=None):
+
+
+
+	def findbags(self, target=None, roi_template=None):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
-			isbig = 80 <= cv2.contourArea(c) < 300
+			isbig = 30 <= cv2.contourArea(c) < 300
 			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
 			return isbig and 3 < rect_w <= 30 and 3 < rect_h <= 30
 
@@ -33,6 +36,8 @@ class BagDetector(AbstractDetector):
 		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 
 		gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
+		cols,rows,channels=target.shape
+		print(rows,cols,channels)
 
 		left_open_mask = np.zeros_like(gray)
 		left_open_mask[0:IMG_HEIGHT, 0:300] = 255
@@ -41,7 +46,8 @@ class BagDetector(AbstractDetector):
 		right_open_mask[0:IMG_HEIGHT, 700:IMG_WIDTH] = 255
 
 		middle_open_mask = np.zeros_like(gray)
-		middle_open_mask[0:IMG_HEIGHT, 150:500] = 255
+		middle_open_mask[0:IMG_HEIGHT, 100:450] = 255
+		# cv2.imshow("middle",middle_open_mask)
 
 		must_unique_window = {}
 		img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
@@ -64,7 +70,9 @@ class BagDetector(AbstractDetector):
 			bk = cv2.bitwise_and(bk, bk, mask=middle_open_mask)
 		bk = cv2.dilate(bk, kernel)
 
-		ret, thresh = cv2.threshold(bk, 50, 255, cv2.THRESH_BINARY)
+		ret, thresh = cv2.threshold(bk, 0, 255, cv2.THRESH_BINARY)
+
+		# cv2.imshow("bags", thresh)
 
 		# thresh=cv2.fastNlMeansDenoisingMulti(thresh,2,5,None,4,7,35)
 
@@ -87,7 +95,7 @@ class BagDetector(AbstractDetector):
 
 		return contours
 
-	def location_bags(self):
+	def location_bags(self,target):
 		'''
 		location_bags
 		:return [Bag]
@@ -95,8 +103,10 @@ class BagDetector(AbstractDetector):
 		从摄像头垂直向下的时候，袋子多出来的X轴误差，就是摄像头中的地标并不是完全垂直于地面造成的
 		'''
 		moderatesize_countours = []
+		# x_error=AbstractDetector.error_causedby_angel_height(target)
+		x_error=0
 		for bag_template in self.bagroi_templates():
-			contours = self.findit(self.img, bag_template)
+			contours = self.findbags(target, bag_template)
 			if contours is None or len(contours) == 0:
 				continue
 			else:
@@ -104,13 +114,14 @@ class BagDetector(AbstractDetector):
 				moderatesize_countours.extend(contours)
 				for increased_id, c in enumerate(contours):
 					box = Bag(c, img=None, id=increased_id)
-					# TODO 记录袋子的位置
+					if x_error is  not None:
+						box.x=box.x-int(x_error)
 					box.modify_box_content(no_num=True)
-					cv2.putText(self.img, box.box_content, (box.boxcenterpoint[0], box.boxcenterpoint[1] + 10),
+					cv2.putText(target, box.box_content, (box.boxcenterpoint[0], box.boxcenterpoint[1] + 10),
 					            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 					self.bags.append(box)
 
-		cv2.drawContours(self.img, moderatesize_countours, -1, (0, 255, 255), 3)
+		cv2.drawContours(target, moderatesize_countours, -1, (0, 255, 255), 3)
 		# print("i have  try my best")
 		# self.modify_x(self.img)
 
