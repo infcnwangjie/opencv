@@ -1,0 +1,12 @@
+#ifndef OPENCV_SUPPLY_GLOBAL_H
+#define OPENCV_SUPPLY_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(OPENCV_SUPPLY_LIBRARY)
+#  define OPENCV_SUPPLY_EXPORT Q_DECL_EXPORT
+#else
+#  define OPENCV_SUPPLY_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // OPENCV_SUPPLY_GLOBAL_H

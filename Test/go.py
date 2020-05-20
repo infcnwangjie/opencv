@@ -1,51 +1,42 @@
+import ctypes
 import os
 from ctypes import cdll, c_uint, c_void_p, c_int, c_float, c_char_p,POINTER,byref,Structure,cast,c_uint8
 
 import cv2
 import numpy as np
 
-MWORKDLL = cdll.LoadLibrary("E:/cpp_workspace/FINDROI/Debug/FINDROI.dll")
+OPENCV_SUPPLYDLL = cdll.LoadLibrary("C:/work/cpp/build-OPENCV_SUPPLY-Desktop_Qt_5_14_2_MinGW_64_bit-Debug/libOPENCV_SUPPLY.dll")
 
-print(MWORKDLL.add(4,5))
-def c_array(ctype, values):  # 把图像的数据转化为内存连续的列表使c++能使用这块内存
-	arr = (ctype * len(values))()
-	arr[:] = values
-	return arr
-
-
-def array_to_image(arr):
-	c = arr.shape[2]
-	h = arr.shape[0]
-	w = arr.shape[1]
-	arr = arr.flatten()
-	data = c_array(c_uint8, arr)
-	im = IMAGE(w, h, c, data)
-	return im
-
-
-class IMAGE(Structure):  # 这里和ImgSegmentation.hpp里面的结构体保持一致。
-	_fields_ = [("w", c_int),
-				("h", c_int),
-				("c", c_int),
-				("data", POINTER(c_uint8))]
-
+print(OPENCV_SUPPLYDLL.helloWorld())
+print(OPENCV_SUPPLYDLL.add(56,78))
 
 
 img = cv2.imread('c:/work/nty/hangche/2020-05-15-15-59-16test.bmp')
 h, w, c = img.shape[0], img.shape[1], img.shape[2]
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-# gray = np.reshape(hsv, (h, w, 3))          # 一定要使用(h, w, 1)，最后的1别忘。
-im = array_to_image(img)
-# gray_img = array_to_image(gray)
+# cv2.imshow("hsv",hsv)
+src_target = np.asarray(hsv, dtype=np.uint8)
+src_target = src_target.ctypes.data_as(ctypes.c_char_p)
 
+OPENCV_SUPPLYDLL.find_it.restype =ctypes.POINTER(ctypes.c_uint8)
+# OPENCV_SUPPLYDLL.find_it.argtype = [POINTER(IMAGE), POINTER(IMAGE)]
+# # gray = np.reshape(hsv, (h, w, 3))          # 一定要使用(h, w, 1)，最后的1别忘。
+# im = array_to_image(hsv)
+# # gray_img = array_to_image(gray)
+# #
 roiimg = cv2.imread('C:/NTY_IMG_PROCESS/ROIS/NO1_L.png')
-model_img = array_to_image(roiimg)
+# cv2.imshow("roiimg",roiimg)
+roihsv = cv2.cvtColor(roiimg, cv2.COLOR_BGR2HSV)
+# model_img = array_to_image(roiimg)
+model = np.asarray(roihsv, dtype=np.uint8)
+model = model.ctypes.data_as(ctypes.c_char_p)
+model_h, model_w, model_c = roiimg.shape[0], roiimg.shape[1], roiimg.shape[2]
 
-
-#测试strTest方法
-MWORKDLL.find_object.argtype = [POINTER(IMAGE), POINTER(IMAGE)]
-MWORKDLL.find_object.restype = POINTER(IMAGE)
-c=MWORKDLL.find_object(im,model_img)
-cv2.imshow(c)
-cv2.waitKey(c)
+pointer=OPENCV_SUPPLYDLL.find_it(src_target,model,w,h,model_w,model_h)
+print(pointer)
+# # #测试strTest方法
+foreground = np.array(np.fromiter(pointer, dtype=np.uint8, count=h * w))
+result=foreground.reshape((h,w))
+cv2.imshow("img",result)
+cv2.waitKey(0)
 cv2.destroyAllWindows()
