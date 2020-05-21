@@ -94,8 +94,8 @@ class IntelligentThread(QThread):
 			if self.work:
 				dest,success = self.landmark_detect.position_landmark(show)
 				if success:
-					bags = self.bag_detect.location_bags(dest)
-					self.landmark_detect.draw_grid_lines(dest)
+					bags = self.bag_detect.location_bags(dest,success)
+					# self.landmark_detect.draw_grid_lines(dest)
 				show = dest.copy()
 				self.video_player.set_img(show)
 

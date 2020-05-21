@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # from gevent import monkey;
+import math
 import os
 import pickle
 import random
@@ -23,7 +24,7 @@ cv2.useOptimized()
 
 rows, cols = IMG_HEIGHT, IMG_WIDTH
 
-WITHOUT_TRANSPORT = False
+WITH_TRANSPORT = True
 
 
 class LandMarkDetecotr(AbstractDetector):
@@ -32,8 +33,9 @@ class LandMarkDetecotr(AbstractDetector):
 		self.img_after_modify = None
 		self._rois = []
 		self.ALL_LANDMARKS_DICT = {}
-		# self.left_landmark_start=0
-		# self.left_landmark_end=300
+
+	# self.left_landmark_start=0
+	# self.left_landmark_end=300
 
 	def landmarkname_cmp(self, a, b):
 		result_a = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', a[0])
@@ -61,14 +63,42 @@ class LandMarkDetecotr(AbstractDetector):
 		labels = [left_top_landmark_name, self.__fetch_neigbbour(left_top_landmark_name, sourth_step=1, west_step=0),
 		          self.__fetch_neigbbour(left_top_landmark_name, sourth_step=1, west_step=1),
 		          self.__fetch_neigbbour(left_top_landmark_name, sourth_step=0, west_step=1)]
-		return labels
+
+		find = {roi_item.label: 1 if roi_item.label in self.ALL_LANDMARKS_DICT else 0 for roi_item in self.rois}
+
+		HAS_POINT_NOT_EXIST = False
+		for label_item in labels:
+			if label_item not in find:
+				HAS_POINT_NOT_EXIST = True
+				break
+		else:
+			HAS_POINT_NOT_EXIST = False
+
+		if not HAS_POINT_NOT_EXIST:
+			return labels
+		else:
+			return None
 
 	def corners_levelsix(self, left_top_landmark_name):
 		'''级别6获取角点'''
 		labels = [left_top_landmark_name, self.__fetch_neigbbour(left_top_landmark_name, sourth_step=1, west_step=0),
 		          self.__fetch_neigbbour(left_top_landmark_name, sourth_step=1, west_step=2),
 		          self.__fetch_neigbbour(left_top_landmark_name, sourth_step=0, west_step=2)]
-		return labels
+
+		find = {roi_item.label: 1 if roi_item.label in self.ALL_LANDMARKS_DICT else 0 for roi_item in self.rois}
+
+		HAS_POINT_NOT_EXIST = False
+		for label_item in labels:
+			if label_item not in find:
+				HAS_POINT_NOT_EXIST = True
+				break
+		else:
+			HAS_POINT_NOT_EXIST = False
+
+		if not HAS_POINT_NOT_EXIST:
+			return labels
+		else:
+			return None
 
 	def corners_leveleight(self, left_top_landmark_name):
 		'''级别8获取角点'''
@@ -144,89 +174,161 @@ class LandMarkDetecotr(AbstractDetector):
 	def choose_best_cornors(self):
 		'''
 		 method choose_best_cornors :must have three landmarks in your image,if not ,then send move instruct to computer
-
-		 TODO <1> check  if  has three point in image,if miss one ,the method may compute it by others landmark;if less than 3,then return back....
-
-		 TODO <2> send move instruct is not in use
-
-		:return:
+		  <1> check  if  has three point in image,if miss one ,the method may compute it by others landmark;if less than 3,then return back....
+		  <2> send move instruct is not in use
+		 # TODO  还有一个问题需要解决，L2 L3 挤在了一起
+		:return: positiondict:{} ,success:boolean
 		'''
-
-		find = defaultdict(int)  # label1:0  label2:1
 		loss = {}  # 闭合层级：丢失角点个数
 
-		# print(ALL_LANDMARKS_DICT)
-		for roi_item in self.rois:
-			label = roi_item.label
-			if label in self.ALL_LANDMARKS_DICT:
-				find[label] = 1
-			else:
-				find[label] = 0
+		find = {roi_item.label: 1 if roi_item.label in self.ALL_LANDMARKS_DICT else 0 for roi_item in self.rois}
 
-		level_four_min_loss = 4
-		level_six_min_loss = 6
-		best_four_label_choose = None
-		best_six_label_choose = None
+		landmark_total = sum(find.values())
+		if landmark_total < 3:
+			return {}, False
 
+		level_four_min_loss, level_six_min_loss, best_four_label_choose, best_six_label_choose = 4, 6, None, None
+
+		# 计算每个地标的定位识别状态
 		for roi_item in self.rois:
 			if "_R" in roi_item.label:
 				continue
 			loss_info = {}
 			for level in ['4', '6']:
 				label = roi_item.label
-
 				if level == '4':
-					point1, point2, point3, point4 = self.corners_levelfour(label)
-					loss_info['4'] = 4 - sum([find[point1], find[point2], find[point3], find[point4]])
-					if loss_info['4'] < level_four_min_loss:
-						best_four_label_choose = roi_item.label
-						level_four_min_loss = loss_info['4']
+					candidate_landmarks = self.corners_levelfour(label)
+					if candidate_landmarks is None:
+						continue
+					else:
+						point1, point2, point3, point4 = candidate_landmarks
+
+						loss_info['4'] = 4 - sum([find[point1], find[point2], find[point3], find[point4]])
+						if loss_info['4'] < level_four_min_loss:
+							best_four_label_choose = roi_item.label
+							level_four_min_loss = loss_info['4']
+
 				elif level == '6':
-					point1, point2, point3, point4 = self.corners_levelsix(label)
-					loss_info['6'] = 4 - sum([find[point1], find[point2], find[point3], find[point4]])
-					if loss_info['6'] < level_six_min_loss:
-						best_six_label_choose = roi_item.label
-						level_six_min_loss = loss_info['6']
+					candidate_landmarks = self.corners_levelsix(label)
+					if candidate_landmarks is None:
+						continue
+					else:
+						point1, point2, point3, point4 = candidate_landmarks
+						loss_info['6'] = 4 - sum([find[point1], find[point2], find[point3], find[point4]])
+						if loss_info['6'] < level_six_min_loss:
+							best_six_label_choose = roi_item.label
+							level_six_min_loss = loss_info['6']
+
 				loss[label] = loss_info
 
-		# print(ALL_LANDMARKS_DICT)
+		# 记录每个地标的定位目标
 		positiondict = {}
-		try:
-			if loss[best_four_label_choose]['4'] < loss[best_six_label_choose]['6']:
-				labels = self.corners_levelfour(best_four_label_choose)
-				self.logger("best landmark is {},level four loss is {},level six loss is {},choose level 4".format(
-					best_four_label_choose,
-					loss[best_four_label_choose][
-						'4'],
-					loss[best_four_label_choose][
-						'6']), "info")
+		if best_four_label_choose not in find and best_six_label_choose not in find:
+			# 评级4与评级5的坐标点 均无效
+			return {}, False
+		elif best_four_label_choose in find and best_six_label_choose in find:
+			# 评级4与评级5的坐标点 均有效
+			labels = self.corners_levelfour(best_four_label_choose) if loss[best_four_label_choose]['4'] < \
+			                                                           loss[best_six_label_choose][
+				                                                           '6'] else self.corners_levelsix(
+				best_six_label_choose)
+		elif (best_four_label_choose not in find and best_six_label_choose in find) or (
+				best_four_label_choose in find and best_six_label_choose not in find):
+			# 评级4与评级5的坐标点 其中一个有效
+			labels = self.corners_levelfour(
+				best_four_label_choose) if best_four_label_choose in find else self.corners_levelsix(
+				best_six_label_choose)
+		# 并计算丢失的地标，如果需要四个地标只有三个获取，缺失的需要计算推导出来
+		compensate_label = ""
+		for label in labels:
+			if label not in self.ALL_LANDMARKS_DICT:
+				print("label {} need compute".format(label))
+				compensate_label = label
+				continue
 			else:
-				labels = self.corners_levelsix(best_six_label_choose)
-				self.logger("best landmark is {},level four loss is {},level six loss is {},and choose level 6".format(
-					best_six_label_choose,
-					loss[best_six_label_choose][
-						'4'],
-					loss[best_six_label_choose][
-						'6']), "info")
-		except:
-			self.logger("some landmark not in image,move forward")
-			return positiondict, False
-		else:
-			compensate_label = ""
-			for label in labels:
-				if label not in self.ALL_LANDMARKS_DICT:
-					print("label {} need compute".format(label))
-					compensate_label = label
-					continue
 				positiondict[label] = [self.ALL_LANDMARKS_DICT[label].col, self.ALL_LANDMARKS_DICT[label].row]
-			if compensate_label != "":
-				try:
-					miss_x, miss_y = self.compute_miss_landmark_position(compensate_label)
-				except (NotFoundLandMarkException) as e:
-					print(e)
+
+		if compensate_label != "":
+			try:
+				miss_x, miss_y = self.compute_miss_landmark_position(compensate_label)
+			except (NotFoundLandMarkException) as e:
+				return {}, False
+			else:
+				positiondict[compensate_label] = [miss_x, miss_y]
+
+		############ -----------------开始间隔检测-------------------------------------------------------------#########
+		success = True
+		yrange = max(y for x, y in positiondict.values()) - min(y for x, y in positiondict.values())
+		if len(positiondict.values()) == 4 and yrange < 300:
+			# 用来排除检测到的地标轮廓挤在一起的情况，这类肯定是与地标相近但并非目标
+			success = False
+		elif len(positiondict.values()) == 6 and yrange < 600:
+			# 同样是用来排查无效地标检测值，但是从六个闭合点中挑选的最佳四个地标
+			success = False
+
+		for key, [x, y] in positiondict.items():
+			key_result = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', key)
+			key_no = key_result.group('NO')
+			key_direct = key_result.group('direct')
+			for key_j, [xj, yj] in positiondict.items():
+				keyj_result = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', key)
+				keyj_direct = keyj_result.group('direct')
+				if key == key_j:
+					continue
+				if key_direct == keyj_direct:
+					q = math.sqrt(math.pow(abs(xj - x), 2) + math.pow(abs(yj - y), 2))
+					if q <200:
+						return {}, False
+
+		##########------------------结束间隔检测-------------------------------------------------------------#########
+
+		###########-------------- 开始递增顺序检测------------------------------------------------------------#########
+		position_row_table = defaultdict(list)
+
+		for label, [x, y] in positiondict.items():
+			# position_row_table[]
+			item_match_result = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', label)
+			position_row_table[item_match_result.group('NO')].append(y)
+
+		position_row_table = {item[0]: item[1] for item in
+		                      sorted(position_row_table.items(), key=lambda record: record[0], reverse=False)}
+		position_row_temp = {}
+		for label, row_list in positiondict.items():
+			item_match_result = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', label)
+			average = sum(row_list) / len(row_list)
+			position_row_temp[item_match_result.group('NO')] = average
+			priver_no = str(int(item_match_result.group('NO')) - 1)
+			# 不按照编号递增排序
+			if priver_no in position_row_temp and (
+					position_row_temp[priver_no] >= average or abs(position_row_temp[priver_no], average) < 190):
+				break
+			# 差异太大应该放弃
+			score = sum([math.pow(row - average, 2) for row in row_list])
+			if score > 20:
+				break
+		else:
+			# --------------------------------判断是否错位--------------------------------------------------------
+			left_points, right_points = [], []
+			for label, point in positiondict.items():
+				if '_L' in label:
+					left_points.append(point[y])
 				else:
-					positiondict[compensate_label] = [miss_x, miss_y]
-			return positiondict, True
+					right_points.append(point[y])
+			# 开始--------------------y轴扭曲-------------------------------------------
+			left_range = abs(left_points[0] - left_points[1])
+			right_range = abs(right_points[0] - right_points[1])
+			if abs(left_range - right_range) > 20:
+				return positiondict, False
+			# 结束--------------------y轴扭曲--------------------------------------------
+			left_points = sorted(left_points, lambda p: p[1], reverse=False)
+			right_points = sorted(right_points, lambda p: p[1], reverse=False)
+			top_range = abs(left_points[0] - right_points[0])
+			bottom_range = abs(left_points[1] - right_points[1])
+			if abs(top_range - bottom_range) > 20:
+				return positiondict, False
+		###################-----------------结束递增顺序检测-------------------------------#####################
+
+		return positiondict, success
 
 	def position_landmark(self, image):
 		self.ALL_LANDMARKS_DICT.clear()
@@ -240,7 +342,7 @@ class LandMarkDetecotr(AbstractDetector):
 
 		self.candidate_landmarks(dest)
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
-			return dest,False
+			return dest, False
 
 		real_positions = self.__landmark_position_dic()
 		real_position_dic = {key: [int(float(value.split(',')[0])), int(float(value.split(',')[1]))] for key, value in
@@ -259,7 +361,7 @@ class LandMarkDetecotr(AbstractDetector):
 
 			real_col, real_row = real_position_dic[landmark_roi.label]
 
-			cv2.rectangle(dest, (col, row), (col + landmark.width, row + landmark.height), color=(0, 255, 255),
+			cv2.rectangle(dest, (col, row), (col + landmark.width, row + landmark.height), color=(255, 0, 255),
 			              thickness=2)
 
 			cv2.putText(dest,
@@ -271,12 +373,14 @@ class LandMarkDetecotr(AbstractDetector):
 			            (col, row + 60),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
+		# 获取最佳的四个地标，如果缺失一个可以通过计算获取
 		position_dic, success = self.choose_best_cornors()
-		if success == True:
-			dest = self.__perspective_transform(dest, position_dic)
+		if success:
+			dest,success = self.__perspective_transform(dest, position_dic)
+			if success:self.draw_grid_lines(dest)
 		end = time.perf_counter()
 		print("结束{}".format(end - start))
-		return dest,success
+		return dest, success
 
 	@property
 	def rois(self):
@@ -341,7 +445,7 @@ class LandMarkDetecotr(AbstractDetector):
 			p3 = left_points[1][1]
 			p4 = right_points[1][1]
 		except:
-			return src
+			return src,False
 		else:
 			pts1 = np.float32([p1, p3, p2, p4])
 			pts2 = np.float32([real_position_dic.get(left_points[0][0]), real_position_dic.get(left_points[1][0]),
@@ -350,7 +454,7 @@ class LandMarkDetecotr(AbstractDetector):
 			# 生成透视变换矩阵；进行透视变换
 			M = cv2.getPerspectiveTransform(pts1, pts2)
 			dst = cv2.warpPerspective(src, M, (W_cols, H_rows))
-		return dst
+		return dst,True
 
 	def __compare_hsv_similar(self, img1, img2):
 		if img1 is None or img2 is None:
@@ -407,7 +511,8 @@ class LandMarkDetecotr(AbstractDetector):
 			real_positions = pickle.load(coordinate)
 		return real_positions
 
-	def candidate_landmarks(self, dest=None, left_start=230, left_end=300, right_start=500, right_end=750):
+	def candidate_landmarks(self, dest=None, left_start=210, left_end=260, right_start=670, right_end=750):
+		'''dest=None, left_start=230, left_end=300, right_start=500, right_end=750'''
 		global rows, cols, step
 
 		# 不要忽略缩小图片尺寸的重要性，减小尺寸，较少像素数就可以最大限度的减少无用操作；
@@ -424,7 +529,7 @@ class LandMarkDetecotr(AbstractDetector):
 
 		def warp_filter(c):
 			'''内部过滤轮廓'''
-			isbig = 10 <= cv2.contourArea(c) < 3600
+			isbig = 200 <= cv2.contourArea(c) < 3600
 			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
 			return isbig and 3 < rect_w <= 60 and 3 < rect_h <= 60
 
@@ -444,9 +549,16 @@ class LandMarkDetecotr(AbstractDetector):
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
 			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
-
+			#
 			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
-			foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+			# foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+			foreground = self.find_it(target_hsvt, img_roi_hsvt)
+
+			# 用来测试
+			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+			# foreground = cv2.filter2D(foreground, -1, disc)
+
+			# foreground = cv2.resize(foreground, (IMG_WIDTH, IMG_HEIGHT))
 
 			if roi_template.label.find("L") > 0:
 				foreground = cv2.bitwise_and(foreground, foreground, mask=left_open_mask)
@@ -461,9 +573,10 @@ class LandMarkDetecotr(AbstractDetector):
 			foreground = cv2.filter2D(foreground, -1, disc)
 			ret, foreground = cv2.threshold(foreground, 110, 255, cv2.THRESH_BINARY)
 
-			# if roi_template.label == "NO3_R":
-			# 	cv2.imshow("NO3_R", foreground)
-			# 	cv2.imshow("imgworld", img_world)
+			# if roi_template.label == "NO2_L":
+			# 	cv2.imshow("NO2_L", foreground)
+			# cv2.imshow("NO1_R", foreground)
+			# cv2.imshow("imgworld", img_world)
 
 			# thresh=cv2.fastNlMeansDenoisingMulti(thresh,2,5,None,4,7,35)
 
@@ -479,17 +592,16 @@ class LandMarkDetecotr(AbstractDetector):
 			# if contours is None or len(contours)==0:
 			# 	# 前景图有白影 但是检测不到轮廓
 			# 	pass
+			# if roi_template.label == "NO2_R":
+			# 	cv2.imshow("NO2_R", foreground)
+			# 	# cv2.imshow("NO1_R", foreground)
+			# 	cv2.imshow("imgworld", img_world)
+			# 	print("contours is {}".format(len(contours)))
 
 			contours = list(filter(lambda c: warp_filter(c), contours)) if len(contours) > 1 else contours
 
 			if contours is None or len(contours) == 0:
-				locs = np.where(foreground >= 200)
-				if len(locs[0]) > 0:
-					# for row, col in zip(locs[0], locs[1]):
-					# 	print(img_world[row, col])
-					pass
-				else:
-					continue
+				continue
 
 			# Z轴无论再怎么变化，灯的面积也大于90
 
@@ -527,7 +639,7 @@ class LandMarkDetecotr(AbstractDetector):
 							                            target[y:y + h, x:x + w])
 							landmark_obj.width = max(bigest_w, w)
 							landmark_obj.height = max(bigest_h, h)
-							set_mask_area(center_x - 50, center_y - 50, 100, 100)
+							set_mask_area(center_x - 50, center_y - 50, 200, 200)
 							landmark_obj.add_maybe_label(roi_template.label)
 							roi_template.set_match_obj(landmark_obj)
 							self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
@@ -539,7 +651,7 @@ class LandMarkDetecotr(AbstractDetector):
 							                            target[y:y + h, x:x + w])
 							landmark_obj.width = max(bigest_w, w)
 							landmark_obj.height = max(bigest_h, h)
-							set_mask_area(center_x - 50, center_y - 50, 100, 100)
+							set_mask_area(center_x - 50, center_y - 50, 200, 200)
 							landmark_obj.add_maybe_label(roi_template.label)
 							roi_template.set_match_obj(landmark_obj)
 							self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
@@ -547,7 +659,6 @@ class LandMarkDetecotr(AbstractDetector):
 				else:
 					# for _else   not if else
 					# 这类最难处理，处理一对多的情况
-
 					rect = cv2.boundingRect(best_match_contour)
 					best_x, best_y, best_w, best_h = rect
 					landmark_obj = NearLandMark(best_x, best_y,
@@ -556,9 +667,10 @@ class LandMarkDetecotr(AbstractDetector):
 					landmark_obj.height = max(bigest_h, best_h)
 					landmark_obj.add_maybe_label(roi_template.label)
 					if len(contours) == 1:
-						set_mask_area(center_x - 50, center_y - 50, 100, 100)
+						set_mask_area(center_x - 50, center_y - 50, 200, 200)
 					roi_template.set_match_obj(landmark_obj)
 					self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
+
 		# print(self.ALL_LANDMARKS_DICT)
 		need_delete_keys = []
 		for key, landmarkitem in self.ALL_LANDMARKS_DICT.items():
@@ -586,15 +698,21 @@ def test_one_image():
 	# cv2.namedWindow("src")
 	# cv2.imshow("src",frame)
 	# image=cv2.imread("c:/work/nty/hangche/2020-05-20-10-26-39test.bmp")
-	image = cv2.imread("c:/work/nty/hangche/Image_20200520143112900.bmp")
+	image = cv2.imread("c:/work/nty/hangche/Image_20200520143122652.bmp")
 	image = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH))
-	dest = a.position_landmark(image)
-	# cv2.namedWindow("dest")
-	# cv2.imshow("dest", dest)
+	cv2.namedWindow("src")
+	cv2.imshow("src", image)
+	dest, success = a.position_landmark(image)
+	cv2.namedWindow("dest")
+	cv2.imshow("dest", dest)
 	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
 	b = BagDetector()
-	for bag in b.location_bags(dest):
-		print(bag)
+	if WITH_TRANSPORT and success:
+		for bag in b.location_bags(dest, middle_start=100, middle_end=400):
+			print(bag)
+	else:
+		for bag in b.location_bags(dest, middle_start=400, middle_end=600):
+			print(bag)
 	# print(dest.shape)
 	a.draw_grid_lines(dest)
 	# cap.release()
@@ -605,23 +723,27 @@ def test_one_image():
 
 
 def test_avi():
-	video = cv2.VideoCapture("C:/NTY_IMG_PROCESS/VIDEO/Video_20200520142918548.avi")
+	video = cv2.VideoCapture("C:/NTY_IMG_PROCESS/VIDEO/Video_20200520142647832.avi")
 	video.set(cv2.CAP_PROP_POS_FRAMES, 1)
 	# 将视频文件初始化为VideoCapture对象
 	success, frame = video.read()
 	a = LandMarkDetecotr()
 	b = BagDetector()
+	stop = 1
 	# read()方法读取视频下一帧到frame，当读取不到内容时返回false!
 	while success and cv2.waitKey(1) & 0xFF != ord('q'):
 		# 等待1毫秒读取键键盘输入，最后一个字节是键盘的ASCII码。ord()返回字母的ASCII码
 		# time.sleep(1)
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
-		dest,success = a.position_landmark(frame)
-		if success:
-			b.location_bags(dest)
-			a.draw_grid_lines(dest)
-			cv2.imshow('frame', dest)
+		dest, success = a.position_landmark(frame)
+		if WITH_TRANSPORT and success:
+			b.location_bags(dest, success, middle_start=150, middle_end=500)
+		cv2.imshow('frame', dest)
 		success, frame = video.read()
+		# if stop==1:
+		# 	cv2.waitKey(0)
+		# 	break
+		stop += 1
 	cv2.destroyAllWindows()
 	video.release()
 

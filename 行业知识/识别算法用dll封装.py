@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 OPENCV_SUPPLYDLL = cdll.LoadLibrary(
-    "C:/work/cpp/build-OPENCV_SUPPLY-Desktop_Qt_5_14_2_MinGW_64_bit-Debug/libOPENCV_SUPPLY.dll")
+    "C:/NTY_IMG_PROCESS/dll/libOPENCV_SUPPLY.dll")
 
 print(OPENCV_SUPPLYDLL.helloWorld())
 print(OPENCV_SUPPLYDLL.add(56, 78))

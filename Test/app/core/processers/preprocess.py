@@ -10,6 +10,8 @@ from app.config import IMG_HEIGHT, IMG_WIDTH, SUPPORTREFROI_DIR
 from app.core.beans.models import SupportRefRoi
 from app.core.processers import SmallWords
 from app.core.support.shapedetect import ShapeDetector
+import ctypes
+from ctypes import cdll, c_uint, c_void_p, c_int, c_float, c_char_p, POINTER, byref, Structure, cast, c_uint8
 
 
 class AbstractDetector(metaclass=SmallWords):
@@ -17,6 +19,8 @@ class AbstractDetector(metaclass=SmallWords):
 	AbstractDetector
 	：used freequently
 	'''
+	OPENCV_SUPPLYDLL = cdll.LoadLibrary(
+		"C:/NTY_IMG_PROCESS/dll/libOPENCV_SUPPLY.dll")
 
 
 	@property
@@ -57,7 +61,7 @@ class AbstractDetector(metaclass=SmallWords):
 		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
 		return degree
 
-	def red_contours(self,img):
+	def red_contours(self,img,middle_start=180,middle_end=500):
 		'''返回红色轮廓'''
 		red_low, red_high = [120, 50, 50], [180, 255, 255]
 		red_min, red_max = np.array(red_low), np.array(red_high)
@@ -65,6 +69,9 @@ class AbstractDetector(metaclass=SmallWords):
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		red_mask = cv2.inRange(hsv, red_min, red_max)
 		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
+		middle_open_mask = np.zeros_like(red_binary)
+		middle_open_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		red_binary = cv2.bitwise_and(red_binary, red_binary, mask=middle_open_mask)
 		red_binary = cv2.medianBlur(red_binary, 3)
 		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return red_binary, red_contours
@@ -128,6 +135,22 @@ class AbstractDetector(metaclass=SmallWords):
 	#
 	# 	cv2.imshow('targetimg', targetimg)
 	# 	cv2.waitKey(0)
+
+	@classmethod
+	def find_it(cls,input, model):
+
+		input_h, input_w = input.shape[0], input.shape[1]
+		m_h, m_w = model.shape[0], model.shape[1]
+
+		frame_data = np.asarray(input, dtype=np.uint8)
+		frame_data = frame_data.ctypes.data_as(ctypes.c_char_p)
+
+		model_data = np.asarray(model, dtype=np.uint8)
+		model_data = model_data.ctypes.data_as(ctypes.c_char_p)
+		cls.OPENCV_SUPPLYDLL.find_it.restype = ctypes.POINTER(ctypes.c_uint8)
+		pointer = cls.OPENCV_SUPPLYDLL.find_it(frame_data,model_data,input_w,input_h,m_w,m_h)
+		result_img = np.array(np.fromiter(pointer, dtype=np.uint8, count=input_h * input_w))
+		return result_img.reshape((input_h, input_w))
 
 	@classmethod
 	def error_causedby_angel_height(cls, target=None, width_start=130, width_end=160):

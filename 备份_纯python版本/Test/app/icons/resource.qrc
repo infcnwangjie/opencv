@@ -1,0 +1,17 @@
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file>auto.png</file>
+        <file>camera.png</file>
+        <file>catalogue.png</file>
+        <file>close.png</file>
+        <file>openfile.png</file>
+        <file>play.png</file>
+        <file>quit.png</file>
+        <file>robot.png</file>
+        <file>stop.png</file>
+        <file>test.png</file>
+        <file>video.png</file>
+        <file>set_roi.png</file>
+        <file>instruct.png</file>
+    </qresource>
+</RCC>
