@@ -142,12 +142,9 @@ class AbstractDetector(metaclass=SmallWords):
 		input_h, input_w = input.shape[0], input.shape[1]
 		m_h, m_w = model.shape[0], model.shape[1]
 
-		frame_data = np.asarray(input, dtype=np.uint8)
-		# print("np.asarray----frame_data")
-		# print(frame_data)
+		frame_data = np.array(input, dtype=np.uint8)
+
 		frame_data = frame_data.ctypes.data_as(ctypes.c_char_p)
-		# print("frame_data.ctypes.data_as(ctypes.c_char_p)")
-		# print(frame_data)
 
 		model_data = np.asarray(model, dtype=np.uint8)
 		model_data = model_data.ctypes.data_as(ctypes.c_char_p)
