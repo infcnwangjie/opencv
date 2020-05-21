@@ -1,0 +1,30 @@
+python numpy向c++ 传递图像数据：
+
+#input 为python opencv 中图像数据，类型为numpy的数组
+frame_data = np.asarray(input, dtype=np.uint8)
+#通过numpy数组的ctypes.data_as将数组转化为c++ int * 或者char * 指针对象
+frame_data = frame_data.ctypes.data_as(ctypes.c_char_p)
+
+
+
+
+
+然后python 调用c++动态链接库：
+OPENCV_SUPPLYDLL = cdll.LoadLibrary(
+		"C:/NTY_IMG_PROCESS/dll/libOPENCV_SUPPLY.dll")
+		
+		
+		
+cls.OPENCV_SUPPLYDLL.find_it.restype = ctypes.POINTER(ctypes.c_uint8)
+
+pointer = cls.OPENCV_SUPPLYDLL.find_it(frame_data,model_data,input_w,input_h,m_w,m_h)
+
+最后我们将c++指针转化为python numpy,指定`count`以提高性能。 它允许``fromiter``
+     预分配输出数组，而不是按需调整大小。:
+
+result_img = np.array(np.fromiter(pointer, dtype=np.uint8, count=input_h * input_w))
+
+得到的result_img为一维数组，为了正常显示图像，需要调用numpy的reshape方法：
+destimg=result_img.reshape((input_h, input_w))
+
+cv2.imshow('destimg', destimg)
