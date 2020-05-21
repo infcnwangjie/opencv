@@ -28,3 +28,81 @@ result_img = np.array(np.fromiter(pointer, dtype=np.uint8, count=input_h * input
 destimg=result_img.reshape((input_h, input_w))
 
 cv2.imshow('destimg', destimg)
+
+
+
+
+然后c++代码如下所示：
+unsigned char  *  find_it( unsigned char * image_meta , unsigned char * model_data,
+                                                            int src_w ,int src_h,
+                         int model_w,int model_h)
+{
+
+    cv::Mat image(src_h, src_w, CV_8UC3, image_meta);
+
+
+
+    cv::Mat model(model_h, model_w, CV_8UC3, model_data);
+
+    Mat model_hsv, image_hsv;
+    cvtColor(model, model_hsv, COLOR_BGR2HSV);
+    cvtColor(image, image_hsv, COLOR_BGR2HSV);
+
+    // 定义直方图参数与属性
+    int h_bins = 32; int s_bins = 32;
+    int histSize[] = { h_bins, s_bins };
+    // hue varies from 0 to 179, saturation from 0 to 255
+    float h_ranges[] = { 0, 180 };
+    float s_ranges[] = { 0, 256 };
+    const float* ranges[] = { h_ranges, s_ranges };
+    int channels[] = { 0, 1 };
+    Mat roiHist;
+
+    calcHist(&model_hsv, 1, channels, Mat(), roiHist, 2, histSize, ranges, true, false);
+    normalize(roiHist, roiHist, 0, 256, NORM_MINMAX, -1, Mat());
+
+    //计算反向投影
+    Mat backproj;
+    calcBackProject(&image_hsv, 1, channels, roiHist, backproj, ranges, 1.0);
+
+   uchar* buffer = (uchar*)malloc(sizeof(uchar)*src_h*src_w);
+   memcpy(buffer, backproj.data, src_h*src_w);
+   return buffer;
+}
+
+
+CMakeLists.txt如下所示：
+cmake_minimum_required(VERSION 3.5)
+
+project(OPENCV_SUPPLY LANGUAGES CXX)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+set(OpenCV_DIR "C:/OpenCV-MinGW-Build-OpenCV-4.0.1-x64")
+set(OpenCV_INCLUDE_DIRS  "C:/OpenCV-MinGW-Build-OpenCV-4.0.1-x64/include" "C:/OpenCV-MinGW-Build-OpenCV-4.0.1-x64/include/opencv2")
+set(OpenCV_LIBS "C:/OpenCV-MinGW-Build-OpenCV-4.0.1-x64/x64/mingw/bin")
+
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+find_package( OpenCV REQUIRED )
+link_directories(${OpenCV_LIBS})
+
+find_package(Qt5 COMPONENTS Core REQUIRED)
+
+add_library(OPENCV_SUPPLY SHARED
+  OPENCV_SUPPLY_global.h
+  opencv_supply.cpp
+  opencv_supply.h
+)
+
+target_link_libraries(OPENCV_SUPPLY  ${OpenCV_LIBS} )
+target_link_libraries(OPENCV_SUPPLY  Qt5::Core)
+
+target_compile_definitions(OPENCV_SUPPLY PRIVATE OPENCV_SUPPLY_LIBRARY)
+
+
