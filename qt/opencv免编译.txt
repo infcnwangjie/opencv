@@ -1,0 +1,9 @@
+https://github.com/huihut/OpenCV-MinGW-Build
+
+
+最简单的Qt5.12配置opencv4.0方法，免Cmake版本
+
+https://blog.csdn.net/qq_33474442/article/details/87074218
+
+
+项目如果运行时候 不出结果，把动态链接库 放到debug目录下

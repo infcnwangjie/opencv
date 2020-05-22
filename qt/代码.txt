@@ -1,0 +1,262 @@
+// NtyVideo.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
+
+#include <iostream>
+// demo_opencv.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include<opencv2/opencv.hpp>
+#include <opencv2/core/cvdef.h>
+#include <opencv2/core/hal/interface.h>
+#include <iostream>
+using namespace cv;
+using namespace std;
+
+#include <vector>
+
+typedef struct NearLandMark {
+
+	int col;
+	int row;
+	Mat slide_img;
+	double similarity;
+}NearLandMark;
+
+typedef struct LandMarkRoi {
+
+	Mat img;
+	string name;
+	double rate=0;
+	int x;
+	int y;
+	bool find;
+	NearLandMark landmark;
+
+} LandMarkRoi;
+
+
+
+typedef struct TargetRect {
+	int  rect_x, rect_y, rect_w, rect_h;
+}TargetRect;
+
+Mat cac_hist(Mat &img) {
+	Mat distHist;
+	int dims = 1;
+	float hranges[] = { 0, 256 };
+	const float* ranges[] = { hranges };   // 这里需要为const类型
+	int size = 256;
+	int channels = 0;
+	calcHist(&img, 1, &channels, Mat(), distHist, dims, &size, ranges);
+	normalize(distHist, distHist, 0, 255, NORM_MINMAX);
+
+	return distHist;
+}
+
+
+
+Mat cac_find(Mat & img_src, Mat &roi)
+{
+	const auto bins = 25;
+	Mat hist;
+	int histSize = bins;
+	float hue_range[] = { 0, 180 };
+	const float* ranges = { hue_range };
+
+	// 计算直方图并归一化到范围[0,255]
+	calcHist(&img_src, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false);
+	normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
+
+	// 调用函数 calcBackProject 计算同一张图像的反向投影：
+	MatND backproj;
+	/*
+		calcBackProject ( // 反向投影
+			const Mat * images, // 输入图像，图像深度必须位CV_8U,CV_16U或CV_32F中的一种，尺寸相同，每一幅图像都可以有任意的通道数
+			int nimages, // 输入图像的数量
+			const int * channels, // 用于计算反向投影的通道列表，通道数必须与直方图维度相匹配，第一个数组的通道是从0到image[0].channels()-1,
+												第二个数组通道从图像image[0].channels()到image[0].channels()+image[1].channels()-1计数
+			InputArray hist, // 输入的直方图，直方图的bin可以是密集(dense)或稀疏(sparse)
+			OutputArray backProject, // 目标反向投影输出图像，是一个单通道图像，与原图像有相同的尺寸和深度
+			const float ** ranges, // 直方图中每个维度bin的取值范围
+			double scale = 1, // 可选输出反向投影的比例因子
+			bool uniform = true // 直方图是否均匀分布(uniform)的标识符，默认值true
+		)
+	*/
+	calcBackProject(&img_src, 1, 0, hist, backproj, &ranges, 1, true);
+
+	// 显示反向投影
+	imshow("BackProj", backproj);
+
+
+return  backproj;
+
+}
+
+inline double similar(Mat &img1, Mat &img2) {
+	//定义变量
+	Mat dstHist1, dsHist2;
+	int dims = 1;
+	float hranges[] = { 0, 256 };
+	const float* ranges[] = { hranges };   // 这里需要为const类型
+	int size = 256;
+	int channels = 0;
+
+	//计算图像的直方图
+	calcHist(&img1, 1, &channels, Mat(), dstHist1, dims, &size, ranges);
+	normalize(dstHist1, dstHist1, 0, 255, NORM_MINMAX);
+	calcHist(&img2, 1, &channels, Mat(), dsHist2, dims, &size, ranges);
+	normalize(dsHist2, dsHist2, 0, 255, NORM_MINMAX);
+	double result = cv::compareHist(dstHist1, dsHist2, 0);
+	return result;
+
+}
+
+
+
+vector<TargetRect>  compute_targetrects(Mat& img, vector<LandMarkRoi> & roiTemplates) {
+	
+	vector<TargetRect> results;
+	
+	vector<LandMarkRoi>::iterator roi_template_iterator;
+	if (roiTemplates.size() == 0)
+		throw "roi can not empty";
+
+	
+	for (roi_template_iterator = roiTemplates.begin(); roi_template_iterator < roiTemplates.end(); ++roi_template_iterator) {
+
+		 Mat  backproject=cac_find(img, roi_template_iterator->img);
+		
+	}
+
+
+
+
+
+	return results;
+}
+
+/***
+
+int main()
+{
+	//0表示将图像转换为灰度再返回
+	Mat srcImage1 = imread("C:/work/imgs/land_mark/1.png");
+	//imshow("原图1", srcImage1);
+
+
+	Mat srcImage2 = imread("C:/work/imgs/land_mark/4.png");
+
+	//imshow("原图2", srcImage2);
+
+	double result = similar(srcImage1, srcImage2);
+
+	cout << "相似度为:" << result << endl;
+
+	Mat testimg = imread("c:/work/nty/hangche/2020-05-15-15-59-16test.bmp");
+	//imshow("原图1", testimg);
+	Mat src_resize;
+	cv::resize(testimg, src_resize, cv::Size(700, 900));
+
+
+	LandMarkRoi roi1;
+	roi1.img = imread("C:/NTY_IMG_PROCESS/ROIS/NO1_L.png");
+	cv::resize(roi1.img, roi1.img, cv::Size(50, 50));
+	roi1.find = false;
+	roi1.name = "NO1_L";
+
+	LandMarkRoi roi2;
+	roi2.img = imread("C:/NTY_IMG_PROCESS/ROIS/NO1_R.png");
+	cv::resize(roi2.img, roi2.img, cv::Size(50, 50));
+	roi2.name = "NO1_R";
+	roi2.find = false;
+
+	
+
+
+
+
+
+	vector<LandMarkRoi> rois;
+	rois.push_back(roi1);
+	rois.push_back(roi2);
+
+	compute_targetrects(src_resize, rois);
+	
+
+	for (LandMarkRoi left : left_rois) {
+		rectangle(src_resize, Rect(left.x-50, left.y-50,60,  60),(0, 255, 255),1);
+	}
+	for (LandMarkRoi right : right_rois) {
+		rectangle(src_resize, Rect(right.x-50, right.y-50, 60,  60), (0, 255, 255), 1);
+	}
+
+	
+
+	//flip(src_resize, red_green_2.img);
+	cv::imshow("find_it", src_resize);
+	waitKey(0);
+	//waitKey(0);
+	return 0;
+}
+
+*/
+
+
+#include <opencv2/opencv.hpp>
+#include <iostream>
+
+using namespace cv;
+using namespace std;
+
+
+
+void backProjection(Mat &image, Mat &model);
+
+int main(int argc, char** argv) {
+	Mat src = imread("c:/work/nty/hangche/2020-05-15-15-59-16test.bmp");
+
+	cv::resize(src, src, cv::Size(700, 900));
+	Mat model = imread("C:/NTY_IMG_PROCESS/ROIS/NO1_L.png");
+
+
+
+	if (src.empty() || model.empty()) {
+		printf("不能加载图像！\n");
+		return 0;
+	}
+	namedWindow("input image", WINDOW_AUTOSIZE);
+	imshow("input image", src);
+	imshow("model", model);
+
+	backProjection(src, model);
+
+
+	waitKey(0);
+	return 0;
+}
+
+void backProjection(Mat &image, Mat &model) {
+	Mat model_hsv, image_hsv;
+	cvtColor(model, model_hsv, COLOR_BGR2HSV);
+	cvtColor(image, image_hsv, COLOR_BGR2HSV);
+
+	// 定义直方图参数与属性
+	int h_bins = 32; int s_bins = 32;
+	int histSize[] = { h_bins, s_bins };
+	// hue varies from 0 to 179, saturation from 0 to 255
+	float h_ranges[] = { 0, 180 };
+	float s_ranges[] = { 0, 256 };
+	const float* ranges[] = { h_ranges, s_ranges };
+	int channels[] = { 0, 1 };
+	Mat roiHist;
+
+	calcHist(&model_hsv, 1, channels, Mat(), roiHist, 2, histSize, ranges, true, false);
+	normalize(roiHist, roiHist, 0, 255, NORM_MINMAX, -1, Mat());
+
+	//计算反向投影
+	Mat backproj;
+	calcBackProject(&image_hsv, 1, channels, roiHist, backproj, ranges, 1.0);
+
+	imshow("BackProj", backproj);
+}
