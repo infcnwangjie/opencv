@@ -258,13 +258,13 @@ class LandMarkDetecotr(AbstractDetector):
 
 		############ -----------------开始间隔检测-------------------------------------------------------------#########
 		success = True
-		yrange = max(y for x, y in positiondict.values()) - min(y for x, y in positiondict.values())
-		if len(positiondict.values()) == 4 and yrange < 300:
-			# 用来排除检测到的地标轮廓挤在一起的情况，这类肯定是与地标相近但并非目标
-			success = False
-		elif len(positiondict.values()) == 6 and yrange < 600:
-			# 同样是用来排查无效地标检测值，但是从六个闭合点中挑选的最佳四个地标
-			success = False
+		# yrange = max(y for x, y in positiondict.values()) - min(y for x, y in positiondict.values())
+		# if len(positiondict.values()) == 4 and yrange < 180:
+		# 	# 用来排除检测到的地标轮廓挤在一起的情况，这类肯定是与地标相近但并非目标
+		# 	success = False
+		# elif len(positiondict.values()) == 6 and yrange < 500:
+		# 	# 同样是用来排查无效地标检测值，但是从六个闭合点中挑选的最佳四个地标
+		# 	success = False
 
 		for key, [x, y] in positiondict.items():
 			key_result = re.match(r'''NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})''', key)
@@ -277,7 +277,7 @@ class LandMarkDetecotr(AbstractDetector):
 					continue
 				if key_direct == keyj_direct:
 					q = math.sqrt(math.pow(abs(xj - x), 2) + math.pow(abs(yj - y), 2))
-					if q <200:
+					if q <170:
 						return {}, False
 
 		##########------------------结束间隔检测-------------------------------------------------------------#########
@@ -548,9 +548,9 @@ class LandMarkDetecotr(AbstractDetector):
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
-			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+			# roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
 			#
-			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
+			# cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
 			# foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 			foreground = self.find_it(target_hsvt, img_roi_hsvt)
 
@@ -697,8 +697,10 @@ def test_one_image():
 	# frame=cv2.resize(frame,(IMG_HEIGHT,IMG_WIDTH))
 	# cv2.namedWindow("src")
 	# cv2.imshow("src",frame)
-	# image=cv2.imread("c:/work/nty/hangche/2020-05-20-10-26-39test.bmp")
-	image = cv2.imread("c:/work/nty/hangche/Image_20200520143122652.bmp")
+	# image=cv2.imread("c:/work/nty/hangche/Image_20200522152805570.bmp")
+	# image = cv2.imread("c:/work/nty/hangche/Image_20200522152729727.bmp")
+	# image = cv2.imread("c:/work/nty/hangche/Image_20200522152825743.bmp")
+	image=cv2.imread("c:/work/nty/hangche/Image_20200522154907736.bmp")
 	image = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH))
 	cv2.namedWindow("src")
 	cv2.imshow("src", image)
@@ -708,13 +710,15 @@ def test_one_image():
 	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
 	b = BagDetector()
 	if WITH_TRANSPORT and success:
+
 		for bag in b.location_bags(dest, middle_start=100, middle_end=400):
 			print(bag)
+		a.draw_grid_lines(dest)
 	else:
 		for bag in b.location_bags(dest, middle_start=400, middle_end=600):
 			print(bag)
 	# print(dest.shape)
-	a.draw_grid_lines(dest)
+
 	# cap.release()
 	cv2.namedWindow("dest")
 	cv2.imshow("dest", dest)
@@ -749,5 +753,5 @@ def test_avi():
 
 
 if __name__ == '__main__':
-	# test_one_image()
-	test_avi()
+	test_one_image()
+	# test_avi()

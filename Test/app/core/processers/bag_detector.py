@@ -28,7 +28,7 @@ class BagDetector(AbstractDetector):
 			'''内部过滤轮廓'''
 			isbig = 30 <= cv2.contourArea(c) < 3000
 			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
-			return isbig and 6 < rect_w <= 60 and 6 < rect_h <= 60
+			return isbig and 4 < rect_w <= 60 and 4 < rect_h <= 60
 
 		global rows, cols, step
 		# target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)

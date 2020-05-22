@@ -26,7 +26,7 @@ cv2.useOptimized()
 rows, cols = IMG_HEIGHT, IMG_WIDTH
 
 
-def compute_bag_location(target=None, start=100, end=400):
+def compute_bag_location(target=None, start=0, end=400):
 	def warp_filter(c):
 		'''内部过滤轮廓'''
 		isbig = 70 <= cv2.contourArea(c) < 600
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 	target = cv2.resize(target, (IMG_HEIGHT, IMG_WIDTH))
 	# compute_bag_location(target)
 	dest = landmark_location(target)
-	# compute_bag_location(dest)
+	compute_bag_location(dest)
 	cv2.namedWindow("dest")
 	cv2.imshow("dest", dest)
 
