@@ -92,7 +92,7 @@ def test_1():
 	img_overlook = cv2.cvtColor(img_overlook, cv2.COLOR_RGB2BGR)
 	img_section = cv2.imread("C:/work/nty/section.jpg")
 	img_section = cv2.cvtColor(img_section, cv2.COLOR_RGB2BGR)
-	img_study = cv2.imread("C:/work/nty/study.png")
+	img_study = cv2.imread("C:/work/nty/study_two.png")
 	img_study = cv2.cvtColor(img_study, cv2.COLOR_RGB2BGR)
 	plt.figure(figsize=(5, 10))  # 设置窗口大小
 	plt.suptitle('img_overlook')  # 图片名称
