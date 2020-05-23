@@ -23,7 +23,7 @@ class BagDetector(AbstractDetector):
 		return landmark_rois
 
 
-	def findbags(self, target=None, roi_template=None,middle_start=100,middle_end=400):
+	def findbags(self, target=None, roi_template=None,middle_start=300,middle_end=500):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
 			isbig = 30 <= cv2.contourArea(c) < 3000
@@ -55,10 +55,7 @@ class BagDetector(AbstractDetector):
 
 	def location_bags(self,target,success_location=True,middle_start=150,middle_end=500):
 		'''
-		location_bags
-		:return [Bag]
-		袋子检测不能完全依赖于透视变换，地标检测也不能完全的作为袋子的参照物;
-		从摄像头垂直向下的时候，袋子多出来的X轴误差，就是摄像头中的地标并不是完全垂直于地面造成的
+	     cm:def location_bags(self,target,success_location=True,middle_start=150,middle_end=500):
 		'''
 		moderatesize_countours = []
 		# x_error=AbstractDetector.error_causedby_angel_height(target)
@@ -68,7 +65,7 @@ class BagDetector(AbstractDetector):
 			if success_location:
 				contours = self.findbags(target, bag_template,middle_start,middle_end)
 			else:
-				contours = self.findbags(target, bag_template, 380, 500)
+				contours = self.findbags(target, bag_template, middle_start=300, middle_end=500)
 			if contours is None or len(contours) == 0:
 				continue
 			else:

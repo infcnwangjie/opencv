@@ -753,5 +753,5 @@ def test_avi():
 
 
 if __name__ == '__main__':
-	test_one_image()
-	# test_avi()
+	# test_one_image()
+	test_avi()
