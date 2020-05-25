@@ -1,7 +1,7 @@
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 
-from app.core.autowork.intelligentthread import IntelligentThread
+from app.core.autowork.processthread import ProcessThread
 from app.core.autowork.plcthread import PlcThread
 from app.core.processers.landmark_detector import LandMarkDetecotr
 from app.core.plc.plchandle import PlcHandle
@@ -47,7 +47,7 @@ class IntelligentProcess(object):
 
 	def init_imgdetector_thread(self):
 		'''初始化图像处理线程'''
-		self.intelligentthread = IntelligentThread(IMGHANDLE=self.IMGHANDLE,
+		self.intelligentthread = ProcessThread(IMGHANDLE=self.IMGHANDLE,
 		                                           video_player=self.img_play)
 		self.intelligentthread.hockstatus = HockStatus.POSITION_NEARESTBAG
 		self.intelligentthread.positionSignal.connect(self.writetoplc_imgsignal_process)  # 发送移动位置

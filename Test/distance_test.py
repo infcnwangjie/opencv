@@ -1,86 +1,87 @@
-#!usr/bin/python
-# -*- coding: utf-8 -*-
-# 定义编码，中文注释
+import math
 
-# import the necessary packages
-import numpy as np
 import cv2
 
-
-# 找到目标函数
-def find_marker(image):
-	# convert the image to grayscale, blur it, and detect edges
-	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	gray = cv2.GaussianBlur(gray, (5, 5), 0)
-	edged = cv2.Canny(gray, 35, 125)
-
-	# find the contours in the edged image and keep the largest one;
-	# we'll assume that this is our piece of paper in the image
-	(cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-	# 求最大面积
-	c = max(cnts, key=cv2.contourArea)
-
-	# compute the bounding box of the of the paper region and return it
-	# cv2.minAreaRect() c代表点集，返回rect[0]是最小外接矩形中心点坐标，
-	# rect[1][0]是width，rect[1][1]是height，rect[2]是角度
-	return cv2.minAreaRect(c)
+from app.config import IMG_HEIGHT, IMG_WIDTH
+from app.core.processers.bag_detector import BagDetector
+from app.core.processers.landmark_detector import LandMarkDetecotr, WITH_TRANSPORT
 
 
-# 距离计算函数
-def distance_to_camera(knownWidth, focalLength, perWidth):
-	# compute and return the distance from the maker to the camera
-	return (knownWidth * focalLength) / perWidth
+# TODO 计算物体距离摄像头的距离
+def compute_height(W=110, F=6, P=10, H=8000):
+	'''
+	用于求解袋子高度
+	@:param W: 实际袋子条宽度
+	@:param F:焦距                   已知项，摄像头焦距 F  6mm
+	@:param P:图像像素宽度
+	@:param H:摄像头距离地面的高度   已知项，摄像头高度 H　８米
+	:return: D=H-W*F/P
+	'''
+	if P < 0:
+		raise Exception("图像像素宽度计算有误")
+	try:
+		d= W * F / P
+	except:
+		raise Exception("计算有误")
+	return d
 
 
-# initialize the known distance from the camera to the object, which
-# in this case is 24 inches
-KNOWN_DISTANCE = 24.0
+def compute_x(L=10, H=8000, F=6, W=100, P=10, D=0):
+	'''
+	# TODO 计算物体X轴坐标值
+	# X*X=L*L -(H-FW/P)*(H-FW/P)
+	:param image:
+	:return:
+	'''
+	try:
+		a = math.pow(L, 2)
+		b = D if D!=0 or D is not None else math.pow(H - F * W / P, 2)
+		x = math.sqrt(abs(a - b))
+	except Exception as e:
+		raise e
+	return x
 
-# initialize the known object width, which in this case, the piece of
-# paper is 11 inches wide
-# A4纸的长和宽(单位:inches)
-KNOWN_WIDTH = 11.69
-KNOWN_HEIGHT = 8.27
 
-# initialize the list of images that we'll be using
-IMAGE_PATHS = ["Picture1.jpg", "Picture2.jpg", "Picture3.jpg"]
+def test_one_image():
+	a = LandMarkDetecotr()
+	# cap = cv2.VideoCapture("C:/NTY_IMG_PROCESS/VIDEO/Video_20200519095438779.avi")
+	# cap.set(cv2.CAP_PROP_POS_FRAMES, 243)
+	# ret, frame = cap.read()
+	# frame=cv2.resize(frame,(IMG_HEIGHT,IMG_WIDTH))
+	# cv2.namedWindow("src")
+	# cv2.imshow("src",frame)
+	# image = cv2.imread("c:/work/nty/hangche/Image_20200522152805570.bmp")
+	image = cv2.imread("c:/work/nty/hangche/Image_20200522152729727.bmp")
+	# image = cv2.imread("c:/work/nty/hangche/Image_20200522152825743.bmp")
+	# image=cv2.imread("c:/work/nty/hangche/Image_20200522154907736.bmp")
+	image = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH))
+	cv2.namedWindow("src")
+	cv2.imshow("src", image)
+	dest, success = a.position_landmark(image)
+	cv2.namedWindow("dest")
+	cv2.imshow("dest", dest)
+	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
+	b = BagDetector()
+	if WITH_TRANSPORT and success:
+		for bag in b.location_bags(dest, middle_start=100, middle_end=400):
+			D=compute_height(W=110,F=6,P=bag.width,H=9577)
+			print("-" * 100)
+			print("高度为：{}".format(D))
+			print(bag)
+			print("计算坐标：{}".format(compute_x(bag.x * 10, H=9577, F=6, W=110, P=bag.width,D=0)))
+		a.draw_grid_lines(dest)
+	else:
+		for bag in b.location_bags(dest, middle_start=400, middle_end=600):
+			print(bag)
+		# print("计算坐标：{}".format(compute_x(bag.x * 10, H=8000, F=6, W=110, P=bag.width)))
+	# print(dest.shape)
 
-# load the furst image that contains an object that is KNOWN TO BE 2 feet
-# from our camera, then find the paper marker in the image, and initialize
-# the focal length
-# 读入第一张图，通过已知距离计算相机焦距
-image = cv2.imread(IMAGE_PATHS[0])
-marker = find_marker(image)
-focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+	# cap.release()
+	cv2.namedWindow("dest")
+	cv2.imshow("dest", dest)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
 
-# 通过摄像头标定获取的像素焦距
-# focalLength = 811.82
-print('focalLength = ', focalLength)
 
-# 打开摄像头
-camera = cv2.VideoCapture(0)
-
-while camera.isOpened():
-	# get a frame
-	(grabbed, frame) = camera.read()
-	marker = find_marker(frame)
-	if marker == 0:
-		print(marker)
-		continue
-	inches = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
-
-	# draw a bounding box around the image and display it
-	box = np.int0(cv2.cv.BoxPoints(marker))
-	cv2.drawContours(frame, [box], -1, (0, 255, 0), 2)
-
-	# inches 转换为 cm
-	cv2.putText(frame, "%.2fcm" % (inches * 30.48 / 12),
-	            (frame.shape[1] - 200, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX,
-	            2.0, (0, 255, 0), 3)
-
-	# show a frame
-	cv2.imshow("capture", frame)
-	if cv2.waitKey(1) & 0xFF == ord('q'):
-		break
-camera.release()
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+	test_one_image()

@@ -2,7 +2,7 @@ import cv2
 from PyQt5.QtCore import QSize, Qt, QRect
 from PyQt5.QtGui import QColor, QIcon, QImage
 from PyQt5.QtWidgets import QApplication, QDialog, QGridLayout, QPushButton, QSpacerItem, QSizePolicy, QWidget, \
-	QFormLayout, QLineEdit, QLabel, QDesktopWidget
+	QFormLayout, QLineEdit, QLabel, QDesktopWidget, QFileDialog
 from PyQt5.QtCore import QRectF, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QPen
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsPixmapItem, QGraphicsScene, QGraphicsItem
@@ -146,27 +146,33 @@ class SetRoiWidget(QWidget):
 		self.init_ui()
 		self.label_save_dialog = LabelNameDialog(parent=self)
 		# 视图背景颜色
-		self.graphicsView.setBackgroundBrush(QColor(0, 160, 0))
-		self.graphicsView.save_signal.connect(self.pushButton_save.setEnabled)
+
 		self.pushButton_cut.clicked.connect(self.pushButton_cut_clicked)
 		self.pushButton_save.clicked.connect(self.pushButton_save_clicked)
 
 	def init_ui(self):
 		# self.showMaximized()
 		self.gridLayout = QGridLayout(self)
+
+		self.pushButton_open = QPushButton('打开文件', self)
+		self.pushButton_open.setCheckable(True)
+		self.pushButton_open.setMaximumSize(QSize(100, 16777215))
+		self.pushButton_open.clicked.connect(self.pushButton_open_clicked)
+		self.gridLayout.addWidget(self.pushButton_open, 0, 0, 1, 1)
+
 		self.pushButton_cut = QPushButton('裁剪', self)
 		self.pushButton_cut.setCheckable(True)
 		self.pushButton_cut.setMaximumSize(QSize(100, 16777215))
-		self.gridLayout.addWidget(self.pushButton_cut, 0, 0, 1, 2)
+		self.gridLayout.addWidget(self.pushButton_cut, 1, 0, 1, 1)
 		self.pushButton_save = QPushButton('保存', self)
 		self.pushButton_save.setEnabled(False)
-		self.gridLayout.addWidget(self.pushButton_save, 1, 0, 1, 1)
+		self.gridLayout.addWidget(self.pushButton_save, 2, 0, 1, 1)
 		spacerItem = QSpacerItem(50, 549, QSizePolicy.Minimum, QSizePolicy.Expanding)
 		self.gridLayout.addItem(spacerItem, 2, 0, 1, 1)
-		self.graphicsView = GraphicsView(picture=self.picture, parent=self)
-		self.graphicsView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.graphicsView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.gridLayout.addWidget(self.graphicsView, 0, 1, 3, 1)
+		# self.graphicsView = GraphicsView(picture=self.picture, parent=self)
+		# self.graphicsView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		# self.graphicsView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		# self.gridLayout.addWidget(self.graphicsView, 0, 1, 3, 1)
 
 		# screen = QDesktopWidget().screenGeometry()
 		# size = self.geometry()
@@ -180,6 +186,21 @@ class SetRoiWidget(QWidget):
 		else:
 			self.graphicsView.image_item.is_start_cut = True
 			self.graphicsView.image_item.setCursor(Qt.CrossCursor)  # 十字光标
+
+	def pushButton_open_clicked(self):
+		filename, filetype = QFileDialog.getOpenFileName(self,
+		                                                 "选取文件",
+		                                                 "./",
+		                                                 "All Files (*);;Text Files (*.txt)")
+		print(filename)
+		self.picture=filename
+		# self.graphicsView = GraphicsView(picture=self.picture, parent=self)
+
+		self.graphicsView = GraphicsView(picture=self.picture, parent=self)
+		self.graphicsView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.graphicsView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.gridLayout.addWidget(self.graphicsView, 0, 1, 3, 1)
+		self.graphicsView.save_signal.connect(self.pushButton_save.setEnabled)
 
 	def saveimg(self):
 		rect = QRect(self.graphicsView.image_item.start_point.toPoint(),

@@ -35,6 +35,10 @@ class Box:
 		self.y = self.y + round(self.h * 0.5)
 		self.status = True
 
+	@property
+	def width(self):
+		return self.w
+
 	# 修改目标物的显示内容
 	def modify_box_content(self, no_num=True):
 		# 如果box内部没有内部轮廓，就直接退出循环
@@ -56,8 +60,8 @@ class Bag(Box):
 			self.y) + ")"
 
 	def __str__(self):
-		return "(" + str(self.boxcenterpoint[0]) + "," + str(
-			self.boxcenterpoint[1]) + ")"
+		return "( x:" + str(self.boxcenterpoint[0]) + ",y:" + str(
+			self.boxcenterpoint[1]) +",p:"+str(self.width)+ ")"
 
 
 # 激光灯

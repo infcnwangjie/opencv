@@ -59,7 +59,7 @@ class BagDetector(AbstractDetector):
 		'''
 		moderatesize_countours = []
 		# x_error=AbstractDetector.error_causedby_angel_height(target)
-		x_error=0
+		# x_error=0
 		for bag_template in self.bagroi_templates():
 			# print(target)
 			if success_location:
@@ -73,8 +73,6 @@ class BagDetector(AbstractDetector):
 				moderatesize_countours.extend(contours)
 				for increased_id, c in enumerate(contours):
 					box = Bag(c, img=None, id=increased_id)
-					if x_error is  not None:
-						box.x=box.x-int(x_error)
 					box.modify_box_content(no_num=True)
 					if success_location:
 						cv2.putText(target, box.box_content, (box.boxcenterpoint[0], box.boxcenterpoint[1] + 10),

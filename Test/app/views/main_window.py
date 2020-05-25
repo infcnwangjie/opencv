@@ -21,29 +21,8 @@ from app.views.roiwindow import SetRoiWidget
 
 SET_ROI = False
 
-
-class MyLabel(QtWidgets.QLabel):  # 自定义的QLabel类
-	left_button_release_signal = pyqtSignal(list)
-
-	def __init__(self, parent=None):
-		super(MyLabel, self).__init__(parent)
-		self.points = []
-		self.item_x = None
-		self.item_y = None
-
-	def set_img(self, img):
-		self.img = img
-		showImage = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
-
-		self.setPixmap(QPixmap.fromImage(showImage))
-		self.setScaledContents(True)
-
-	def copy_img(self):
-		return self.img.copy()
-
-
 class CentWindowUi(object):
-	# Video_20200519093635911.avi
+
 	movie_pattern = re.compile("Video_(?P<time>\d+).avi")
 
 	def setupUi(self, Form):
@@ -74,7 +53,7 @@ class CentWindowUi(object):
 		self.tree = QTreeWidget()
 		self.tree.setHeaderLabels(['视频录像'])
 		self.tree.setColumnCount(1)
-		self.tree.setColumnWidth(0, 160)
+		self.tree.setColumnWidth(0, 180)
 		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
 		for datestr, files in groupinfo:
 			root = QTreeWidgetItem(self.tree)
@@ -99,7 +78,7 @@ class CentWindowUi(object):
 		self.videoBox.setObjectName("videoBox")
 		all_layout.addWidget(self.videoBox)
 
-		self.picturelabel = MyLabel(self)
+		self.picturelabel = QLabel(self)
 		self.picturelabel.setObjectName("picturelabel")
 		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
 		video_layout = QtWidgets.QHBoxLayout()
@@ -237,17 +216,13 @@ class CenterWindow(QWidget, CentWindowUi):
 		if self.process.IMGHANDLE:
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
-			self.process.plcthread.work = False
-			self.process.plcthread.start()
+			# self.process.plcthread.work = True
+			# self.process.plcthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
 
-	def autowork(self):
-		self.process.intelligentthread.play = True
-		self.process.intelligentthread.work = True
-		self.process.plcthread.work = True
 
 	def stop(self):
 		'''暂停摄像机'''
@@ -283,26 +258,6 @@ class MainWindow(QMainWindow):
 		exitAction.setStatusTip('退出应用')
 		exitAction.triggered.connect(self.close)
 
-		openCameraAction = QAction(QIcon(':icons/camera.png'), '摄像头', self)
-		openCameraAction.setShortcut('Ctrl+o')
-		openCameraAction.setStatusTip('打开摄像头')
-		openCameraAction.triggered.connect(self._openCamera)
-
-		stopCameraAction = QAction(QIcon(":icons/close.png"), '关闭摄像头', self)
-		stopCameraAction.setShortcut('Ctrl+q')
-		stopCameraAction.setStatusTip('关闭摄像头')
-		stopCameraAction.triggered.connect(self._stopCamera)
-
-		robotAction = QAction(QIcon(':icons/robot.png'), '自动抓取模式', self)
-		robotAction.setShortcut('Ctrl+o')
-		robotAction.setStatusTip('自动抓取模式')
-		robotAction.triggered.connect(self._work_as_robot)
-
-		testAction = QAction(QIcon(":icons/test.png"), '测试模式', self)
-		testAction.setShortcut('Ctrl+t')
-		testAction.setStatusTip('测试模式')
-		testAction.triggered.connect(self._test)
-
 		roisetAction = QAction(QIcon(":icons/set_roi.png"), '选取ROI', self)
 		roisetAction.setShortcut('Ctrl+t')
 		roisetAction.setStatusTip('选取ROI')
@@ -317,9 +272,6 @@ class MainWindow(QMainWindow):
 		fileMenu = menubar.addMenu('&文件')
 		fileMenu.addAction(openFileAction)
 
-		cameraMenu = menubar.addMenu('&摄像头')
-		cameraMenu.addAction(openCameraAction)
-
 		roiMenu = menubar.addMenu('&设置ROI')
 		roiMenu.addAction(roisetAction)
 		cooridnateMenu = menubar.addMenu("&设置坐标系")
@@ -331,18 +283,6 @@ class MainWindow(QMainWindow):
 		exitToolbar = self.addToolBar('Exit')
 		exitToolbar.addAction(exitAction)
 
-		openCameraToolbar = self.addToolBar("OpenCamera")
-		openCameraToolbar.addAction(openCameraAction)
-
-		closeToolbar = self.addToolBar("CloseCamera")
-		closeToolbar.addAction(stopCameraAction)
-
-		intellectToolbar = self.addToolBar("Intellect")
-		intellectToolbar.addAction(robotAction)
-
-		testToolbar = self.addToolBar("Test")
-		testToolbar.addAction(testAction)
-
 		setRoiToolbar = self.addToolBar("SetRoi")
 		setRoiToolbar.addAction(roisetAction)
 
@@ -352,23 +292,6 @@ class MainWindow(QMainWindow):
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
 
-	def _openCamera(self):
-		# 正常情况读取sdk
-		imagehandle = ImageProvider(ifsdk=SDK_OPEN)
-		self.centralwidget.process.IMGHANDLE = imagehandle
-		self.centralwidget.process.intelligentthread.IMAGE_HANDLE = imagehandle
-		self.centralwidget.play()
-		self.statusBar().showMessage("已经开启摄像头!")
-
-	def _stopCamera(self):
-		'''关闭摄像机'''
-		del self.centralwidget.process.intelligentthread.IMAGE_HANDLE
-		self.statusBar().showMessage("已经关闭摄像头!")
-
-	def _work_as_robot(self):
-		'''开始智能抓取'''
-		self.centralwidget.autowork()
-		self.statusBar().showMessage("已经开启智能识别!")
 
 	def _openfile(self):
 		filename, filetype = QFileDialog.getOpenFileName(self,
@@ -383,8 +306,8 @@ class MainWindow(QMainWindow):
 			else:
 				self._test()
 
-	def _test(self):
-		self.centralwidget.process.monitor_all_once()
+	# def _test(self):
+	# 	self.centralwidget.process.monitor_all_once()
 
 	def set_roi(self):
 
