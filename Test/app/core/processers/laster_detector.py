@@ -17,7 +17,7 @@ class LasterDetector(AbstractDetector):
 		super().__init__()
 		self.laster = None
 
-	def location_laster(self, img, middle_start=200, middle_end=500):
+	def location_laster(self, dest, middle_start=200, middle_end=500):
 		def __distance_middle(contour):
 			rows, cols = self.shape
 			x, y, w, h = cv2.boundingRect(contour)
@@ -33,18 +33,18 @@ class LasterDetector(AbstractDetector):
 			else:
 				return True
 
-		foregroud, contours = self.green_contours(img,middle_start,middle_end)
+		foregroud, contours = self.green_contours(dest,middle_start,middle_end)
 		contours = list(filter(__filter_laster_contour, contours))
 
 		if contours is None or len(contours) == 0:
 			return None
 
-		cv2.drawContours(img, contours, -1, (255, 0, 0), 3)
+		cv2.drawContours(dest, contours, -1, (255, 0, 0), 3)
 
+		try:
+			self.laster = Laster(contours[0], foregroud, id=0)
+			self.laster.modify_box_content()
+		except Exception as e:
+			print("laster contour is miss")
 
-		laster = Laster(contours[0], foregroud, id=0)
-		laster.modify_box_content()
-		self.laster = laster
-
-		print(self.laster.x, self.laster.y)
 		return self.laster

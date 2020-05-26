@@ -80,7 +80,5 @@ class BagDetector(AbstractDetector):
 					self.bags.append(box)
 
 		cv2.drawContours(target, moderatesize_countours, -1, (0, 255, 255), 3)
-		# print("i have  try my best")
-		# self.modify_x(self.img)
 
 		return self.bags

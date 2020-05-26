@@ -86,18 +86,19 @@ class ProcessThread(QThread):
 			show = self.IMAGE_HANDLE.read()
 			if show is None:
 				break
-			# frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
-			# if frame.ndim == 3:
-			# 	show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-			# elif frame.ndim == 2:
-			# 	show = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
 			if self.work:
 				dest, success = self.landmark_detect.position_landmark(show)
-				self.laster_detect.location_laster(dest, middle_start=250, middle_end=500)
+				laster = self.laster_detect.location_laster(dest, middle_start=250, middle_end=500)
 				if success:
-					self.bag_detect.location_bags(dest, success, middle_start=100, middle_end=400)
+					bags=self.bag_detect.location_bags(dest, success, middle_start=100, middle_end=400)
 					self.landmark_detect.draw_grid_lines(dest)
+					if laster is not None:
+						print("compute distance bag and laster,and laster is ({x},{y})".format(x=laster.x, y=laster.y))
+						# TODO  计算钩子与每个袋子的距离，用来指导行车移动
+						for bag  in bags:
+							print(bag)
+
 				else:
 					self.bag_detect.location_bags(dest, middle_start=400, middle_end=600)
 
@@ -108,7 +109,7 @@ class ProcessThread(QThread):
 				elif show.ndim == 2:
 					show = cv2.cvtColor(show, cv2.COLOR_GRAY2BGR)
 
-				showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-				# self.video_player.set_img(show)
-				self.video_player.setPixmap(QPixmap.fromImage(showImage))
-				self.video_player.setScaledContents(True)
+			showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+			# self.video_player.set_img(show)
+			self.video_player.setPixmap(QPixmap.fromImage(showImage))
+			self.video_player.setScaledContents(True)

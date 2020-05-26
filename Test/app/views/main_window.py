@@ -177,7 +177,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		filename = os.path.join(VIDEO_DIR, item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
-			imagehandle = ImageProvider(videofile=filename, ifsdk=SDK_OPEN)
+			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
 			self.process.IMGHANDLE = imagehandle
 			self.play()
 
@@ -191,6 +191,26 @@ class CenterWindow(QWidget, CentWindowUi):
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
+
+	def startwork(self):
+		'''这是正儿八经的开始移动行车
+		'''
+		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
+		imagehandle = ImageProvider(videofile=None, ifsdk=True)
+		self.process.IMGHANDLE = imagehandle
+		if self.process.IMGHANDLE:
+			self.process.intelligentthread.play = True
+			self.process.intelligentthread.start()
+		else:
+			QMessageBox.warning(self, "警告",
+			                    self.tr("还没有开启摄像头或者选择播放视频!"))
+			print("关闭")
+
+	def quickly_stop_work(self):
+		print("stop work")
+		self.process.quickly_stop_work()
+
+
 
 	def stop(self):
 		'''暂停摄像机'''
@@ -235,6 +255,16 @@ class MainWindow(QMainWindow):
 		setCooridnateAction.setStatusTip('设置地标')
 		setCooridnateAction.triggered.connect(self.set_cooridnate)
 
+		startworkAction = QAction(QIcon(":icons/pointer.png"), '开始工作', self)
+		startworkAction.setShortcut('Ctrl+w')
+		startworkAction.setStatusTip('开始工作')
+		startworkAction.triggered.connect(self.start_work)
+
+		quickly_stop_workAction = QAction(QIcon(":icons/quickly_stop.png"), '紧急停止', self)
+		quickly_stop_workAction.setShortcut('Ctrl+s')
+		quickly_stop_workAction.setStatusTip('紧急停止')
+		quickly_stop_workAction.triggered.connect(self.stop_work)
+
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
 		fileMenu.addAction(openFileAction)
@@ -255,6 +285,12 @@ class MainWindow(QMainWindow):
 
 		setCooridnateToolBar = self.addToolBar("SetCooridnate")
 		setCooridnateToolBar.addAction(setCooridnateAction)
+
+		startWorkToolBar = self.addToolBar("StartWork")
+		startWorkToolBar.addAction(startworkAction)
+
+		quicklystopWorkToolBar = self.addToolBar("StopWork")
+		quicklystopWorkToolBar.addAction(quickly_stop_workAction)
 
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
@@ -279,3 +315,17 @@ class MainWindow(QMainWindow):
 	def set_cooridnate(self):
 		self.coordinate_widget.move(260, 120)
 		self.coordinate_widget.show()
+
+	def start_work(self):
+		print("start_work")
+		try:
+			self.centralwidget.startwork()
+		except Exception as e:
+			raise e
+
+	def stop_work(self):
+		print("quicklystop")
+		try:
+			self.centralwidget.quickly_stop_work()
+		except Exception as e:
+			raise e

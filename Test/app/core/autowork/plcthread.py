@@ -12,41 +12,14 @@ class PlcThread(QThread):
 
 	def __init__(self, plchandle: PlcHandle):
 		super().__init__(parent=None)
-		self._movex = None
-		self._movey = None
-		self._on = True
 		self.plchandle = plchandle
-
-	@property
-	def work(self):
-		return self._on
-
-	@work.setter
-	def work(self, value=True):
-		self._on = value
-
-	@property
-	def x(self):
-		return self._movex
-
-	@x.setter
-	def x(self, value):
-		self._movex = value
-
-	@property
-	def y(self):
-		return self._movey
-
-	@y.setter
-	def y(self, value):
-		self._movey = value
 
 	def run(self):
 		if self.work == True:
-			plcstatus = self.plchandle.read_status()
-			# 'move', 'stop', 'reback'
-			if plcstatus == 3:
-				# if plcstatus in ['stop', 'reback']:
+			move_status = self.plchandle.read_status()
+			if move_status == 0:
+				#静止态，需要索要定位信息
 				self.askforSingnal.emit("plc need hock  position!")
-			elif plcstatus == 4:
+			elif move_status == 1:
+				# 运动态不需要定位信息
 				self.moveSignal.emit("hock is moveing ,dont need position")

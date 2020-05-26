@@ -14,5 +14,7 @@
         <file>set_roi.png</file>
         <file>instruct.png</file>
         <file>img.png</file>
+        <file>pointer.png</file>
+        <file>quickly_stop.png</file>
     </qresource>
 </RCC>

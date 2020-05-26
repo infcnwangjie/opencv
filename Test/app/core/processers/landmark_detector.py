@@ -11,8 +11,8 @@ from app.config import IMG_HEIGHT, IMG_WIDTH, ROIS_DIR, LEFT_MARK_FROM, LEFT_MAR
 	PROGRAM_DATA_DIR
 import cv2
 import time
-import gevent
-import profile
+# import gevent
+# import profile
 from app.core.beans.models import LandMarkRoi, NearLandMark, TargetRect
 from app.core.exceptions.allexception import NotFoundLandMarkException
 from app.core.processers.bag_detector import BagDetector
@@ -22,9 +22,7 @@ from app.log.logtool import mylog_error
 import re
 
 cv2.useOptimized()
-
 rows, cols = IMG_HEIGHT, IMG_WIDTH
-
 WITH_TRANSPORT = True
 
 
@@ -555,11 +553,11 @@ class LandMarkDetecotr(AbstractDetector):
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
-			# roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
 			#
-			# cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
-			# foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
-			foreground = self.find_it(target_hsvt, img_roi_hsvt)
+			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
+			foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
+			# foreground = self.find_it(target_hsvt, img_roi_hsvt)
 
 			# 用来测试
 			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
@@ -768,3 +766,4 @@ def test_avi():
 if __name__ == '__main__':
 	# test_one_image()
 	test_avi()
+	# profile.run('test_avi()')
