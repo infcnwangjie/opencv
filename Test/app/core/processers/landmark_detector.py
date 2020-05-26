@@ -16,6 +16,7 @@ import profile
 from app.core.beans.models import LandMarkRoi, NearLandMark, TargetRect
 from app.core.exceptions.allexception import NotFoundLandMarkException
 from app.core.processers.bag_detector import BagDetector
+from app.core.processers.laster_detector import LasterDetector
 from app.core.processers.preprocess import AbstractDetector
 from app.log.logtool import mylog_error
 import re
@@ -385,7 +386,6 @@ class LandMarkDetecotr(AbstractDetector):
 		position_dic, success = self.choose_best_cornors()
 		if success:
 			dest, success = self.__perspective_transform(dest, position_dic)
-			if success: self.draw_grid_lines(dest)
 		end = time.perf_counter()
 		print("结束{}".format(end - start))
 		return dest, success
@@ -410,10 +410,10 @@ class LandMarkDetecotr(AbstractDetector):
 		H_rows, W_cols = img.shape[:2]
 		for row in range(0, H_rows):
 			if row % 50 == 0:
-				cv2.line(img, (0, row), (W_cols, row), color=(0, 255, 0), thickness=1, lineType=cv2.LINE_8)
+				cv2.line(img, (0, row), (W_cols, row), color=(255, 255, 0), thickness=1, lineType=cv2.LINE_8)
 		for col in range(0, W_cols):
 			if col % 50 == 0:
-				cv2.line(img, (col, 0), (col, H_rows), color=(0, 255, 0), thickness=1, lineType=cv2.LINE_8)
+				cv2.line(img, (col, 0), (col, H_rows), color=(255, 255, 0), thickness=1, lineType=cv2.LINE_8)
 
 	def __perspective_transform(self, src, position_dic):
 		'''透视变化'''
@@ -742,6 +742,7 @@ def test_avi():
 	success, frame = video.read()
 	a = LandMarkDetecotr()
 	b = BagDetector()
+	c = LasterDetector()
 	stop = 1
 	# read()方法读取视频下一帧到frame，当读取不到内容时返回false!
 	while success and cv2.waitKey(1) & 0xFF != ord('q'):
@@ -749,8 +750,11 @@ def test_avi():
 		# time.sleep(1)
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		dest, success = a.position_landmark(frame)
+		c.location_laster(dest,middle_start=250, middle_end=500)
 		if WITH_TRANSPORT and success:
 			b.location_bags(dest, success, middle_start=150, middle_end=500)
+			a.draw_grid_lines(dest)
+
 		cv2.imshow('frame', dest)
 		success, frame = video.read()
 		# if stop==1:

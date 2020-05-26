@@ -21,8 +21,8 @@ from app.views.roiwindow import SetRoiWidget
 
 SET_ROI = False
 
-class CentWindowUi(object):
 
+class CentWindowUi(object):
 	movie_pattern = re.compile("Video_(?P<time>\d+).avi")
 
 	def setupUi(self, Form):
@@ -32,46 +32,16 @@ class CentWindowUi(object):
 
 		self.storedbox = QtWidgets.QGroupBox(self)
 		self.storedbox.setObjectName("storedbox")
-		self.storedbox.setTitle("已存录像")
+		self.storedbox.setTitle("已存文档")
 
 		layout = QtWidgets.QVBoxLayout()
 
-		# days = ['2020-03-26', '2020-03-27']
-		try:
-			if not os.path.exists(VIDEO_DIR):
-				os.makedirs(VIDEO_DIR)
-		except:
-			pass
-		videos = []
-		for file in os.listdir(VIDEO_DIR):
-			# if os.path.isfile(file):
-			matchresult = re.match(self.movie_pattern, file)
-			# print(file)
-			if matchresult:
-				videos.append(matchresult.group(0))
-
-		self.tree = QTreeWidget()
-		self.tree.setHeaderLabels(['视频录像'])
-		self.tree.setColumnCount(1)
-		self.tree.setColumnWidth(0, 180)
-		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
-		for datestr, files in groupinfo:
-			root = QTreeWidgetItem(self.tree)
-			root.setText(0, datestr)
-			root.setIcon(0, QIcon(":icons/catalogue.png"))
-			for filepath in files:
-				child = QTreeWidgetItem(root)
-				child.setText(0, filepath)
-				# child1.setText(1, 'ios')
-				child.setIcon(0, QIcon(":icons/video.png"))
-				# child1.setCheckState(0, Qt.Checked)
-				root.addChild(child)
-
-		self.tree.clicked.connect(self.onTreeClicked)
-		self.tree.expandAll()
+		# 构建视频树形列表
+		self.init_video_tree()
 		layout.addWidget(self.tree)
 		self.storedbox.setLayout(layout)
 
+		# all_layout.addWidget(self.roi_box)
 		all_layout.addWidget(self.storedbox)
 
 		self.videoBox = QtWidgets.QGroupBox(self)
@@ -110,49 +80,24 @@ class CentWindowUi(object):
 
 		self.info_box = QtWidgets.QGroupBox()
 		self.info_box.setTitle("操作状态")
-		baginfo_layout = QtWidgets.QFormLayout()
+		plc_status_layout = QtWidgets.QFormLayout()
 		test_label = QLabel("调试状态：")
 		self.test_status_edit = QLineEdit()
 		self.test_status_edit.setReadOnly(True)
-		baginfo_layout.addRow(test_label, self.test_status_edit)
+		plc_status_layout.addRow(test_label, self.test_status_edit)
 
 		plc_label = QLabel("PLC状态：")
 		self.plc_status_edit = QLineEdit()
 		self.plc_status_edit.setReadOnly(True)
-		baginfo_layout.addRow(plc_label, self.plc_status_edit)
-		# bagnum_label = QLabel("袋子总数：")
-		# self.bagnum_edit = QLineEdit()
-		# baginfo_layout.addRow(bagnum_label, self.bagnum_edit)
-		# restbaglabel = QLabel("剩余袋子：")
-		# self.restbagnum_edit = QLineEdit()
-		# baginfo_layout.addRow(restbaglabel, self.restbagnum_edit)
+		plc_status_layout.addRow(plc_label, self.plc_status_edit)
 
-		currentStatuslabel = QLabel("当前状态：")
-		self.currentstatus_edit = QLineEdit()
-		baginfo_layout.addRow(currentStatuslabel, self.currentstatus_edit)
-
-		self.info_box.setLayout(baginfo_layout)
-
-		self.roi_box = QtWidgets.QGroupBox(self)
-		self.roi_box.setTitle("地标ROI模型")
-
-		self.roi_layout = QtWidgets.QVBoxLayout()
-
-		self.roi_img_listview = QListView()
-		self.roilistmodel = QStandardItemModel()
-		self.init_roi_imgs()
-		self.roi_img_listview.setModel(self.roilistmodel)
-		self.roi_layout.addWidget(self.roi_img_listview)
-		self.roi_box.setLayout(self.roi_layout)
+		self.info_box.setLayout(plc_status_layout)
 
 		right_layout = QtWidgets.QVBoxLayout()
 		# 添加操作信息
 		right_layout.addLayout(operate_layout)
 		# 添加袋子信息
 		right_layout.addWidget(self.info_box)
-
-		# slm = QStringListModel()
-		right_layout.addWidget(self.roi_box)
 
 		self.operatorBox.setLayout(right_layout)
 
@@ -162,18 +107,45 @@ class CentWindowUi(object):
 		                                QLabel{border-radius:10px}
 		                             QLabel{padding:2px 4px}''')
 
-		all_layout.setStretch(0, 1.5)
-		all_layout.setStretch(1, 6.8)
-		all_layout.setStretch(2, 1.7)
+		all_layout.setStretch(0, 2)
+		all_layout.setStretch(1, 7)
+		all_layout.setStretch(2, 1)
 		self.setLayout(all_layout)
 		self.retranslateUi(Form)
 
-	def init_roi_imgs(self):
-		self.roilistmodel.clear()
-		for img in os.listdir(ROIS_DIR):
-			imgpath = os.path.join(ROIS_DIR, img)
-			roi = QStandardItem(QIcon(imgpath), img)
-			self.roilistmodel.appendRow(roi)
+	def init_video_tree(self):
+		'''
+		构建视频树形列表
+		:return:
+		'''
+		try:
+			if not os.path.exists(VIDEO_DIR):
+				os.makedirs(VIDEO_DIR)
+		except:
+			pass
+		videos = []
+		for file in os.listdir(VIDEO_DIR):
+			matchresult = re.match(self.movie_pattern, file)
+			if matchresult:
+				videos.append(matchresult.group(0))
+		self.tree = QTreeWidget()
+		self.tree.setHeaderLabels(['已存文档'])
+		self.tree.setColumnCount(1)
+		self.tree.setColumnWidth(0, 200)
+		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
+		for datestr, files in groupinfo:
+			video_level_root = QTreeWidgetItem(self.tree)
+			video_level_root.setText(0, datestr)
+			video_level_root.setIcon(0, QIcon(":icons/catalogue.png"))
+			for filepath in files:
+				child = QTreeWidgetItem(video_level_root)
+				child.setText(0, filepath)
+				# child1.setText(1, 'ios')
+				child.setIcon(0, QIcon(":icons/video.png"))
+				# child1.setCheckState(0, Qt.Checked)
+				video_level_root.addChild(child)
+		self.tree.clicked.connect(self.onTreeClicked)
+		self.tree.expandAll()
 
 	def retranslateUi(self, Form):
 		_translate = QtCore.QCoreApplication.translate
@@ -198,8 +170,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.stop_button.clicked.connect(self.stop)
 
 	def check_test_status(self):
-		self.test_status_edit.setText('测试状态开启' if DEBUG else "测试状态关闭")
-
+		self.test_status_edit.setText('开启' if DEBUG else "关闭")
 
 	def onTreeClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
@@ -216,13 +187,10 @@ class CenterWindow(QWidget, CentWindowUi):
 		if self.process.IMGHANDLE:
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
-			# self.process.plcthread.work = True
-			# self.process.plcthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
-
 
 	def stop(self):
 		'''暂停摄像机'''
@@ -236,7 +204,6 @@ class MainWindow(QMainWindow):
 		self.resize(1289, 1000)
 		self.init_window()
 		self.set_roi_widget = SetRoiWidget()
-		self.set_roi_widget.update_listmodel_signal.connect(self.centralwidget.init_roi_imgs)
 
 		self.coordinate_widget = SetCoordinateWidget()
 
@@ -292,7 +259,6 @@ class MainWindow(QMainWindow):
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
 
-
 	def _openfile(self):
 		filename, filetype = QFileDialog.getOpenFileName(self,
 		                                                 "选取文件",
@@ -306,28 +272,10 @@ class MainWindow(QMainWindow):
 			else:
 				self._test()
 
-	# def _test(self):
-	# 	self.centralwidget.process.monitor_all_once()
-
 	def set_roi(self):
-
-		# global SET_ROI
-		# SET_ROI = not SET_ROI
-		# img = cv2.imread('d:/2020-04-10-15-26-22test.bmp')
-		# # self.centralwidget.process.set_roi(img)
-		#
-		# dest = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
-		# self.centralwidget.picturelabel.set_img(dest)
-		# show = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
-		#
-		# showImage = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-		# self.centralwidget.picturelabel.setPixmap(QPixmap.fromImage(showImage))
-		# self.centralwidget.picturelabel.setScaledContents(True)
 		self.set_roi_widget.move(260, 120)
-		# self.set_roi_widget.showMaximized()
 		self.set_roi_widget.show()
 
 	def set_cooridnate(self):
 		self.coordinate_widget.move(260, 120)
-		# self.coordinate_widget.showMaximized()
 		self.coordinate_widget.show()

@@ -22,7 +22,6 @@ class AbstractDetector(metaclass=SmallWords):
 	OPENCV_SUPPLYDLL = cdll.LoadLibrary(
 		"C:/NTY_IMG_PROCESS/dll/libOPENCV_SUPPLY.dll")
 
-
 	@property
 	def shape(self):
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
@@ -61,7 +60,7 @@ class AbstractDetector(metaclass=SmallWords):
 		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
 		return degree
 
-	def red_contours(self,img,middle_start=180,middle_end=500):
+	def red_contours(self, img, middle_start=180, middle_end=500):
 		'''返回红色轮廓'''
 		red_low, red_high = [120, 50, 50], [180, 255, 255]
 		red_min, red_max = np.array(red_low), np.array(red_high)
@@ -76,7 +75,7 @@ class AbstractDetector(metaclass=SmallWords):
 		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return red_binary, red_contours
 
-	def yellow_contours(self,img):
+	def yellow_contours(self, img):
 		'''
 		返回黄色轮廓
 		:return:
@@ -98,19 +97,36 @@ class AbstractDetector(metaclass=SmallWords):
 
 		return yellow_binary, yellow_contours
 
-	def green_contours(self):
+	def green_contours(self, img, middle_start=150, middle_end=500):
 		'''
 		返回黄色轮廓
 		:return:
 		'''
+		rows, cols, channels = img.shape
+		# 如果尺寸已经调整，就无须调整
+		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
+			img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		green_low, green_high = [35, 43, 46], [77, 255, 255]
 		# green_low, green_high = [17, 43, 46], [77, 255, 255]
 		green_min, green_max = np.array(green_low), np.array(green_high)
-		green_mask = cv2.inRange(self.hsv, green_min, green_max)
-		green_ret, green_binary = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
-		green_binary = cv2.medianBlur(green_binary, 3)
-		green_contours, _hierarchy = cv2.findContours(green_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		return green_binary, green_contours
+		green_mask = cv2.inRange(hsv, green_min, green_max)
+		green_ret, binarry = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
+
+		disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+		binarry = cv2.filter2D(binarry, -1, disc)
+
+		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		middle_mask=np.zeros_like(gray)
+		middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+
+		foreground = cv2.bitwise_and(binarry, binarry, mask=middle_mask)
+
+		cv2.imshow("green_binary", foreground)
+		foreground = cv2.medianBlur(foreground, 3)
+		green_contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return foreground, green_contours
 
 	# def modify_x(self, img):
 	# 	'''
@@ -137,7 +153,7 @@ class AbstractDetector(metaclass=SmallWords):
 	# 	cv2.waitKey(0)
 
 	@classmethod
-	def find_it(cls,input, model):
+	def find_it(cls, input, model):
 
 		input_h, input_w = input.shape[0], input.shape[1]
 		m_h, m_w = model.shape[0], model.shape[1]
@@ -149,7 +165,7 @@ class AbstractDetector(metaclass=SmallWords):
 		model_data = np.asarray(model, dtype=np.uint8)
 		model_data = model_data.ctypes.data_as(ctypes.c_char_p)
 		cls.OPENCV_SUPPLYDLL.find_it.restype = ctypes.POINTER(ctypes.c_uint8)
-		pointer = cls.OPENCV_SUPPLYDLL.find_it(frame_data,model_data,input_w,input_h,m_w,m_h)
+		pointer = cls.OPENCV_SUPPLYDLL.find_it(frame_data, model_data, input_w, input_h, m_w, m_h)
 		result_img = np.array(np.fromiter(pointer, dtype=np.uint8, count=input_h * input_w))
 		return result_img.reshape((input_h, input_w))
 

@@ -13,5 +13,6 @@
         <file>video.png</file>
         <file>set_roi.png</file>
         <file>instruct.png</file>
+        <file>img.png</file>
     </qresource>
 </RCC>
