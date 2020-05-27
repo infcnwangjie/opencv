@@ -16,5 +16,6 @@
         <file>img.png</file>
         <file>pointer.png</file>
         <file>quickly_stop.png</file>
+        <file>recover.png</file>
     </qresource>
 </RCC>
