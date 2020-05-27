@@ -6,7 +6,10 @@ from app.status import HockStatus
 
 
 class PlcThread(QThread):
-	'''钩子运动的时候，一定要向PLC中写入X，Y位置参数'''
+	'''
+	钩子运动的时候，一定要向PLC中写入X，Y位置参数
+
+	'''
 	askforSingnal = pyqtSignal(str)
 	moveSignal = pyqtSignal(str)
 

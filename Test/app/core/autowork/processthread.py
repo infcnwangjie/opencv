@@ -42,7 +42,6 @@ class ProcessThread(QThread):
 		self._working = True
 		self.video_player = video_player
 		self.IMAGE_HANDLE = IMGHANDLE  # 从skd中获取图像
-		self._hockstatus = HockStatus.POSITION_NEARESTBAG  # 钩子状态会影响定位程序
 		self.bags = []
 		self.send_positions = []
 		self.landmark_detect = LandMarkDetecotr()
@@ -70,15 +69,6 @@ class ProcessThread(QThread):
 	def work(self, value=True):
 		self._working = value
 
-	@property
-	def hockstatus(self):
-		return self._hockstatus
-
-	@hockstatus.setter
-	def hockstatus(self, value=HockStatus.POSITION_NEARESTBAG):
-		# value must HockStatus enum
-		self._hockstatus = value
-
 	def run(self):
 
 		while self.play and self.IMAGE_HANDLE:
@@ -91,12 +81,11 @@ class ProcessThread(QThread):
 				dest, success = self.landmark_detect.position_landmark(show)
 				laster = self.laster_detect.location_laster(dest, middle_start=250, middle_end=500)
 				if success:
-					bags=self.bag_detect.location_bags(dest, success, middle_start=100, middle_end=400)
+					bags = self.bag_detect.location_bags(dest, success, middle_start=100, middle_end=400)
 					self.landmark_detect.draw_grid_lines(dest)
 					if laster is not None:
 						print("compute distance bag and laster,and laster is ({x},{y})".format(x=laster.x, y=laster.y))
-						# TODO  计算钩子与每个袋子的距离，用来指导行车移动
-						for bag  in bags:
+						for bag in bags:
 							print(bag)
 
 				else:
