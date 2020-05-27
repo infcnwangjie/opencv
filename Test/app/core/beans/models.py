@@ -31,13 +31,17 @@ class Box:
 		self.box = cv2.boundingRect(contour)
 		self.x, self.y, self.w, self.h = self.box
 		self.boxcenterpoint = (self.x + round(self.w * 0.5), self.y + round(self.h * 0.5))
-		self.x = self.x + round(self.w * 0.5)
-		self.y = self.y + round(self.h * 0.5)
+		# self.x = self.x + round(self.w * 0.5)
+		# self.y = self.y + round(self.h * 0.5)
 		self.status = True
 
 	@property
 	def width(self):
 		return self.w
+
+	@property
+	def height(self):
+		return self.h
 
 	# 修改目标物的显示内容
 	def modify_box_content(self, no_num=True):

@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 
 from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR
 from app.core.autowork.process import IntelligentProcess
+from app.core.plc.plchandle import PlcHandle
 from app.core.video.imageprovider import ImageProvider
 from app.icons import resource
 from app.views.landmark_window import SetCoordinateWidget
@@ -48,11 +49,23 @@ class CentWindowUi(object):
 		self.videoBox.setObjectName("videoBox")
 		all_layout.addWidget(self.videoBox)
 
-		self.picturelabel = QLabel(self)
-		self.picturelabel.setObjectName("picturelabel")
-		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
-		video_layout = QtWidgets.QHBoxLayout()
-		video_layout.addWidget(self.picturelabel)
+		self.final_picture_label = QLabel(self)
+		self.final_picture_label.setObjectName("final_picture_label")
+		# self.final_picture_label.size()
+		self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
+
+		# self.bag_picture_label = QLabel(self)
+		# self.bag_picture_label.setObjectName("bag_picture_label")
+		# self.bag_picture_label.resize(400, 300)
+
+		# self.laster_picture_label = QLabel(self)
+		# self.laster_picture_label.setObjectName("laster_picture_label")
+		# self.laster_picture_label.resize(400, 300)
+
+		video_layout = QtWidgets.QGridLayout()
+		video_layout.addWidget(self.final_picture_label, 0, 0)
+		# video_layout.addWidget(self.bag_picture_label, 0, 1)
+		# video_layout.addWidget(self.laster_picture_label, 1, 0)
 		self.videoBox.setLayout(video_layout)
 
 		# 右侧按钮操作区域
@@ -101,11 +114,11 @@ class CentWindowUi(object):
 
 		self.operatorBox.setLayout(right_layout)
 
-		self.videoBox.setStyleSheet('''QLabel{color:black}
-		                                QLabel{background-color:lightgreen}
-		                                QLabel{border:2px}
-		                                QLabel{border-radius:10px}
-		                             QLabel{padding:2px 4px}''')
+		self.videoBox.setStyleSheet(''' QLabel{color:black}
+		                                QLabel#final_picture_label{background-color:lightgreen}
+		                                QLabel#final_picture_label{border:2px}
+		                                QLabel#final_picture_label{border-radius:10px}
+		                                QLabel#final_picture_label{padding:2px 4px}''')
 
 		all_layout.setStretch(0, 2)
 		all_layout.setStretch(1, 7)
@@ -161,9 +174,11 @@ class CenterWindow(QWidget, CentWindowUi):
 		super().__init__()
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
-		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.picturelabel,
-		                                  plc_status_show=self.plc_status_edit)
+		self.plchandle = PlcHandle()
+		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label,plchandle=self.plchandle)
+
 		self.check_test_status()
+		self.check_plc_status()
 
 	def init_button(self):
 		self.play_button.clicked.connect(self.play)
@@ -171,6 +186,11 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def check_test_status(self):
 		self.test_status_edit.setText('开启' if DEBUG else "关闭")
+
+	def check_plc_status(self):
+		'''检测plc状态'''
+		print(self.plchandle.is_open())
+		self.plc_status_edit.setText('开启' if self.plchandle.is_open() else "关闭")
 
 	def onTreeClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
@@ -183,7 +203,7 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def play(self):
 		'''开始播放'''
-		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
+		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
 		if self.process.IMGHANDLE:
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
@@ -195,7 +215,7 @@ class CenterWindow(QWidget, CentWindowUi):
 	def startwork(self):
 		'''这是正儿八经的开始移动行车
 		'''
-		self.picturelabel.resize(IMG_WIDTH, IMG_HEIGHT)
+		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
 		imagehandle = ImageProvider(videofile=None, ifsdk=True)
 		self.process.IMGHANDLE = imagehandle
 		if self.process.IMGHANDLE:
@@ -209,8 +229,6 @@ class CenterWindow(QWidget, CentWindowUi):
 	def quickly_stop_work(self):
 		print("stop work")
 		self.process.quickly_stop_work()
-
-
 
 	def stop(self):
 		'''暂停摄像机'''

@@ -145,7 +145,7 @@ class LandMarkDetecotr(AbstractDetector):
 
 	def compute_miss_landmark_position(self, landmark_name):
 		opposite = self.get_opposite_landmark(landmark_name)
-		print("opposite is {}".format(opposite))
+		# print("opposite is {}".format(opposite))
 		if opposite not in self.ALL_LANDMARKS_DICT:
 			raise NotFoundLandMarkException("opposite landmark is not exist")
 		# assert opposite in ALL_LANDMARKS_DICT, "opposite landmark is not exist"
@@ -209,7 +209,7 @@ class LandMarkDetecotr(AbstractDetector):
 		compensate_label = ""
 		for label in labels:
 			if label not in self.ALL_LANDMARKS_DICT:
-				print("label {} need compute".format(label))
+				# print("label {} need compute".format(label))
 				compensate_label = label
 				continue
 			else:
@@ -334,7 +334,7 @@ class LandMarkDetecotr(AbstractDetector):
 		self.ALL_LANDMARKS_DICT.clear()
 		self.ALL_POSITIONS.clear()
 		del self.rois
-		start = time.perf_counter()
+		# start = time.perf_counter()
 		rows, cols, channels = image.shape
 		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
 			dest = cv2.resize(image, (IMG_WIDTH, IMG_HEIGHT))
@@ -349,9 +349,9 @@ class LandMarkDetecotr(AbstractDetector):
 			                    (re.match(self.landmark_match, landmarkname).group('NO') < no and itemy > y) or (
 						                    re.match(self.landmark_match, landmarkname).group('NO') > no and itemy < y)]
 			if len(exception_labels) > 0:
-				for exception_label in exception_labels:
-					print("{}is {}，but {} is {}".format(label, y, exception_label,
-					                                    self.ALL_POSITIONS[exception_label][1]))
+				# for exception_label in exception_labels:
+				# 	print("{}is {}，but {} is {}".format(label, y, exception_label,
+				# 	                                    self.ALL_POSITIONS[exception_label][1]))
 				return dest, False
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
@@ -384,8 +384,8 @@ class LandMarkDetecotr(AbstractDetector):
 		position_dic, success = self.choose_best_cornors()
 		if success:
 			dest, success = self.__perspective_transform(dest, position_dic)
-		end = time.perf_counter()
-		print("结束{}".format(end - start))
+		# end = time.perf_counter()
+		# print("结束{}".format(end - start))
 		return dest, success
 
 	@property
@@ -717,13 +717,16 @@ def test_one_image():
 	# src = LandMarkDetecotr(img=cv2.imread('d:/2020-05-14-12-50-58test.bmp')).position_landmark()
 	b = BagDetector()
 	if WITH_TRANSPORT and success:
-
-		for bag in b.location_bags(dest, middle_start=100, middle_end=400):
-			print(bag)
+		bags,bag_foreground=b.location_bags(dest, middle_start=100, middle_end=400)
+		cv2.imshow("bag_foreground",bag_foreground)
+		# for bag in  bags:
+		# 	print(bag)
 		a.draw_grid_lines(dest)
 	else:
-		for bag in b.location_bags(dest, middle_start=400, middle_end=600):
-			print(bag)
+		bags,bag_foreground=b.location_bags(dest, middle_start=400, middle_end=600)
+		cv2.imshow("bag_foreground", bag_foreground)
+		# for bag in bags:
+		# 	print(bag)
 	# print(dest.shape)
 
 	# cap.release()
@@ -745,25 +748,26 @@ def test_avi():
 	# read()方法读取视频下一帧到frame，当读取不到内容时返回false!
 	while success and cv2.waitKey(1) & 0xFF != ord('q'):
 		# 等待1毫秒读取键键盘输入，最后一个字节是键盘的ASCII码。ord()返回字母的ASCII码
-		# time.sleep(1)
+
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		dest, success = a.position_landmark(frame)
-		c.location_laster(dest,middle_start=250, middle_end=500)
+		dest_copy=dest.copy()
+		laster,laster_foreground=c.location_laster(dest,dest_copy,middle_start=250, middle_end=500)
+		cv2.imshow("laster_foreground",laster_foreground)
 		if WITH_TRANSPORT and success:
-			b.location_bags(dest, success, middle_start=150, middle_end=500)
+			bags,bag_foreground=b.location_bags(dest,dest_copy, success, middle_start=100, middle_end=500)
+			cv2.imshow("bag_foreground",bag_foreground)
 			a.draw_grid_lines(dest)
 
 		cv2.imshow('frame', dest)
 		success, frame = video.read()
-		# if stop==1:
-		# 	cv2.waitKey(0)
-		# 	break
 		stop += 1
+	cv2.waitKey(0)
 	cv2.destroyAllWindows()
 	video.release()
 
 
 if __name__ == '__main__':
-	# test_one_image()
 	test_avi()
+	# test_one_image()
 	# profile.run('test_avi()')
