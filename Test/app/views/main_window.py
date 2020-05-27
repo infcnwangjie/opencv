@@ -230,6 +230,14 @@ class CenterWindow(QWidget, CentWindowUi):
 		print("stop work")
 		self.process.quickly_stop_work()
 
+	def reset_plc(self):
+		'''
+		PLC复位
+		:return:
+		'''
+		print("stop work")
+		self.process.resetplc()
+
 	def stop(self):
 		'''暂停摄像机'''
 		print("关闭摄像")
@@ -283,6 +291,16 @@ class MainWindow(QMainWindow):
 		quickly_stop_workAction.setStatusTip('紧急停止')
 		quickly_stop_workAction.triggered.connect(self.stop_work)
 
+		reset_plcAction = QAction(QIcon(":icons/recover.png"), '行车复位', self)
+		reset_plcAction.setShortcut('Ctrl+r')
+		reset_plcAction.setStatusTip('行车复位')
+		reset_plcAction.triggered.connect(self.resetplc)
+
+		# recover_workAction = QAction(QIcon(":icons/quickly_stop.png"), '紧急停止', self)
+		# quickly_stop_workAction.setShortcut('Ctrl+s')
+		# quickly_stop_workAction.setStatusTip('紧急停止')
+		# quickly_stop_workAction.triggered.connect(self.stop_work)
+
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
 		fileMenu.addAction(openFileAction)
@@ -309,6 +327,9 @@ class MainWindow(QMainWindow):
 
 		quicklystopWorkToolBar = self.addToolBar("StopWork")
 		quicklystopWorkToolBar.addAction(quickly_stop_workAction)
+
+		resetToolBar = self.addToolBar("ResetPlc")
+		resetToolBar.addAction(reset_plcAction)
 
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
@@ -345,5 +366,12 @@ class MainWindow(QMainWindow):
 		print("quicklystop")
 		try:
 			self.centralwidget.quickly_stop_work()
+		except Exception as e:
+			raise e
+
+	def resetplc(self):
+		print("resetplc")
+		try:
+			self.centralwidget.reset_plc()
 		except Exception as e:
 			raise e

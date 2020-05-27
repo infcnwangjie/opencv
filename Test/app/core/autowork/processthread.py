@@ -51,8 +51,6 @@ class ProcessThread(QThread):
 		if hasattr(self.IMAGE_HANDLE, 'release') and self.IMAGE_HANDLE:
 			self.IMAGE_HANDLE.release()
 
-
-
 	@property
 	def play(self):
 		return self._playing
@@ -83,6 +81,8 @@ class ProcessThread(QThread):
 			finalimg = QImage(dest.data, dest.shape[1], dest.shape[0], QImage.Format_RGB888)
 			self.video_player.setPixmap(QPixmap.fromImage(finalimg))
 			self.video_player.setScaledContents(True)
+		# 程序执行结束要重置PLC
+		self.plchandle.reset()
 
 	def compute_img(self, show):
 		'''
@@ -94,6 +94,11 @@ class ProcessThread(QThread):
 
 		if not find_landmark:
 			# 当前帧，地标定位失败
+			return dest
+
+		ugent_stop_status = self.plchandle.is_ugent_stop()
+		if ugent_stop_status == 1:
+			self.landmark_detect.draw_grid_lines(dest)
 			return dest
 
 		dest_copy = dest.copy()
@@ -114,6 +119,7 @@ class ProcessThread(QThread):
 		if bags is None or len(bags) == 0:
 			# 袋子检测失败
 			self.landmark_detect.draw_grid_lines(dest)
+			self.plchandle.reset()
 			return dest
 
 		if self.history_bags is not None and len(self.history_bags) > 0:
@@ -130,10 +136,14 @@ class ProcessThread(QThread):
 		print("will get to {},{}".format(choosed_bag.x, choosed_bag.y))
 
 		try:
+			# self.plchandle.ugent_stop()
 			move_status = self.plchandle.read_status()
+			is_ugent_stop = self.plchandle.is_ugent_stop()
 			# move==1说明行车在移动中，0静止
-			if move_status == 1:
-				pass
+			if move_status == 1 or is_ugent_stop == 1:
+				# 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
+				self.landmark_detect.draw_grid_lines(dest)
+				return dest
 
 			print("移动状态为：{}".format(move_status))
 			# 视频中行车激光位置，钩子的位置需要定位
@@ -146,21 +156,19 @@ class ProcessThread(QThread):
 				self.plchandle.write_target_position([choosed_bag.x, choosed_bag.y, bag_z])
 
 			# 写入钩子当前坐标
-			# TODO current_car_z
 			plc_x, plc_y, plc_z = self.plchandle.current_hock_position()
 			current_car_x, current_car_y, current_car_z = laster.x, laster.y + 100, 0
 			if abs(plc_x - current_car_x) > 20 or abs(plc_y - current_car_y) > 20 or abs(plc_z - current_car_z) > 20:
 				self.plchandle.write_hock_position([current_car_x, current_car_y, current_car_z])
 
-			# 不用写入纠偏量当前坐标
-			# plc_target_x, plc_target_y, plc_target_z = self.plchandle.target_position()
-			# if abs(plc_target_y - current_car_y) > 20 or abs(plc_target_x - current_car_x) > 20:
-			# 	error_x = plc_target_x - current_car_x
-			# 	error_y = plc_target_y - current_car_y
-			# 	self.plchandle.write_error([error_x, error_y, 0])
+			# 智能识别紧急停止行车
+			if current_car_y == 0 or current_car_y > 800 or current_car_x == 0 or current_car_x > 500:
+				print(" ugent_stop {},{},{}".format(current_car_x, current_car_y, current_car_z))
+				self.plchandle.ugent_stop()
 
 
-		except:
+		except Exception as e:
+			print(e)
 			self.landmark_detect.draw_grid_lines(dest)  # 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
 			return dest
 

@@ -47,9 +47,9 @@ HOCK_MOVE_STATUS_PLC = 0x0FA6  # 4006  行车移动状态写入地址  1：运�
 HOCK_STOP_PLC = 0x0FA7  # 4007   强制停止写入地址  1:停止  0: 取消限制
 HOCK_RESET_PLC = 0x0FA8  # 4008   行车复位写入地址  1 复位 0：取消复位
 
-ERROR_X_PLC = 0x0FA9  # 4009   行车与目标X轴误差    可能不会用到
-ERROR_Y_PLC = 0x0FAA  # 4010   行车与目标Y轴误差    可能不会用到
-ERROR_Z_PLC = 0x0FAB  # 4011   行车与目标Z轴误差    可能不会用到
+# ERROR_X_PLC = 0x0FA9  # 4009   行车与目标X轴误差    可能不会用到
+# ERROR_Y_PLC = 0x0FAA  # 4010   行车与目标Y轴误差    可能不会用到
+# ERROR_Z_PLC = 0x0FAB  # 4011   行车与目标Z轴误差    可能不会用到
 
 # print(NEG_TEMPLATES_PATH)
 

@@ -48,4 +48,15 @@ class IntelligentProcess(object):
 	# self.intelligentthread.foundbagSignal.connect(self.editbagnum_imgsignal_process)
 
 	def quickly_stop_work(self):
+		'''
+		行车紧急停止
+		:return:
+		'''
 		self.plchandle.ugent_stop()
+
+	def resetplc(self):
+		'''
+		行车复位
+		:return:
+		'''
+		self.plchandle.reset()

@@ -7,7 +7,7 @@ from modbus_tk import modbus_rtu
 
 from app.config import HOCK_MOVE_STATUS_PLC, \
 	HOCK_STOP_PLC, HOCK_CURRENT_X_PLC, HOCK_CURRENT_Y_PLC, HOCK_CURRENT_Z_PLC, TARGET_X_PLC, TARGET_Y_PLC, \
-	TARGET_Z_PLC, HOCK_RESET_PLC, ERROR_X_PLC, ERROR_Y_PLC, ERROR_Z_PLC
+	TARGET_Z_PLC, HOCK_RESET_PLC
 
 
 class PlcHandle:
@@ -149,36 +149,36 @@ class PlcHandle:
 		z = self.__read(TARGET_Z_PLC)
 		return [x, y, z]
 
-	def write_error(self, position):
-		'''
-				写入纠偏量
-				:param position: dict
-				:return:
-				'''
-		print("now,write to plc,position is x:{},y:{},z:{}".format(*position))
-		try:
-			x, y, z = position
-			self.__write(ERROR_X_PLC, int(x))
-			self.__write(ERROR_Y_PLC, int(y))
-			self.__write(ERROR_Z_PLC, int(z))
-		# self.logger.info(
-		# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_X_PLC, output_value=int(x)))  # 写入
-		# self.logger.info(
-		# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_Y_PLC, output_value=int(y)))  # 写入
-		# self.logger.info(
-		# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_Z_PLC, output_value=int(z)))  # 写入
-		except modbus_tk.modbus.ModbusError as exc:
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+	# def write_error(self, position):
+	# 	'''
+	# 			写入纠偏量
+	# 			:param position: dict
+	# 			:return:
+	# 			'''
+	# 	print("now,write to plc,position is x:{},y:{},z:{}".format(*position))
+	# 	try:
+	# 		x, y, z = position
+	# 		self.__write(ERROR_X_PLC, int(x))
+	# 		self.__write(ERROR_Y_PLC, int(y))
+	# 		self.__write(ERROR_Z_PLC, int(z))
+	# 	# self.logger.info(
+	# 	# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_X_PLC, output_value=int(x)))  # 写入
+	# 	# self.logger.info(
+	# 	# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_Y_PLC, output_value=int(y)))  # 写入
+	# 	# self.logger.info(
+	# 	# 	self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_MOVE_Z_PLC, output_value=int(z)))  # 写入
+	# 	except modbus_tk.modbus.ModbusError as exc:
+	# 		self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
 
-	def error_position(self):
-		'''
-		获取纠偏量
-		:return:
-		'''
-		x = self.__read(ERROR_X_PLC)
-		y = self.__read(ERROR_Y_PLC)
-		z = self.__read(ERROR_Z_PLC)
-		return [x, y, z]
+	# def error_position(self):
+	# 	'''
+	# 	获取纠偏量
+	# 	:return:
+	# 	'''
+	# 	x = self.__read(ERROR_X_PLC)
+	# 	y = self.__read(ERROR_Y_PLC)
+	# 	z = self.__read(ERROR_Z_PLC)
+	# 	return [x, y, z]
 
 	def ugent_stop(self):
 		'''
@@ -186,6 +186,10 @@ class PlcHandle:
 		'''
 		# self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_STOP_PLC, output_value=1)  # 写入
 		self.__write(HOCK_STOP_PLC, 1)
+
+	def is_ugent_stop(self):
+		result = self.__read(HOCK_STOP_PLC)
+		return result
 
 	def reset(self):
 		'''复位 1:复位 0：取消复位 '''
@@ -196,9 +200,12 @@ class PlcHandle:
 			self.write_target_position([0, 0, 0])
 			# 紧急停止也要清零
 			self.__write(HOCK_STOP_PLC, 0)
-			# 目标地址清零
+			# 运动状态清零
+			self.__write(HOCK_MOVE_STATUS_PLC, 0)
+			# 钩子地址清零
 			self.write_hock_position([0, 0, 0])
-			self.write_error([0, 0, 0])
+			# 目标地址清零
+			self.write_target_position([0, 0, 0])
 		except Exception as e:
 			pass
 
@@ -212,8 +219,9 @@ if __name__ == '__main__':
 	# print(plc.read_status())
 
 	# print(plc.write_error([-1,-2,0]))
-	print(plc.target_position())
-	print(plc.current_hock_position())
+	# print(plc.target_position())
+	# print(plc.current_hock_position())
 	# print(plc.error_position())
+	print(plc.is_ugent_stop())
 
 # print(hex(4004))
