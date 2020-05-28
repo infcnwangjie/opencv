@@ -27,7 +27,7 @@ class PlcHandle:
 	def __init__(self, plc_port='COM3', timeout=0.3):
 		self.port = plc_port
 		self.timeout = timeout
-		self._plc_status = True
+		self._plc_status = False
 		self.init_plc()
 
 	def init_plc(self):
@@ -42,6 +42,7 @@ class PlcHandle:
 			self.master.set_timeout(self.timeout)  # PLC 延迟
 			self.master.set_verbose(True)
 			self.logger.info("connected")
+			self._plc_status = True
 		except modbus_tk.modbus.ModbusError as exc:
 			self._plc_status = False
 			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())

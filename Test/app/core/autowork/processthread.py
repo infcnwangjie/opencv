@@ -96,32 +96,33 @@ class ProcessThread(QThread):
 			# 当前帧，地标定位失败
 			return dest
 
-		ugent_stop_status = self.plchandle.is_ugent_stop()
-		if ugent_stop_status == 1:
-			self.landmark_detect.draw_grid_lines(dest)
-			return dest
+		if self.plchandle.is_open():
+			return self.processimg_plcopen(dest, find_landmark)
+		else:
+			return self.processimg_plcclose(dest,find_landmark)
 
+	def processimg_plcclose(self, dest, find_landmark):
+		'''
+		当PLC关闭的时候处理图像
+		:param dest:
+		:param find_landmark:
+		:return:
+		'''
 		dest_copy = dest.copy()
-
 		laster, laster_foreground = self.laster_detect.location_laster(dest, dest_copy, middle_start=250,
 		                                                               middle_end=500)
 		if laster is None:
 			# 当前帧，钩子定位失败
 			self.landmark_detect.draw_grid_lines(dest)
 			return dest
-
 		print("激光斑点坐标 is ({x},{y})".format(x=laster.x, y=laster.y))
-
 		self.history_laster_travel.append((laster.x, laster.y))  # 记录激光灯移动轨迹，用来纠偏
-
 		bags, bag_forground = self.bag_detect.location_bags(dest, dest_copy, find_landmark, middle_start=100,
 		                                                    middle_end=400)
 		if bags is None or len(bags) == 0:
 			# 袋子检测失败
 			self.landmark_detect.draw_grid_lines(dest)
-			self.plchandle.reset()
 			return dest
-
 		if self.history_bags is not None and len(self.history_bags) > 0:
 			last_time_bags = self.history_bags[-1]
 			# 检测到的袋子忽多忽少的情况，一定是不稳定的；
@@ -129,12 +130,48 @@ class ProcessThread(QThread):
 			if len(last_time_bags) != len(bags):
 				self.landmark_detect.draw_grid_lines(dest)
 				return dest
-
 		choose_index = self.choose_nearest_bag(bags, laster)
-
 		choosed_bag = bags[choose_index]
 		print("will get to {},{}".format(choosed_bag.x, choosed_bag.y))
+		return dest
 
+	def processimg_plcopen(self, dest, find_landmark):
+		'''
+		当PLC开启的时候处理图像
+		:param dest:
+		:param find_landmark:
+		:return:
+		'''
+		ugent_stop_status = self.plchandle.is_ugent_stop()
+		if ugent_stop_status == 1:
+			self.landmark_detect.draw_grid_lines(dest)
+			return dest
+		dest_copy = dest.copy()
+		laster, laster_foreground = self.laster_detect.location_laster(dest, dest_copy, middle_start=250,
+		                                                               middle_end=500)
+		if laster is None:
+			# 当前帧，钩子定位失败
+			self.landmark_detect.draw_grid_lines(dest)
+			return dest
+		print("激光斑点坐标 is ({x},{y})".format(x=laster.x, y=laster.y))
+		self.history_laster_travel.append((laster.x, laster.y))  # 记录激光灯移动轨迹，用来纠偏
+		bags, bag_forground = self.bag_detect.location_bags(dest, dest_copy, find_landmark, middle_start=100,
+		                                                    middle_end=400)
+		if bags is None or len(bags) == 0:
+			# 袋子检测失败
+			self.landmark_detect.draw_grid_lines(dest)
+			self.plchandle.reset()
+			return dest
+		if self.history_bags is not None and len(self.history_bags) > 0:
+			last_time_bags = self.history_bags[-1]
+			# 检测到的袋子忽多忽少的情况，一定是不稳定的；
+			# 退出前记得绘制网格线
+			if len(last_time_bags) != len(bags):
+				self.landmark_detect.draw_grid_lines(dest)
+				return dest
+		choose_index = self.choose_nearest_bag(bags, laster)
+		choosed_bag = bags[choose_index]
+		print("will get to {},{}".format(choosed_bag.x, choosed_bag.y))
 		try:
 			# self.plchandle.ugent_stop()
 			move_status = self.plchandle.read_status()
@@ -171,7 +208,6 @@ class ProcessThread(QThread):
 			print(e)
 			self.landmark_detect.draw_grid_lines(dest)  # 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
 			return dest
-
 		self.landmark_detect.draw_grid_lines(dest)  # 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
 		return dest
 
