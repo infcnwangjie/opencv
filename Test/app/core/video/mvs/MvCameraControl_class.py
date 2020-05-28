@@ -17,11 +17,8 @@ from app.core.video.mvs.PixelType_header import *
 
 # print(MVCAMERACONTROLDLL_PATH)
 # MvCamCtrldll = WinDLL("MvCameraControl.dll")
-MvCamCtrldll = None
-try:
-	MvCamCtrldll = WinDLL(MVCAMERACONTROLDLL_PATH)
-except:
-	pass
+MvCamCtrldll = WinDLL(MVCAMERACONTROLDLL_PATH)
+
 
 # 用于回调函数传入相机实例
 class _MV_PY_OBJECT_(Structure):

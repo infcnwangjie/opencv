@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import cv2
 
+from app.config import SDK_OPEN
 from app.core.exceptions.allexception import SdkException
 
 
@@ -11,12 +12,12 @@ from app.core.video.sdk import SdkHandle
 class ImageProvider(object):
 	'''部署到工控机上使用sdk获取图像，如果测试阶段使用opencv视频库来获取图像'''
 
-	def __init__(self, videofile=None, ifsdk=True):
+	def __init__(self, videofile=None, ifsdk=SDK_OPEN):
 		self.videofile = videofile
 		self.ifsdk = ifsdk
 		if videofile:
 			self.IMG_HANDLE = cv2.VideoCapture(videofile)
-		elif ifsdk:
+		elif self.ifsdk:
 			self.IMG_HANDLE = SdkHandle() #开启海康sdk调用
 			# pass
 		else:
@@ -27,8 +28,8 @@ class ImageProvider(object):
 		'''从sdk或者opencv获取一帧图像'''
 		try:
 			imageinfo = self.IMG_HANDLE.read()
-		except:
-			raise SdkException("sdk还没开始调研")
+		except Exception as e:
+			raise e
 		else:
 			if isinstance(imageinfo, tuple):
 				return imageinfo[1]

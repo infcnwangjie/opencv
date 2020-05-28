@@ -139,6 +139,7 @@ class CentWindowUi(object):
 		videos = []
 		for file in os.listdir(VIDEO_DIR):
 			matchresult = re.match(self.movie_pattern, file)
+			print(matchresult.group(0))
 			if matchresult:
 				videos.append(matchresult.group(0))
 		self.tree = QTreeWidget()
@@ -216,15 +217,15 @@ class CenterWindow(QWidget, CentWindowUi):
 		'''这是正儿八经的开始移动行车
 		'''
 		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
-		imagehandle = ImageProvider(videofile=None, ifsdk=True)
+		imagehandle = ImageProvider( ifsdk=True)
 		self.process.IMGHANDLE = imagehandle
 		if self.process.IMGHANDLE:
+			self.process.IMGHANDLE=imagehandle
 			self.process.intelligentthread.play = True
 			self.process.intelligentthread.start()
 		else:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
-			print("关闭")
 
 	def quickly_stop_work(self):
 		print("stop work")

@@ -17,7 +17,7 @@ from app.core.processers.landmark_detector import LandMarkDetecotr
 from app.core.processers.laster_detector import LasterDetector
 from app.log.logtool import mylog_error, mylog_debug
 from app.status import HockStatus
-import gevent
+# import gevent
 
 
 class ProcessThread(QThread):
@@ -70,10 +70,16 @@ class ProcessThread(QThread):
 	def run(self):
 
 		while self.play and self.IMAGE_HANDLE:
-			# sleep(1 / 8)
+			sleep(1 / 13)
 			show = self.IMAGE_HANDLE.read()
 			if show is None:
-				break
+				print("is none")
+				continue
+
+			# if show.ndim == 3:
+			# 	show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
+			# elif show.ndim == 2:
+			# 	show = cv2.cvtColor(show, cv2.COLOR_GRAY2BGR)
 
 			dest = self.compute_img(show) if self.work else show
 
@@ -235,16 +241,18 @@ class ProcessThread(QThread):
 
 			return distance
 
-		gent_list = []
-		for index, bag in enumerate(bags):
-			task = gevent.spawn(__compute_distance, bag, laster)
-			gent_list.append(task)
-		gevent.joinall(gent_list)
+		# gent_list = []
+		distances=[__compute_distance(bag,laster) for bag in bags]
+		# for index, bag in enumerate(bags):
+			# task = gevent.spawn(__compute_distance, bag, laster)
+			# distance=__compute_distance(bag,laster)
+			# gent_list.append(task)
+		# gevent.joinall(gent_list)
 
 		min_distance, choose_index = 10000, 0
-		for index, g in enumerate(gent_list):
-			if g.value < min_distance:
-				min_distance = g.value
+		for index, d in enumerate(distances):
+			if d < min_distance:
+				min_distance = d
 				choose_index = index
 
 		return choose_index

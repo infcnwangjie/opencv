@@ -3,6 +3,7 @@ import os
 import sys
 import cv2
 from PyQt5.QtWidgets import QApplication, QMainWindow
+
 from app.views.main_window import CenterWindow, MainWindow
 
 '''
