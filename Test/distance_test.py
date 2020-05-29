@@ -1,4 +1,5 @@
 import math
+import time
 
 import cv2
 
@@ -82,6 +83,10 @@ def test_one_image():
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
 
+def time_test():
+	time_str=time.strftime("%Y%m%d%X",time.localtime()).replace(":","")
+	print(time_str)
 
 if __name__ == '__main__':
-	test_one_image()
+	# test_one_image()
+	time_test()

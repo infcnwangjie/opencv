@@ -52,7 +52,11 @@ class IntelligentProcess(object):
 		行车紧急停止
 		:return:
 		'''
-		self.plchandle.ugent_stop()
+		self.intelligentthread.work = False
+		try:
+			self.plchandle.ugent_stop()
+		except:
+			pass
 
 	def resetplc(self):
 		'''
@@ -60,3 +64,12 @@ class IntelligentProcess(object):
 		:return:
 		'''
 		self.plchandle.reset()
+
+	def save_video(self):
+		'''
+		留存
+		:return:
+		'''
+		# self.plchandle.reset()
+		self.intelligentthread.save_video = not self.intelligentthread.save_video
+		print("录像功能为:{}".format(self.intelligentthread.save_video))

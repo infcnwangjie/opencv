@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter, QListView, \
 	QListWidgetItem
 
-from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR
+from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR, SAVE_VIDEO_DIR
 from app.core.autowork.process import IntelligentProcess
 from app.core.plc.plchandle import PlcHandle
 from app.core.video.imageprovider import ImageProvider
@@ -24,7 +24,7 @@ SET_ROI = False
 
 
 class CentWindowUi(object):
-	movie_pattern = re.compile("Video_(?P<time>\d+).avi")
+	movie_pattern = re.compile("[A-Za-z]+_(?P<time>\d+).avi")
 
 	def setupUi(self, Form):
 		Form.setObjectName("Form")
@@ -126,6 +126,14 @@ class CentWindowUi(object):
 		self.setLayout(all_layout)
 		self.retranslateUi(Form)
 
+
+	def add_save_video(self,save_video_name=None):
+		if save_video_name is not None:
+			child = QTreeWidgetItem(self.saved_root)
+			child.setText(0, save_video_name)
+			child.setIcon(0, QIcon(":icons/video.png"))
+			self.saved_root.addChild(child)
+
 	def init_video_tree(self):
 		'''
 		构建视频树形列表
@@ -134,30 +142,51 @@ class CentWindowUi(object):
 		try:
 			if not os.path.exists(VIDEO_DIR):
 				os.makedirs(VIDEO_DIR)
+			if not os.path.exists(SAVE_VIDEO_DIR):
+				os.mkdir(SAVE_VIDEO_DIR)
 		except:
 			pass
-		videos = []
-		for file in os.listdir(VIDEO_DIR):
-			matchresult = re.match(self.movie_pattern, file)
-			print(matchresult.group(0))
+		# haikang_videos = []
+		# for file in os.listdir(VIDEO_DIR):
+		# 	matchresult = re.match(self.movie_pattern, file)
+		# 	# print(matchresult.group(0))
+		# 	if matchresult:
+		# 		haikang_videos.append(matchresult.group(0))
+
+		save_videos = []
+		for item_file in os.listdir(SAVE_VIDEO_DIR):
+			matchresult = re.match(self.movie_pattern, item_file)
+			# print(matchresult.group(0))
 			if matchresult:
-				videos.append(matchresult.group(0))
+				save_videos.append(matchresult.group(0))
+
 		self.tree = QTreeWidget()
 		self.tree.setHeaderLabels(['已存文档'])
 		self.tree.setColumnCount(1)
 		self.tree.setColumnWidth(0, 200)
-		groupinfo = itertools.groupby(videos, key=lambda videofile: videofile[0:10])
-		for datestr, files in groupinfo:
-			video_level_root = QTreeWidgetItem(self.tree)
-			video_level_root.setText(0, datestr)
-			video_level_root.setIcon(0, QIcon(":icons/catalogue.png"))
-			for filepath in files:
-				child = QTreeWidgetItem(video_level_root)
-				child.setText(0, filepath)
-				# child1.setText(1, 'ios')
-				child.setIcon(0, QIcon(":icons/video.png"))
-				# child1.setCheckState(0, Qt.Checked)
-				video_level_root.addChild(child)
+		# haikang_groupinfo = itertools.groupby(haikang_videos, key=lambda videofile: videofile[0:14])
+		# for datestr, files in haikang_groupinfo:
+		# 	video_level_root = QTreeWidgetItem(self.tree)
+		# 	video_level_root.setText(0, datestr)
+		# 	video_level_root.setIcon(0, QIcon(":icons/catalogue.png"))
+		# 	for filepath in files:
+		# 		child = QTreeWidgetItem(video_level_root)
+		# 		child.setText(0, filepath)
+		# 		# child1.setText(1, 'ios')
+		# 		child.setIcon(0, QIcon(":icons/video.png"))
+		# 		# child1.setCheckState(0, Qt.Checked)
+		# 		video_level_root.addChild(child)
+
+		self.saved_root = QTreeWidgetItem(self.tree)
+		self.saved_root.setText(0, "视频留痕")
+		self.saved_root.setIcon(0, QIcon(":icons/catalogue.png"))
+		for save_video in save_videos:
+			child = QTreeWidgetItem(self.saved_root)
+			child.setText(0, save_video)
+			child.setIcon(0, QIcon(":icons/video.png"))
+			self.saved_root.addChild(child)
+
+
 		self.tree.clicked.connect(self.onTreeClicked)
 		self.tree.expandAll()
 
@@ -176,8 +205,8 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
 		self.plchandle = PlcHandle()
-		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label,plchandle=self.plchandle)
-
+		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label, plchandle=self.plchandle)
+		self.process.intelligentthread.update_savevideo.connect(self.add_save_video)
 		self.check_test_status()
 		self.check_plc_status()
 
@@ -195,7 +224,7 @@ class CenterWindow(QWidget, CentWindowUi):
 
 	def onTreeClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
-		filename = os.path.join(VIDEO_DIR, item.text(0))
+		filename = os.path.join(SAVE_VIDEO_DIR, item.text(0))
 
 		if filename and os.path.isfile(filename) and os.path.exists(filename):
 			imagehandle = ImageProvider(videofile=filename, ifsdk=False)
@@ -216,16 +245,17 @@ class CenterWindow(QWidget, CentWindowUi):
 	def startwork(self):
 		'''这是正儿八经的开始移动行车
 		'''
-		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
-		imagehandle = ImageProvider( ifsdk=True)
-		self.process.IMGHANDLE = imagehandle
-		if self.process.IMGHANDLE:
-			self.process.IMGHANDLE=imagehandle
-			self.process.intelligentthread.play = True
-			self.process.intelligentthread.start()
-		else:
+		self.process.intelligentthread.work = True
+		try:
+			imagehandle = ImageProvider(ifsdk=True)
+			self.process.IMGHANDLE = imagehandle
+			if self.process.IMGHANDLE:
+				self.process.IMGHANDLE = imagehandle
+				self.process.intelligentthread.play = True
+				self.process.intelligentthread.start()
+		except:
 			QMessageBox.warning(self, "警告",
-			                    self.tr("还没有开启摄像头或者选择播放视频!"))
+				                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
 
 	def quickly_stop_work(self):
 		print("stop work")
@@ -238,6 +268,13 @@ class CenterWindow(QWidget, CentWindowUi):
 		'''
 		print("stop work")
 		self.process.resetplc()
+
+	def save_video(self):
+		'''
+		留存，数据处理留存
+		:return:
+		'''
+		self.process.save_video()
 
 	def stop(self):
 		'''暂停摄像机'''
@@ -297,10 +334,10 @@ class MainWindow(QMainWindow):
 		reset_plcAction.setStatusTip('行车复位')
 		reset_plcAction.triggered.connect(self.resetplc)
 
-		# recover_workAction = QAction(QIcon(":icons/quickly_stop.png"), '紧急停止', self)
-		# quickly_stop_workAction.setShortcut('Ctrl+s')
-		# quickly_stop_workAction.setStatusTip('紧急停止')
-		# quickly_stop_workAction.triggered.connect(self.stop_work)
+		video_save_action = QAction(QIcon(":icons/savevideo.png"), '视频留存', self)
+		video_save_action.setShortcut('Ctrl+l')
+		video_save_action.setStatusTip('视频留存')
+		video_save_action.triggered.connect(self.save_video)
 
 		menubar = self.menuBar()
 		fileMenu = menubar.addMenu('&文件')
@@ -331,6 +368,9 @@ class MainWindow(QMainWindow):
 
 		resetToolBar = self.addToolBar("ResetPlc")
 		resetToolBar.addAction(reset_plcAction)
+
+		savevideoToolBar = self.addToolBar("SaveVideo")
+		savevideoToolBar.addAction(video_save_action)
 
 		self.setWindowTitle('Main window')
 		self.statusBar().show()
@@ -374,5 +414,11 @@ class MainWindow(QMainWindow):
 		print("resetplc")
 		try:
 			self.centralwidget.reset_plc()
+		except Exception as e:
+			raise e
+
+	def save_video(self):
+		try:
+			self.centralwidget.save_video()
 		except Exception as e:
 			raise e

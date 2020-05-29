@@ -197,6 +197,8 @@ class SdkHandle(object):
 
 	def __del__(self):
 		# ch:停止取流 | en:Stop grab image
+		if not hasattr(self,'cam') or self.cam is None:
+			return
 		ret = self.cam.MV_CC_StopGrabbing()
 		if ret != 0:
 			print("stop grabbing fail! ret[0x%x]" % ret)

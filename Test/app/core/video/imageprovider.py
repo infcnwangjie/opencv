@@ -39,6 +39,7 @@ class ImageProvider(object):
 	def __del__(self):
 		'''释放sdk句柄，或者opencv句柄'''
 		try:
-			self.IMG_HANDLE.release()
+			if hasattr(self,'IMG_HANDLE') and self.IMG_HANDLE is not None:
+				self.IMG_HANDLE.release()
 		except SdkException as e:
 			raise e
