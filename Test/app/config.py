@@ -1,10 +1,8 @@
 # encoding:utf-8
 import os
-import re
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 基准目录
-
 
 DETECT_BY_MULTIPLEAREA = 0  # 多区域混合计算
 
@@ -14,23 +12,22 @@ DISTANCE_LASTER_HOCK_X = 60  # 灯与钩子X轴误差距离60cm
 
 DISTANCE_LASTER_HOCK_Y = 60  # 灯与钩子Y轴误差距离60cm
 
-DEBUG = False
-SDK_OPEN = True
+DEBUG = False  #开启测试模式
+SDK_OPEN = True #开启海康摄像头
 
 DISTANCE_SAMEXLANDMARK_SPACE = 200 if not DEBUG else 20  # 地标与地标之间间隔大概2米
 
 DISTANCE_SAMEYLANDMARK_SPACE = 400  # 地标与地标之间间隔大概2米
 
 #######################################################################################
-IMG_WIDTH = 900
-IMG_HEIGHT = 700
-LEFT_MARK_FROM = int(0.168 * IMG_WIDTH)
-LEFT_MARK_TO = int(0.195 * IMG_WIDTH)
-RIGHT_MARK_FROM = int(0.848 * IMG_WIDTH)
-RIGHT_MARK_TO = int(0.876 * IMG_WIDTH)
+IMG_WIDTH = 900  #限定图像宽度
+IMG_HEIGHT = 700 #限定图像高度
+LEFT_MARK_FROM = int(0.168 * IMG_WIDTH) #左侧部分开始
+LEFT_MARK_TO = int(0.195 * IMG_WIDTH) #左侧部分结束
+RIGHT_MARK_FROM = int(0.848 * IMG_WIDTH) #右侧部分开始
+RIGHT_MARK_TO = int(0.876 * IMG_WIDTH) #右侧部分结束
 
-#####海康威视图像动态连接库#############################################################
-MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
+MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll' #海康威视图像动态连接库
 
 
 VIDEO_DIR = 'D:/PIC/MV-CA060-10GC (00674709176)' # 海康视频路径

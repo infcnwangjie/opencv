@@ -34,7 +34,13 @@ def add_picture(img1, img2):
 
 class BagDetector(BaseDetector):
 	'''
-	袋子检测算法
+	袋子检测算法:
+	methods:{
+	location_bags:调用findbags,获取袋子目标前景图以及轮廓；
+	findbags: 通过颜色值获取袋子目标；
+	轮廓检测规则:去除面积太大或太小的目标，依据为轮廓区域面积；
+	以及袋子目标坐标区域；
+	}
 	'''
 
 	def __init__(self, img=None):

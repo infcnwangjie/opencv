@@ -231,6 +231,12 @@ class ProcessThread(QThread):
 		            (255, 255, 255), 2)
 
 		cv2.putText(dest, move_info, (460, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+
+		error_info = "ERROR:{},{},{}".format(abs(target_x - current_car_x), abs(target_y - current_car_y),
+		                                     abs(target_z - current_car_z))
+		logger(error_info, level='info')
+		cv2.putText(dest, error_info, (460, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+		            (255, 255, 255), 2)
 		print("will get to {},{}".format(choosed_bag.x, choosed_bag.y))
 		return dest
 
