@@ -75,7 +75,7 @@ class ProcessThread(QThread):
 
 	def run(self):
 		save_video_name = time.strftime("%Y%m%d%X", time.localtime()).replace(":", "")
-		save_video_name = "saved_" + save_video_name+'.avi'
+		save_video_name = "saved_" + save_video_name + '.avi'
 		if self.save_video:
 			fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 保存视频的编码
 			out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, save_video_name), fourcc, 20.0, (900, 700))
@@ -105,9 +105,11 @@ class ProcessThread(QThread):
 
 			dest = self.compute_img(show) if self.work else show
 
-			dest = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
+
 			if self.save_video:
 				out.write(dest)
+
+			dest = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
 
 			finalimg = QImage(dest.data, dest.shape[1], dest.shape[0], QImage.Format_RGB888)
 			self.video_player.setPixmap(QPixmap.fromImage(finalimg))
@@ -309,6 +311,11 @@ class ProcessThread(QThread):
 				            (255, 255, 255), 2)
 			current_hock_info = "HOCK->X:{},Y:{}".format(current_car_x, current_car_y)
 			cv2.putText(dest, current_hock_info, (460, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+			            (255, 255, 255), 2)
+
+			error_info = "ERROR:{},{},{}".format(abs(target_x - current_car_x), abs(target_y - current_car_y),
+			                                     abs(target_z - current_car_z))
+			cv2.putText(dest, error_info, (460, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
 
 			# 智能识别紧急停止行车
