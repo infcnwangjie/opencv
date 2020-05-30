@@ -93,7 +93,6 @@ class ProcessThread(QThread):
 					print("plc is not in use")
 					break
 				if self.save_video:
-					print("发射更新保存按钮")
 					self.update_savevideo.emit(save_video_name)
 				break
 
