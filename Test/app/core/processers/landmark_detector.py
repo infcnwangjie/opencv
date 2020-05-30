@@ -554,7 +554,6 @@ class LandMarkDetecotr(AbstractDetector):
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
 			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
-			#
 			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
 			foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
 			# foreground = self.find_it(target_hsvt, img_roi_hsvt)

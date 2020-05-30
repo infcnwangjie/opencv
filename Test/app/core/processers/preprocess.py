@@ -152,22 +152,7 @@ class AbstractDetector(metaclass=SmallWords):
 	# 	cv2.imshow('targetimg', targetimg)
 	# 	cv2.waitKey(0)
 
-	# @classmethod
-	# def find_it(cls, input, model):
-	#
-	# 	input_h, input_w = input.shape[0], input.shape[1]
-	# 	m_h, m_w = model.shape[0], model.shape[1]
-	#
-	# 	frame_data = np.array(input, dtype=np.uint8)
-	#
-	# 	frame_data = frame_data.ctypes.data_as(ctypes.c_char_p)
-	#
-	# 	model_data = np.asarray(model, dtype=np.uint8)
-	# 	model_data = model_data.ctypes.data_as(ctypes.c_char_p)
-	# 	cls.OPENCV_SUPPLYDLL.find_it.restype = ctypes.POINTER(ctypes.c_uint8)
-	# 	pointer = cls.OPENCV_SUPPLYDLL.find_it(frame_data, model_data, input_w, input_h, m_w, m_h)
-	# 	result_img = np.array(np.fromiter(pointer, dtype=np.uint8, count=input_h * input_w))
-	# 	return result_img.reshape((input_h, input_w))
+
 
 	@classmethod
 	def error_causedby_angel_height(cls, target=None, width_start=130, width_end=160):
