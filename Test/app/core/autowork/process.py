@@ -3,11 +3,7 @@ from PyQt5.QtGui import QImage, QPixmap
 
 from app.core.autowork.processthread import ProcessThread
 from app.core.autowork.plcthread import PlcThread
-from app.core.processers.landmark_detector import LandMarkDetecotr
 from app.core.plc.plchandle import PlcHandle
-from app.core.beans.locationservice import PointLocationService
-from app.core.processers.bag_detector import BagDetector
-from app.core.processers.laster_detector import LasterDetector
 from app.log.logtool import logger
 from app.status import HockStatus
 

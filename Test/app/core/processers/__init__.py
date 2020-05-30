@@ -15,9 +15,8 @@ class SmallWords(type):
 		if attrs is None:
 			attrs = {}
 		attrs['logger'] = logger
-		# attrs['find_it'] = findit
+		attrs['find_it'] = partial(cv2.calcBackProject,channels=[0, 1],ranges=[0, 180, 0, 256],scale=1)
 		cls.instance = None
-
 		return super().__new__(cls, name, bases, attrs)
 
 	def __call__(self, *args, **kwargs):

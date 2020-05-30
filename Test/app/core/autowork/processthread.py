@@ -12,10 +12,8 @@ from PyQt5.QtGui import QImage, QPixmap
 from app.config import IMG_WIDTH, IMG_HEIGHT, SAVE_VIDEO_DIR
 from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
 from app.core.plc.plchandle import PlcHandle
-from app.core.beans.locationservice import PointLocationService, BAG_AND_LANDMARK
-from app.core.processers.bag_detector import BagDetector
-from app.core.processers.landmark_detector import LandMarkDetecotr
-from app.core.processers.laster_detector import LasterDetector
+from app.core.processers.preprocess import LandMarkDetecotr, BagDetector, LasterDetector
+
 from app.log.logtool import mylog_error, mylog_debug, logger
 from app.status import HockStatus
 
