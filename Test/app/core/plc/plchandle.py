@@ -5,6 +5,9 @@ import modbus_tk
 import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
 
+from app.config import PLC_COM
+from app.log.logtool import logger
+
 EAST_PLC = 0x0FA0  # 4000    东写入地址
 WEST_PLC = 0x0FA1  # 4001    西写入地址
 SOUTH_PLC = 0x0FA2  # 4002   南写入地址
@@ -25,7 +28,7 @@ class PlcHandle(object):
 	'''
 	instance = None
 
-	def __init__(self, plc_port='COM7', timeout=0.3):
+	def __init__(self, plc_port=PLC_COM, timeout=0.3):
 		self.port = plc_port
 		self.timeout = timeout
 		self._plc_status = False
@@ -100,7 +103,7 @@ class PlcHandle(object):
 		:return:
 		'''
 		if not hasattr(self, 'master') or self.master is None:
-			return
+			logger("PLC 无法写入，请检查端口",level='error')
 		self.master.execute(1, cst.WRITE_SINGLE_REGISTER, address, output_value=value)
 
 	def is_open(self):
@@ -112,7 +115,7 @@ class PlcHandle(object):
 			self.info()
 			self._plc_status = True
 		except Exception as e:
-			print(e)
+			logger("PLC 连接失败，请检查端口",level='error')
 			self._plc_status = False
 
 		return self._plc_status
@@ -128,6 +131,7 @@ class PlcHandle(object):
 			self.master.set_timeout(self.timeout)  # PLC 延迟
 			self.master.set_verbose(True)
 		except Exception as exc:
+			logger("PLC 连接失败，请检查端口", level='error')
 			self._plc_status = False
 
 	def read_status(self):
@@ -141,7 +145,7 @@ class PlcHandle(object):
 		#                            quantity_of_x=1)
 		# status_value = info[0]
 		except modbus_tk.modbus.ModbusError as exc:
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+			logger("PLC 无法读取数值，请检查端口", level='error')
 		return result
 
 	def move(self, east=0, west=0, south=0, nourth=0, up=0, down=0):
@@ -168,8 +172,8 @@ class PlcHandle(object):
 			if down != 0:
 				self.__write(DOWN_PLC, int(down))
 
-		except modbus_tk.modbus.ModbusError as exc:
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+		except Exception as exc:
+			logger("PLC 无法写入数值，请检查端口", level='error')
 
 	def ugent_stop(self):
 		'''
@@ -177,6 +181,15 @@ class PlcHandle(object):
 		'''
 		# self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_STOP_PLC, output_value=1)  # 写入
 		self.__write(HOCK_STOP_PLC, 1)
+		# 运动状态清零
+		self.__write(HOCK_MOVE_STATUS_PLC, 0)
+		self.__write(EAST_PLC, 0)
+		self.__write(WEST_PLC, 0)
+		self.__write(SOUTH_PLC, 0)
+		self.__write(NORTH_PLC, 0)
+		self.__write(UP_PLC, 0)
+		self.__write(DOWN_PLC, 0)
+		self.__write(HOCK_RESET_PLC, 0)
 
 	def is_ugent_stop(self):
 		result = self.__read(HOCK_STOP_PLC)
@@ -198,9 +211,8 @@ class PlcHandle(object):
 			self.__write(UP_PLC, 0)
 			self.__write(DOWN_PLC, 0)
 
-
 		except Exception as e:
-			pass
+			logger("PLC 无法写入数值，请检查端口", level='error')
 
 	def info(self):
 		info = "E:{},W:{},N:{},S:{},UP:{},DOWN:{}".format(self.__read(EAST_PLC), self.__read(WEST_PLC),

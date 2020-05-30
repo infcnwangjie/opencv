@@ -16,7 +16,7 @@ from app.core.beans.locationservice import PointLocationService, BAG_AND_LANDMAR
 from app.core.processers.bag_detector import BagDetector
 from app.core.processers.landmark_detector import LandMarkDetecotr
 from app.core.processers.laster_detector import LasterDetector
-from app.log.logtool import mylog_error, mylog_debug
+from app.log.logtool import mylog_error, mylog_debug, logger
 from app.status import HockStatus
 
 
@@ -75,10 +75,10 @@ class ProcessThread(QThread):
 
 	def run(self):
 		save_video_name = time.strftime("%Y%m%d%X", time.localtime()).replace(":", "")
-		save_video_name = "saved_" + save_video_name + '.avi'
+		self.save_video_name = "saved_" + save_video_name + '.avi'
 		if self.save_video:
 			fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 保存视频的编码
-			out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, save_video_name), fourcc, 20.0, (900, 700))
+			out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, self.save_video_name), fourcc, 20.0, (900, 700))
 
 		# index = 0
 		while self.play and self.IMAGE_HANDLE:
@@ -90,7 +90,8 @@ class ProcessThread(QThread):
 				try:
 					self.plchandle.reset()
 				except:
-					print("plc is not in use")
+					# print("plc is not in use")
+					logger("PLC连接失败", 'error')
 					break
 				if self.save_video:
 					self.update_savevideo.emit(save_video_name)
@@ -104,7 +105,6 @@ class ProcessThread(QThread):
 
 			dest = self.compute_img(show) if self.work else show
 
-
 			if self.save_video:
 				out.write(dest)
 
@@ -115,12 +115,12 @@ class ProcessThread(QThread):
 			self.video_player.setScaledContents(True)
 
 		if self.save_video:
-			self.update_savevideo.emit(save_video_name)
+			self.update_savevideo.emit(self.save_video_name)
 		# 程序执行结束要重置PLC
 		try:
 			self.plchandle.reset()
 		except:
-			pass
+			logger("PLC重置失败", 'error')
 
 	def compute_img(self, show):
 		'''
@@ -131,13 +131,29 @@ class ProcessThread(QThread):
 		dest, find_landmark = self.landmark_detect.position_landmark(show)
 
 		if not find_landmark:
-			# 当前帧，地标定位失败
+			self.find_objects_first(msg="没有发现地标，向东移动1米")
 			return dest
 
 		if self.plchandle.is_open():
 			return self.processimg_plcopen(dest, find_landmark)
 		else:
 			return self.processimg_plcclose(dest, find_landmark)
+
+	def find_objects_first(self, msg=None):
+		'''
+		看不到地标或者看不到目标，是因为还没有进入视野
+		:return:
+		'''
+		try:
+			move_status = self.plchandle.read_status()
+			is_ugent_stop = self.plchandle.is_ugent_stop()
+			# 确保行车没有被紧急停止或者没有在运动状态中
+			if move_status == 0 and is_ugent_stop == 0:
+				self.plchandle.move(east=100)
+				if msg is not None:
+					logger(msg, 'info')
+		except Exception as e:
+			logger("plc没有开启或者连接失败", "error")
 
 	def processimg_plcclose(self, dest, find_landmark):
 		'''
@@ -234,14 +250,17 @@ class ProcessThread(QThread):
 			# 当前帧，钩子定位失败
 			self.landmark_detect.draw_grid_lines(dest)
 			return dest
-		print("激光斑点坐标 is ({x},{y})".format(x=laster.x, y=laster.y))
+
+		logger("激光斑点坐标 is ({x},{y})".format(x=laster.x, y=laster.y), 'info')
 		self.history_laster_travel.append((laster.x, laster.y))  # 记录激光灯移动轨迹，用来纠偏
 		bags, bag_forground = self.bag_detect.location_bags(dest, dest_copy, find_landmark, middle_start=100,
 		                                                    middle_end=400)
 		if bags is None or len(bags) == 0:
 			# 袋子检测失败
+			self.find_objects_first(msg="没有发现袋子，向东移动一米")
 			self.landmark_detect.draw_grid_lines(dest)
 			return dest
+
 		if self.history_bags is not None and len(self.history_bags) > 0:
 			last_time_bags = self.history_bags[-1]
 			# 检测到的袋子忽多忽少的情况，一定是不稳定的；
@@ -251,9 +270,8 @@ class ProcessThread(QThread):
 				return dest
 		choose_index = self.choose_nearest_bag(bags, laster)
 		choosed_bag = bags[choose_index]
-		print("will get to {},{}".format(choosed_bag.x, choosed_bag.y))
+		logger("find nearest bag->({},{})".format(choosed_bag.x, choosed_bag.y), level='info')
 		try:
-			# self.plchandle.ugent_stop()
 			move_status = self.plchandle.read_status()
 			is_ugent_stop = self.plchandle.is_ugent_stop()
 
@@ -266,8 +284,6 @@ class ProcessThread(QThread):
 				self.landmark_detect.draw_grid_lines(dest)
 				return dest
 
-			print("移动状态为：{}".format(move_status))
-
 			# 视频中行车激光位置，钩子的位置需要定位
 			current_car_x, current_car_y, current_car_z = laster.x, laster.y + 100, 0
 			# self.hock_points.append(current_car_x, current_car_y)
@@ -275,6 +291,7 @@ class ProcessThread(QThread):
 			# 写入目标坐标
 			target_x, target_y, target_z = choosed_bag.x, choosed_bag.y, 0
 			target_info = "bag_X:{},bag_Y:{}".format(target_x, target_y)
+			logger(target_info, level='info')
 			cv2.putText(dest, target_info, (460, 300), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
 
@@ -296,31 +313,41 @@ class ProcessThread(QThread):
 				move_info += ",to E {} cm".format(east)
 
 			if target_z - current_car_z > 0:
-				up = abs(target_y - current_car_y)
+				up = abs(target_z - current_car_z)
 				move_info += ",UP {} cm".format(up)
 			else:
-				down = abs(target_y - current_car_y)
+				down = abs(target_z - current_car_z)
 				move_info += ",DOWN {} cm".format(down)
 
 			self.plchandle.move(east=east, west=west, south=south, nourth=north, up=up, down=down)
+			logger(move_info, level='info')
 			self.input_move_instructs.append(move_info)
 
 			if len(self.input_move_instructs) > 0:
 				cv2.putText(dest, self.input_move_instructs[-1], (460, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 				            (255, 255, 255), 2)
 			current_hock_info = "HOCK->X:{},Y:{}".format(current_car_x, current_car_y)
+			logger(current_hock_info, 'info')
 			cv2.putText(dest, current_hock_info, (460, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
 
 			error_info = "ERROR:{},{},{}".format(abs(target_x - current_car_x), abs(target_y - current_car_y),
 			                                     abs(target_z - current_car_z))
+			logger(error_info, level='info')
 			cv2.putText(dest, error_info, (460, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
 
 			# 智能识别紧急停止行车
 			if current_car_y == 0 or current_car_y > 800 or current_car_x == 0 or current_car_x > 500 or current_car_x < 0 or current_car_y < 0:
-				print(" ugent_stop {},{},{}".format(current_car_x, current_car_y, current_car_z))
+
+				cv2.putText(dest, " ugent_stop {},{},{}".format(current_car_x, current_car_y, current_car_z),
+				            (260, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+				            (255, 255, 255), 2)
+				self.work = False
+				if self.save_video:
+					self.update_savevideo.emit(self.save_video_name)
 				self.plchandle.ugent_stop()
+
 
 		except Exception as e:
 			print(e)
@@ -353,13 +380,7 @@ class ProcessThread(QThread):
 
 			return distance
 
-		# gent_list = []
 		distances = [__compute_distance(bag, laster) for bag in bags]
-		# for index, bag in enumerate(bags):
-		# task = gevent.spawn(__compute_distance, bag, laster)
-		# distance=__compute_distance(bag,laster)
-		# gent_list.append(task)
-		# gevent.joinall(gent_list)
 
 		min_distance, choose_index = 10000, 0
 		for index, d in enumerate(distances):

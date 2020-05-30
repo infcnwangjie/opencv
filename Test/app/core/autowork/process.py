@@ -8,6 +8,7 @@ from app.core.plc.plchandle import PlcHandle
 from app.core.beans.locationservice import PointLocationService
 from app.core.processers.bag_detector import BagDetector
 from app.core.processers.laster_detector import LasterDetector
+from app.log.logtool import logger
 from app.status import HockStatus
 
 
@@ -53,10 +54,14 @@ class IntelligentProcess(object):
 		:return:
 		'''
 		self.intelligentthread.work = False
+
 		try:
 			self.plchandle.ugent_stop()
-		except:
-			pass
+			if self.intelligentthread.save_video:
+				self.intelligentthread.update_savevideo.emit(self.intelligentthread.save_video)
+		except Exception as e:
+			logger(e.__str__(),"error")
+
 
 	def resetplc(self):
 		'''

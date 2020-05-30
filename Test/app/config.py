@@ -2,11 +2,9 @@
 import os
 import re
 
-from app.log.logtool import mylog_error
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 基准目录
 
-mylog_error(BASE_DIR)
 
 DETECT_BY_MULTIPLEAREA = 0  # 多区域混合计算
 
@@ -34,22 +32,14 @@ RIGHT_MARK_TO = int(0.876 * IMG_WIDTH)
 #####海康威视图像动态连接库#############################################################
 MVCAMERACONTROLDLL_PATH = 'C:/Program Files/MVS/MvCameraControl.dll'
 
-####PLC存放变量地址#####################################################################
-EAST_PLC = 0x0FA0  # 4000    东写入地址
-WEST_PLC = 0x0FA1  # 4001    西写入地址
-SOUTH_PLC = 0x0FA2  # 4002   南写入地址
-NORTH_PLC = 0x0FA3  # 4003   北写入地址
-UP_PLC = 0x0FA4  # 4004      上写入地址
-DOWN_PLC = 0x0FA5  # 4005    下写入地址
 
-HOCK_MOVE_STATUS_PLC = 0x0FA6  # 4006  行车移动状态写入地址  1：运动  0:静止
-HOCK_STOP_PLC = 0x0FA7  # 4007   强制停止写入地址  1:停止  0: 取消限制
-HOCK_RESET_PLC = 0x0FA8  # 4008   行车复位写入地址  1 复位 0：取消复位
-# print(NEG_TEMPLATES_PATH)
-
-VIDEO_DIR = 'D:/PIC/MV-CA060-10GC (00674709176)'
-ROIS_DIR = 'D:/NTY_IMG_PROCESS/ROIS'
-SAVE_VIDEO_DIR='D:/NTY_IMG_PROCESS/VIDEO'
-PROGRAM_DATA_DIR = 'D:/NTY_IMG_PROCESS/DATA'
-BAGROI_DIR = "D:/NTY_IMG_PROCESS/BAG_ROI"
+VIDEO_DIR = 'D:/PIC/MV-CA060-10GC (00674709176)' # 海康视频路径
+ROIS_DIR = 'D:/NTY_IMG_PROCESS/ROIS' #海康ROI存储路径
+SAVE_VIDEO_DIR='D:/NTY_IMG_PROCESS/VIDEO' #视频留存路径
+PROGRAM_DATA_DIR = 'D:/NTY_IMG_PROCESS/DATA' #其他数据存储路径
+BAGROI_DIR = "D:/NTY_IMG_PROCESS/BAG_ROI" #袋子ROI存储
 SUPPORTREFROI_DIR = "D:/NTY_IMG_PROCESS/SUPPORT_ROI"
+
+LOG_PATH="D:/NTY_IMG_PROCESS/LOGS"# 日志存储文档
+
+PLC_COM='COM7' #PLC端口号

@@ -364,7 +364,7 @@ class LandMarkDetecotr(AbstractDetector):
 		for landmark_roi in self.rois:
 			landmark = landmark_roi.landmark
 			if landmark is None or landmark_roi.label not in self.ALL_LANDMARKS_DICT:
-				self.logger("{} miss landmark".format(landmark_roi.label), "warn")
+				# self.logger("{} miss landmark".format(landmark_roi.label), "warn")
 				continue
 
 			col = landmark.col

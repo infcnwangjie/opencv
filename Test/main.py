@@ -7,11 +7,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from app.views.main_window import CenterWindow, MainWindow
 
 '''
-today to do:
-	钩子位置还没有定位，只是用激光灯定位了钩子的xY，钩子的Z轴需要识别钩子
- １、视频识别软件，袋子检测位置去重与排除异常袋子 已搞定
- 2、视频识别软件，加入实时纠偏 已搞定
- 3、视频识别软件，加入是否越界判断 已加入
+#TODO 5.30 
+1、如果视频识别看不到地标怎么处理   向前移动一米
+2、如果视频软件看不到目标怎么处理   向前移动一米
+3、如果视频中袋子数目是0，怎么处理
+4、怎么真正防止行车越界造成危险
 '''
 
 if __name__ == '__main__':
