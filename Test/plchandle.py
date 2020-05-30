@@ -5,6 +5,7 @@ import modbus_tk
 import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
 
+
 EAST_PLC = 0x0FA0  # 4000    东写入地址
 WEST_PLC = 0x0FA1  # 4001    西写入地址
 SOUTH_PLC = 0x0FA2  # 4002   南写入地址
@@ -17,18 +18,42 @@ HOCK_STOP_PLC = 0x0FA7  # 4007   强制停止写入地址  1:停止  0: 取消�
 HOCK_RESET_PLC = 0x0FA8  # 4008   行车复位写入地址  1 复位 0：取消复位
 
 
-class PlcHandle:
+class PlcHandle(object):
 	'''
 	东西南北上下
 	紧急停止
 	复位 寄存器清零
 	'''
+	instance = None
 
-	def __init__(self, plc_port='COM7', timeout=0.3):
+	def __init__(self, plc_port="COM7", timeout=0.3):
 		self.port = plc_port
 		self.timeout = timeout
 		self._plc_status = False
 		self.init_plc()
+
+	def __new__(cls, *args, **kwargs):
+		if cls.instance == None:
+			cls.instance = super().__new__(cls)
+		return cls.instance
+
+	def change_port(self, port):
+		'''
+			切换PLC端口
+			:return:
+		'''
+		try:
+			# self.logger = modbus_tk.utils.create_logger("console")
+			self.master = modbus_rtu.RtuMaster(
+				serial.Serial(port=port, baudrate=19200, bytesize=8, parity='E', stopbits=1, xonxoff=0))
+			self.master.set_timeout(self.timeout)  # PLC 延迟
+			self.master.set_verbose(True)
+			# self.logger.info("connected")
+			self._plc_status = True
+		except Exception as exc:
+			self._plc_status = False
+			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+		return self._plc_status
 
 	def init_plc(self):
 		'''
@@ -43,9 +68,19 @@ class PlcHandle:
 			self.master.set_verbose(True)
 			self.logger.info("connected")
 			self._plc_status = True
-		except modbus_tk.modbus.ModbusError as exc:
-			self._plc_status = False
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+		except Exception as exc:
+
+			for port_index in range(0, 10):
+				port = "COM{}".format(port_index)
+				print("test COM{}".format(port_index))
+				success = self.change_port(port)
+				if success:
+					self.port = port
+					self._plc_status = True
+					break
+			else:
+				self._plc_status = False
+				self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
 
 	def __read(self, address):
 		'''
@@ -65,6 +100,8 @@ class PlcHandle:
 		:param value:
 		:return:
 		'''
+		if not hasattr(self, 'master') or self.master is None:
+			print("PLC 无法写入，请检查端口")
 		self.master.execute(1, cst.WRITE_SINGLE_REGISTER, address, output_value=value)
 
 	def is_open(self):
@@ -72,6 +109,13 @@ class PlcHandle:
 		用来检测程序是否连接了PLC
 		:return:
 		'''
+		try:
+			self.info()
+			self._plc_status = True
+		except Exception as e:
+			print("PLC 连接失败，请检查端口")
+			self._plc_status = False
+
 		return self._plc_status
 
 	def init_plc(self):
@@ -85,6 +129,7 @@ class PlcHandle:
 			self.master.set_timeout(self.timeout)  # PLC 延迟
 			self.master.set_verbose(True)
 		except Exception as exc:
+			print("PLC 连接失败，请检查端口")
 			self._plc_status = False
 
 	def read_status(self):
@@ -98,7 +143,7 @@ class PlcHandle:
 		#                            quantity_of_x=1)
 		# status_value = info[0]
 		except modbus_tk.modbus.ModbusError as exc:
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
+			print("PLC 无法读取数值，请检查端口")
 		return result
 
 	def move(self, east=0, west=0, south=0, nourth=0, up=0, down=0):
@@ -125,17 +170,8 @@ class PlcHandle:
 			if down != 0:
 				self.__write(DOWN_PLC, int(down))
 
-		except modbus_tk.modbus.ModbusError as exc:
-			self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
-
-	def current_position(self):
-		east = self.__read(EAST_PLC)
-		west = self.__read(WEST_PLC)
-		south = self.__read(SOUTH_PLC)
-		north = self.__read(NORTH_PLC)
-		up = self.__read(UP_PLC)
-		down = self.__read(DOWN_PLC)
-		return east, west, south, north, up, down
+		except Exception as exc:
+			print("PLC 无法写入数值，请检查端口")
 
 	def ugent_stop(self):
 		'''
@@ -143,6 +179,15 @@ class PlcHandle:
 		'''
 		# self.master.execute(1, cst.WRITE_SINGLE_REGISTER, HOCK_STOP_PLC, output_value=1)  # 写入
 		self.__write(HOCK_STOP_PLC, 1)
+		# 运动状态清零
+		self.__write(HOCK_MOVE_STATUS_PLC, 0)
+		self.__write(EAST_PLC, 0)
+		self.__write(WEST_PLC, 0)
+		self.__write(SOUTH_PLC, 0)
+		self.__write(NORTH_PLC, 0)
+		self.__write(UP_PLC, 0)
+		self.__write(DOWN_PLC, 0)
+		self.__write(HOCK_RESET_PLC, 0)
 
 	def is_ugent_stop(self):
 		result = self.__read(HOCK_STOP_PLC)
@@ -157,16 +202,29 @@ class PlcHandle:
 			self.__write(HOCK_STOP_PLC, 0)
 			# 运动状态清零
 			self.__write(HOCK_MOVE_STATUS_PLC, 0)
+			self.__write(EAST_PLC, 0)
+			self.__write(WEST_PLC, 0)
+			self.__write(SOUTH_PLC, 0)
+			self.__write(NORTH_PLC, 0)
+			self.__write(UP_PLC, 0)
+			self.__write(DOWN_PLC, 0)
 
 		except Exception as e:
-			pass
+			print("PLC 无法写入数值，请检查端口")
+
+	def info(self):
+		info = "E:{},W:{},N:{},S:{},UP:{},DOWN:{}".format(self.__read(EAST_PLC), self.__read(WEST_PLC),
+		                                                  self.__read(SOUTH_PLC), self.__read(NORTH_PLC),
+		                                                  self.__read(UP_PLC), self.__read(DOWN_PLC)
+		                                                  )
+		print(info)
 
 
 if __name__ == '__main__':
-	plc = PlcHandle()
-	# plc.reset()
-	print(plc.read_status())
+	plc = PlcHandle(plc_port='COM7')
+	plc.reset()
+	print(plc.is_open())
 
 	# print(plc.write_error([-1,-2,0]))
-	plc.move(east=2, nourth=3)
-	print("东:{} 西:{} 南:{} 北:{} 上:{} 下:{}".format(*plc.current_position()))
+	# plc.move(east=2, nourth=3)
+	plc.info()

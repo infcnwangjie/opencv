@@ -74,6 +74,7 @@ class ProcessThread(QThread):
 	def run(self):
 		save_video_name = time.strftime("%Y%m%d%X", time.localtime()).replace(":", "")
 		self.save_video_name = "saved_" + save_video_name + '.avi'
+		out=None
 		if self.save_video:
 			fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 保存视频的编码
 			out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, self.save_video_name), fourcc, 20.0, (900, 700))
@@ -104,6 +105,9 @@ class ProcessThread(QThread):
 			dest = self.compute_img(show) if self.work else show
 
 			if self.save_video:
+				if out is None:
+					fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 保存视频的编码
+					out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, self.save_video_name), fourcc, 20.0, (900, 700))
 				out.write(dest)
 
 			dest = cv2.cvtColor(dest, cv2.COLOR_BGR2RGB)
