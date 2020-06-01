@@ -5,7 +5,6 @@ import modbus_tk
 import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
 
-from app.config import PLC_COM
 from app.log.logtool import logger
 
 EAST_PLC = 0x0FA0  # 4000    东写入地址
@@ -19,6 +18,8 @@ HOCK_MOVE_STATUS_PLC = 0x0FA6  # 4006  行车移动状态写入地址  1：运�
 HOCK_STOP_PLC = 0x0FA7  # 4007   强制停止写入地址  1:停止  0: 取消限制
 HOCK_RESET_PLC = 0x0FA8  # 4008   行车复位写入地址  1 复位 0：取消复位
 POWER_PLC = 0x0FA9  # 4009   启动行车  1 启动  0：关闭
+
+
 
 
 class PlcHandle(object):
@@ -96,7 +97,7 @@ class PlcHandle(object):
 		try:
 			powervalue = self.__read(POWER_PLC)
 		except Exception as e:
-			logger(e.__str__(),level="error")
+			logger(e.__str__(), level="error")
 		else:
 			self._power = (powervalue == 1)
 		return self._power
@@ -111,8 +112,8 @@ class PlcHandle(object):
 		try:
 			self._power = value
 			self.__write(POWER_PLC, 1 if value else 0)
-		except:
-			pass
+		except Exception as e:
+			logger(e.__str__(), level="error")
 
 	def __read(self, address):
 		'''
@@ -171,9 +172,6 @@ class PlcHandle(object):
 		'''
 		try:
 			result = self.__read(HOCK_MOVE_STATUS_PLC)
-		# info = self.master.execute(1, cst.READ_HOLDING_REGISTERS, starting_address=HOCK_MOVE_STATUS_PLC,
-		#                            quantity_of_x=1)
-		# status_value = info[0]
 		except modbus_tk.modbus.ModbusError as exc:
 			logger("PLC 无法读取数值，请检查端口", level='error')
 		return result
@@ -220,6 +218,7 @@ class PlcHandle(object):
 		self.__write(UP_PLC, 0)
 		self.__write(DOWN_PLC, 0)
 		self.__write(HOCK_RESET_PLC, 0)
+		self.power = False
 
 	def is_ugent_stop(self):
 		result = self.__read(HOCK_STOP_PLC)
@@ -240,6 +239,7 @@ class PlcHandle(object):
 			self.__write(NORTH_PLC, 0)
 			self.__write(UP_PLC, 0)
 			self.__write(DOWN_PLC, 0)
+			self.power = False
 
 		except Exception as e:
 			logger("PLC 无法写入数值，请检查端口", level='error')

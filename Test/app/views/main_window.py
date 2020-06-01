@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 import os
+import pickle
 import re
 
 import cv2
@@ -9,9 +10,9 @@ from PyQt5.QtCore import QSize, Qt, pyqtSignal, QStringListModel
 from PyQt5.QtGui import QImage, QPixmap, QIcon, QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter, QListView, \
-	QListWidgetItem
+	QListWidgetItem, QPushButton, QToolButton
 
-from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR, SAVE_VIDEO_DIR
+from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR, SAVE_VIDEO_DIR, PROGRAM_DATA_DIR
 from app.core.autowork.process import IntelligentProcess
 from app.core.plc.plchandle import PlcHandle
 from app.core.video.imageprovider import ImageProvider
@@ -108,6 +109,15 @@ class CentWindowUi(object):
 		self.ladder_edit = QLineEdit()
 		self.ladder_edit.setReadOnly(True)
 		plc_status_layout.addRow(ladder_label, self.ladder_edit)
+
+		self.fresh_pushbutton=QToolButton()
+		self.fresh_pushbutton.setIcon(QIcon(":icons/fresh.png"))
+		self.fresh_pushbutton.setIconSize(QSize(60,60))
+		self.fresh_pushbutton.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		self.fresh_pushbutton.setText("刷新")
+		self.fresh_pushbutton.setStyleSheet("border:none")
+		self.fresh_pushbutton.clicked.connect(self.fresh_all)
+		plc_status_layout.addRow(self.fresh_pushbutton)
 
 		self.info_box.setLayout(plc_status_layout)
 
@@ -207,7 +217,10 @@ class CenterWindow(QWidget, CentWindowUi):
 		super().__init__()
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
-		self.plchandle = PlcHandle()
+		with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'rb') as comfile:
+			info = pickle.load(comfile)
+			# print(info)
+		self.plchandle = PlcHandle(plc_port=info['PLC_COM'])
 		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label, plchandle=self.plchandle)
 		self.process.intelligentthread.update_savevideo.connect(self.add_save_video)
 		self.check_test_status()
@@ -318,6 +331,11 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.process.intelligentthread.play = False
 
 
+	def fresh_all(self):
+		self.check_test_status()
+		self.check_plc_status()
+		self.check_ladder_status()
+
 class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
@@ -355,6 +373,11 @@ class MainWindow(QMainWindow):
 		setCooridnateAction.setStatusTip('设置地标')
 		setCooridnateAction.triggered.connect(self.set_cooridnate)
 
+		commonAction = QAction(QIcon(":icons/set.png"), '常规设置', self)
+		commonAction.setShortcut('Ctrl+i')
+		commonAction.setStatusTip('常规设置')
+		commonAction.triggered.connect(self.common_set)
+
 		powerAction = QAction(QIcon(":icons/power.png"), '电源', self)
 		powerAction.setShortcut('Ctrl+p')
 		powerAction.setStatusTip('梯形图启动')
@@ -381,25 +404,20 @@ class MainWindow(QMainWindow):
 		video_save_action.triggered.connect(self.save_video)
 
 		menubar = self.menuBar()
+
 		fileMenu = menubar.addMenu('&文件')
 		fileMenu.addAction(openFileAction)
 
-		roiMenu = menubar.addMenu('&设置ROI')
-		roiMenu.addAction(roisetAction)
-		cooridnateMenu = menubar.addMenu("&设置坐标系")
-		cooridnateMenu.addAction(setCooridnateAction)
+		basic_site_menu = menubar.addMenu("&基础设置")
+		basic_site_menu.addAction(commonAction)  # 常规设置
+		basic_site_menu.addAction(setCooridnateAction)  # 定位
+		basic_site_menu.addAction(roisetAction)  # roi
 
 		openFileToolBar = self.addToolBar('OpenFile')
 		openFileToolBar.addAction(openFileAction)
 
 		exitToolbar = self.addToolBar('Exit')
 		exitToolbar.addAction(exitAction)
-
-		setRoiToolbar = self.addToolBar("SetRoi")
-		setRoiToolbar.addAction(roisetAction)
-
-		setCooridnateToolBar = self.addToolBar("SetCooridnate")
-		setCooridnateToolBar.addAction(setCooridnateAction)
 
 		powerToolBar = self.addToolBar("StartWork")
 		powerToolBar.addAction(powerAction)
@@ -477,3 +495,7 @@ class MainWindow(QMainWindow):
 			self.centralwidget.save_video()
 		except Exception as e:
 			raise e
+
+	def common_set(self):
+		self.coordinate_widget.move(260, 120)
+		self.coordinate_widget.show()

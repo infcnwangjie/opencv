@@ -19,5 +19,7 @@
         <file>recover.png</file>
         <file>savevideo.png</file>
         <file>power.png</file>
+        <file>set.png</file>
+        <file>fresh.png</file>
     </qresource>
 </RCC>
