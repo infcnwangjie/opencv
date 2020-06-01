@@ -34,16 +34,6 @@ class IntelligentProcess(object):
 		self.intelligentthread = ProcessThread(IMGHANDLE=self.IMGHANDLE, PLCHANDLE=self.plchandle,
 		                                       video_player=self.img_play)
 
-	# self.intelligentthread.hockstatus = HockStatus.POSITION_NEARESTBAG
-	# self.intelligentthread.positionSignal.connect(self.writetoplc_imgsignal_process)  # 发送移动位置
-	# self.intelligentthread.dropHockSignal.connect(self.drophock_imgsignal_process)  # 命令放下钩子
-	# self.intelligentthread.pullHockSignal.connect(self.pullhock_imgsignal_process)  # 命令拉起钩子
-	# self.intelligentthread.findConveyerBeltSignal.connect(self.findconveyerbelt_imgsignal_process)  # 命令移动袋子到传送带
-	# self.intelligentthread.dropBagSignal.connect(self.drop_bag_imgsignal_process)
-	# self.intelligentthread.rebackSignal.connect(self.reback_imgsignal_process)
-	# self.intelligentthread.finishSignal.connect(self.finish_imgsignal_process)
-	# self.intelligentthread.foundbagSignal.connect(self.editbagnum_imgsignal_process)
-
 	def quickly_stop_work(self):
 		'''
 		行车紧急停止
@@ -74,7 +64,10 @@ class IntelligentProcess(object):
 		行车复位
 		:return:
 		'''
-		self.plchandle.reset()
+		try:
+			self.plchandle.reset()
+		except Exception as  e:
+			logger(e.__str__(), "error")
 
 	def save_video(self):
 		'''

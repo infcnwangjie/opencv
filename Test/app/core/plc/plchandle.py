@@ -96,7 +96,7 @@ class PlcHandle(object):
 		try:
 			powervalue = self.__read(POWER_PLC)
 		except Exception as e:
-			print(e)
+			logger(e.__str__(),level="error")
 		else:
 			self._power = (powervalue == 1)
 		return self._power
