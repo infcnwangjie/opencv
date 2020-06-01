@@ -56,8 +56,18 @@ class IntelligentProcess(object):
 			if self.intelligentthread.save_video:
 				self.intelligentthread.update_savevideo.emit(self.intelligentthread.save_video)
 		except Exception as e:
-			logger(e.__str__(),"error")
+			logger(e.__str__(), "error")
 
+	def switch_power(self):
+		'''
+		行车梯形图电源
+		:return:
+		'''
+
+		try:
+			self.plchandle.power = not self.plchandle.power
+		except Exception as e:
+			logger(e.__str__(), "error")
 
 	def resetplc(self):
 		'''

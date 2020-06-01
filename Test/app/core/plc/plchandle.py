@@ -18,6 +18,7 @@ DOWN_PLC = 0x0FA5  # 4005    下写入地址
 HOCK_MOVE_STATUS_PLC = 0x0FA6  # 4006  行车移动状态写入地址  1：运动  0:静止
 HOCK_STOP_PLC = 0x0FA7  # 4007   强制停止写入地址  1:停止  0: 取消限制
 HOCK_RESET_PLC = 0x0FA8  # 4008   行车复位写入地址  1 复位 0：取消复位
+POWER_PLC = 0x0FA9  # 4009   启动行车  1 启动  0：关闭
 
 
 class PlcHandle(object):
@@ -28,10 +29,11 @@ class PlcHandle(object):
 	'''
 	instance = None
 
-	def __init__(self, plc_port=PLC_COM, timeout=0.3):
+	def __init__(self, plc_port="COM7", timeout=0.3):
 		self.port = plc_port
 		self.timeout = timeout
 		self._plc_status = False
+		self._power = False
 		self.init_plc()
 
 	def __new__(cls, *args, **kwargs):
@@ -84,6 +86,34 @@ class PlcHandle(object):
 				self._plc_status = False
 				self.logger.error("%s- Code=%d", exc, exc.get_exception_code())
 
+	@property
+	def power(self):
+		'''
+		1:开启
+		0：关闭
+		:return:
+		'''
+		try:
+			powervalue = self.__read(POWER_PLC)
+		except Exception as e:
+			print(e)
+		else:
+			self._power = (powervalue == 1)
+		return self._power
+
+	@power.setter
+	def power(self, value):
+		'''
+				1:开启
+				0：关闭
+				:return:
+				'''
+		try:
+			self._power = value
+			self.__write(POWER_PLC, 1 if value else 0)
+		except:
+			pass
+
 	def __read(self, address):
 		'''
 		向PLC中读取数据
@@ -103,7 +133,7 @@ class PlcHandle(object):
 		:return:
 		'''
 		if not hasattr(self, 'master') or self.master is None:
-			logger("PLC 无法写入，请检查端口",level='error')
+			logger("PLC 无法写入，请检查端口", level='error')
 		self.master.execute(1, cst.WRITE_SINGLE_REGISTER, address, output_value=value)
 
 	def is_open(self):
@@ -115,7 +145,7 @@ class PlcHandle(object):
 			self.info()
 			self._plc_status = True
 		except Exception as e:
-			logger("PLC 连接失败，请检查端口",level='error')
+			logger("PLC 连接失败，请检查端口", level='error')
 			self._plc_status = False
 
 		return self._plc_status
@@ -215,18 +245,20 @@ class PlcHandle(object):
 			logger("PLC 无法写入数值，请检查端口", level='error')
 
 	def info(self):
-		info = "E:{},W:{},N:{},S:{},UP:{},DOWN:{}".format(self.__read(EAST_PLC), self.__read(WEST_PLC),
-		                                                  self.__read(SOUTH_PLC), self.__read(NORTH_PLC),
-		                                                  self.__read(UP_PLC), self.__read(DOWN_PLC)
-		                                                  )
+		info = "E:{},W:{},N:{},S:{},UP:{},DOWN:{},POWER:{}".format(self.__read(EAST_PLC), self.__read(WEST_PLC),
+		                                                           self.__read(SOUTH_PLC), self.__read(NORTH_PLC),
+		                                                           self.__read(UP_PLC), self.__read(DOWN_PLC),
+		                                                           self.__read(POWER_PLC)
+		                                                           )
 		print(info)
 
 
 if __name__ == '__main__':
-	plc = PlcHandle(plc_port='COM3')
-	plc.reset()
-	print(plc.is_open())
+	plc = PlcHandle(plc_port='COM7')
+	# plc.reset()
+	# print(plc.is_open())
 
 	# print(plc.write_error([-1,-2,0]))
 	# plc.move(east=2, nourth=3)
+	plc.power = False
 	plc.info()

@@ -383,9 +383,8 @@ class ProcessThread(QThread):
 			X_2 = math.pow(bag.x - laster.x, 2)
 			Y_2 = math.pow(bag.y - laster.y, 2)
 			distance = math.sqrt(X_2 + Y_2)
-			end = time.perf_counter()
+			# end = time.perf_counter()
 			# print("distance is {},compute cost:{}".format(distance,end-start))
-
 			return distance
 
 		distances = [__compute_distance(bag, laster) for bag in bags]

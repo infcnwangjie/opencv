@@ -18,5 +18,6 @@
         <file>quickly_stop.png</file>
         <file>recover.png</file>
         <file>savevideo.png</file>
+        <file>power.png</file>
     </qresource>
 </RCC>

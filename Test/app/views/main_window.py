@@ -104,6 +104,11 @@ class CentWindowUi(object):
 		self.plc_status_edit.setReadOnly(True)
 		plc_status_layout.addRow(plc_label, self.plc_status_edit)
 
+		ladder_label = QLabel("梯形图状态：")
+		self.ladder_edit = QLineEdit()
+		self.ladder_edit.setReadOnly(True)
+		plc_status_layout.addRow(ladder_label, self.ladder_edit)
+
 		self.info_box.setLayout(plc_status_layout)
 
 		right_layout = QtWidgets.QVBoxLayout()
@@ -126,8 +131,7 @@ class CentWindowUi(object):
 		self.setLayout(all_layout)
 		self.retranslateUi(Form)
 
-
-	def add_save_video(self,save_video_name=None):
+	def add_save_video(self, save_video_name=None):
 		if save_video_name is not None:
 			child = QTreeWidgetItem(self.saved_root)
 			child.setText(0, save_video_name)
@@ -186,7 +190,6 @@ class CentWindowUi(object):
 			child.setIcon(0, QIcon(":icons/video.png"))
 			self.saved_root.addChild(child)
 
-
 		self.tree.clicked.connect(self.onTreeClicked)
 		self.tree.expandAll()
 
@@ -209,18 +212,28 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.process.intelligentthread.update_savevideo.connect(self.add_save_video)
 		self.check_test_status()
 		self.check_plc_status()
+		self.check_ladder_status()
 
 	def init_button(self):
 		self.play_button.clicked.connect(self.play)
 		self.stop_button.clicked.connect(self.stop)
 
 	def check_test_status(self):
-		self.test_status_edit.setText('开启' if DEBUG else "关闭")
+		self.test_status_edit.setText('测试' if DEBUG else "正式")
 
 	def check_plc_status(self):
-		'''检测plc状态'''
+		'''
+		检测plc状态
+		'''
 		print(self.plchandle.is_open())
-		self.plc_status_edit.setText('开启' if self.plchandle.is_open() else "关闭")
+		self.plc_status_edit.setText('连接' if self.plchandle.is_open() else "断开")
+
+	def check_ladder_status(self):
+		'''
+		检测梯形图状态
+		:return:
+		'''
+		self.ladder_edit.setText('启动' if self.plchandle.power else "未开启")
 
 	def onTreeClicked(self, qmodeLindex):
 		item = self.tree.currentItem()
@@ -255,7 +268,30 @@ class CenterWindow(QWidget, CentWindowUi):
 				self.process.intelligentthread.start()
 		except:
 			QMessageBox.warning(self, "警告",
-				                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+
+	def startwork(self):
+		'''这是正儿八经的开始移动行车
+		'''
+		self.process.intelligentthread.work = True
+		try:
+			imagehandle = ImageProvider(ifsdk=True)
+			self.process.IMGHANDLE = imagehandle
+			if self.process.IMGHANDLE:
+				self.process.IMGHANDLE = imagehandle
+				self.process.intelligentthread.play = True
+				self.process.intelligentthread.start()
+		except:
+			QMessageBox.warning(self, "警告",
+			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+
+	def switch_power(self):
+		'''
+		启动行车梯形图电源
+		:return:
+		'''
+		print("切换梯形图power")
+		self.process.switch_power()
 
 	def quickly_stop_work(self):
 		print("stop work")
@@ -319,6 +355,11 @@ class MainWindow(QMainWindow):
 		setCooridnateAction.setStatusTip('设置地标')
 		setCooridnateAction.triggered.connect(self.set_cooridnate)
 
+		powerAction = QAction(QIcon(":icons/power.png"), '电源', self)
+		powerAction.setShortcut('Ctrl+p')
+		powerAction.setStatusTip('梯形图启动')
+		powerAction.triggered.connect(self.switch_power)
+
 		startworkAction = QAction(QIcon(":icons/pointer.png"), '开始工作', self)
 		startworkAction.setShortcut('Ctrl+w')
 		startworkAction.setStatusTip('开始工作')
@@ -360,6 +401,9 @@ class MainWindow(QMainWindow):
 		setCooridnateToolBar = self.addToolBar("SetCooridnate")
 		setCooridnateToolBar.addAction(setCooridnateAction)
 
+		powerToolBar = self.addToolBar("StartWork")
+		powerToolBar.addAction(powerAction)
+
 		startWorkToolBar = self.addToolBar("StartWork")
 		startWorkToolBar.addAction(startworkAction)
 
@@ -395,6 +439,17 @@ class MainWindow(QMainWindow):
 	def set_cooridnate(self):
 		self.coordinate_widget.move(260, 120)
 		self.coordinate_widget.show()
+
+	def switch_power(self):
+		'''
+		启动梯形图
+		:return:
+		'''
+		print("切换梯形图电源状态")
+		try:
+			self.centralwidget.switch_power()
+		except Exception as e:
+			raise e
 
 	def start_work(self):
 		print("start_work")
