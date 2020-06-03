@@ -87,6 +87,7 @@ class CommonSetWidget(QWidget):
 		info = dict(PLC_COM=self.ui.plc_com_edit.text())
 		with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'wb') as comfile:
 			pickle.dump(info, comfile, 0)
+		self.hide()
 
 	def cancel(self):
 		'''

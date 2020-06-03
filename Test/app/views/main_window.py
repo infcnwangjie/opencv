@@ -17,6 +17,7 @@ from app.core.autowork.process import IntelligentProcess
 from app.core.plc.plchandle import PlcHandle
 from app.core.video.imageprovider import ImageProvider
 from app.icons import resource
+from app.views.commonset_window import CommonSetWidget
 from app.views.landmark_window import SetCoordinateWidget
 
 from app.views.roiwindow import SetRoiWidget
@@ -342,7 +343,7 @@ class MainWindow(QMainWindow):
 		self.resize(1289, 1000)
 		self.init_window()
 		self.set_roi_widget = SetRoiWidget()
-
+		self.common_set_widget=CommonSetWidget()
 		self.coordinate_widget = SetCoordinateWidget()
 
 	def init_window(self):
@@ -497,5 +498,5 @@ class MainWindow(QMainWindow):
 			raise e
 
 	def common_set(self):
-		self.coordinate_widget.move(260, 120)
-		self.coordinate_widget.show()
+		self.common_set_widget.move(260, 120)
+		self.common_set_widget.show()

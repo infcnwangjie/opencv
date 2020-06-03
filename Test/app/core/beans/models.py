@@ -31,6 +31,7 @@ class Box:
 		self.box = cv2.boundingRect(contour)
 		self.x, self.y, self.w, self.h = self.box
 		self.boxcenterpoint = (self.x + round(self.w * 0.5), self.y + round(self.h * 0.5))
+		self.area = (self.x - 50, self.y - 50, self.x + 50, self.y + 50)
 		# self.x = self.x + round(self.w * 0.5)
 		# self.y = self.y + round(self.h * 0.5)
 		self.status = True
@@ -57,15 +58,17 @@ class Bag(Box):
 	def __init__(self, contour, img, id=1):
 		super().__init__(contour, img, id)
 		self.finish_move = False
+		self.status_map = dict(move_close=True, drop_hock=False, pull_hock=False, put_down_bag=False)
+
+
 
 	def modify_box_content(self, no_num=True):
-
 		self.box_content = "(" + str(self.x) + "," + str(
 			self.y) + ")"
 
 	def __str__(self):
 		return "( x:" + str(self.boxcenterpoint[0]) + ",y:" + str(
-			self.boxcenterpoint[1]) +",p:"+str(self.width)+ ")"
+			self.boxcenterpoint[1]) + ",p:" + str(self.width) + ")"
 
 
 # 激光灯

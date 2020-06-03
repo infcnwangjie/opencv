@@ -254,7 +254,7 @@ class PlcHandle(object):
 
 
 if __name__ == '__main__':
-	plc = PlcHandle(plc_port='COM7')
+	plc = PlcHandle(plc_port='COM3')
 	# plc.reset()
 	# print(plc.is_open())
 

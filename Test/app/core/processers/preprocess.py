@@ -31,7 +31,6 @@ def add_picture(img1, img2):
 	return cv2.add(img1, img2)
 
 
-
 class BagDetector(BaseDetector):
 	'''
 	袋子检测算法:
@@ -54,20 +53,22 @@ class BagDetector(BaseDetector):
 		                 enumerate(os.listdir(BAGROI_DIR)) if roi_img.find('bag') != -1]
 		return landmark_rois
 
-	def findbags(self, img_copy=None, roi_template=None, middle_start=300, middle_end=500):
+	def findbags(self, img_copy=None, middle_start=300, middle_end=500):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
-			isbig = 100 <= cv2.contourArea(c) < 3000
-			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
-			return isbig and 8 < rect_w <= 60 and 4 < rect_h <= 60
+			area = cv2.contourArea(c)
+			isbig = (60 <= area and area < 10000)
+			# rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
+			return isbig
 
 		global rows, cols, step
 		# target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 
-		gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
+		# gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
 		cols, rows, channels = img_copy.shape
 		# print(rows,cols,channels)
 		foreground, contours = self.red_contours(img_copy, middle_start, middle_end)
+		# cv2.imshow("bag",foreground)
 		#
 		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 		# foreground = cv2.filter2D(foreground, -1, disc)
@@ -81,37 +82,37 @@ class BagDetector(BaseDetector):
 		# Z轴无论再怎么变化，灯的面积也大于90
 		if contours is not None and len(contours) > 0:
 			contours = list(filter(lambda c: warp_filter(c), contours))
+			print("bag contour is {}".format(len(contours)))
 
 		return contours, foreground
 
-	def location_bags(self, img_final_show, img_copy, success_location=True, middle_start=150, middle_end=500):
+	def location_bags(self, dest, img_copy, success_location=True, middle_start=110, middle_end=450):
 		'''
 	     cm:def location_bags(self,target,success_location=True,middle_start=150,middle_end=500):
 		'''
+		# self.bags.clear()
+		# 存储前景图
+		contours, foreground = self.findbags(img_copy, middle_start, middle_end)
+		# 对袋子排序
 
-		forgounds = []
-		for bag_template in self.bagroi_templates():
-			# print(target)
-			contours, foreground = self.findbags(img_copy, bag_template, middle_start, middle_end)
-			# 存储前景图
-			forgounds.append(foreground)
-			if contours is None or len(contours) == 0:
-				continue
+		for increased_id, c in enumerate(contours):
+			bag = Bag(c, img=None, id=increased_id)
+			bag.modify_box_content(no_num=True)
+			if success_location:
+				cv2.putText(dest, bag.box_content,
+				            (bag.boxcenterpoint[0], bag.boxcenterpoint[1] + 10),
+				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
+
+			for existbag in (item for item in self.bags if item.finish_move == False):
+				if abs(existbag.x - bag.x) < 20 and abs(existbag.y - bag.y) < 20:
+					existbag.x, existbag.y = bag.x, bag.y
+					break
 			else:
-				# contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=False)
-				for increased_id, c in enumerate(contours):
-					box = Bag(c, img=None, id=increased_id)
-					box.modify_box_content(no_num=True)
-					if success_location:
-						cv2.putText(img_final_show, box.box_content,
-						            (box.boxcenterpoint[0], box.boxcenterpoint[1] + 10),
-						            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
-					self.bags.append(box)
+				self.bags.append(bag)
 
-		cv2.drawContours(img_final_show, contours, -1, (0, 255, 255), 3)
+		cv2.drawContours(dest, contours, -1, (0, 255, 255), 3)
 
-		bag_forground = reduce(add_picture, forgounds)
-		return self.bags, bag_forground
+		return self.bags, foreground
 
 
 class LandMarkDetecotr(BaseDetector):
@@ -328,7 +329,7 @@ class LandMarkDetecotr(BaseDetector):
 					continue
 				if (key_no < keyj_no and y > yj) or (key_no > keyj_no and y < yj):
 					return positiondict, False
-				if key_j != key and abs(x - xj) < 20 and abs(y - yj) < 20:
+				if key_j != key and abs(x - xj) < 50 and abs(y - yj) < 50:
 					return positiondict, False
 				if key_direct == keyj_direct:
 					q = math.sqrt(math.pow(abs(xj - x), 2) + math.pow(abs(yj - y), 2))
@@ -356,7 +357,7 @@ class LandMarkDetecotr(BaseDetector):
 				break
 			# 差异太大应该放弃
 			score = sum([math.pow(row - average, 2) for row in row_list])
-			if score > 20:
+			if score > 100:
 				break
 		else:
 			# --------------------------------判断是否错位--------------------------------------------------------
@@ -428,30 +429,39 @@ class LandMarkDetecotr(BaseDetector):
 		# start = time.perf_counter()
 		rows, cols, channels = image.shape
 		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
-			dest = cv2.resize(image, (IMG_WIDTH, IMG_HEIGHT))
+			dest = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH))
+		# rows, cols, channels = dest.shape
+		# print("rows:{},cols:{}".format(rows, cols))
 		else:
 			dest = image
-
-		self.candidate_landmarks(dest)
+		self.candidate_landmarks(dest, left_start=110, left_end=210, right_start=510, right_end=600)
 		for label, (x, y) in self.ALL_POSITIONS.items():
 			label_match_result = re.match(self.landmark_match, label)
 			no = label_match_result.group('NO')
 			exception_labels = [landmarkname for landmarkname, (itemx, itemy) in self.ALL_POSITIONS.items() if
 			                    (re.match(self.landmark_match, landmarkname).group('NO') < no and itemy > y) or (
 					                    re.match(self.landmark_match, landmarkname).group('NO') > no and itemy < y)]
+			# print(exception_labels)
+			# print("{}:({},{})".format(label,x,y))
 			if len(exception_labels) > 0:
 				# for exception_label in exception_labels:
 				# 	print("{}is {}，but {} is {}".format(label, y, exception_label,
 				# 	                                    self.ALL_POSITIONS[exception_label][1]))
+				# print("exception_labels >0")
 				return dest, False
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
+			print("self.ALL_LANDMARKS_DICT.keys() < 3")
 			return dest, False
 
 		real_positions = self.__landmark_position_dic()
 		real_position_dic = {key: [int(float(value.split(',')[0])), int(float(value.split(',')[1]))] for key, value in
 		                     real_positions.items()}
 
+		# cv2.rectangle(dest, (left_start, 0), (left_end, 900), color=(0, 0, 255),
+		#               thickness=2)
+		# cv2.rectangle(dest, (right_start, 0), (right_end, 900), color=(0, 0, 255),
+		#               thickness=2)
 		for landmark_roi in self.rois:
 			landmark = landmark_roi.landmark
 			if landmark is None or landmark_roi.label not in self.ALL_LANDMARKS_DICT:
@@ -473,6 +483,7 @@ class LandMarkDetecotr(BaseDetector):
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 		# 获取最佳的四个地标，如果缺失一个可以通过计算获取
 		position_dic, success = self.choose_best_cornors()
+
 		if success:
 			dest, success = self.__perspective_transform(dest, position_dic)
 		# end = time.perf_counter()
@@ -498,7 +509,7 @@ class LandMarkDetecotr(BaseDetector):
 	def draw_grid_lines(self, img):
 		H_rows, W_cols = img.shape[:2]
 		for row in range(0, H_rows):
-			if row % 50 == 0:
+			if row % 100 == 0:
 				cv2.line(img, (0, row), (W_cols, row), color=(255, 255, 0), thickness=1, lineType=cv2.LINE_8)
 		for col in range(0, W_cols):
 			if col % 50 == 0:
@@ -607,13 +618,13 @@ class LandMarkDetecotr(BaseDetector):
 			real_positions = pickle.load(coordinate)
 		return real_positions
 
-	def candidate_landmarks(self, dest=None, left_start=210, left_end=260, right_start=670, right_end=750):
-		'''dest=None, left_start=230, left_end=300, right_start=500, right_end=750'''
+	def candidate_landmarks(self, dest=None, left_start=120, left_end=260, right_start=550, right_end=700):
+		'''left_start=120, left_end=260, right_start=550, right_end=700'''
 		global rows, cols, step
 
 		# 不要忽略缩小图片尺寸的重要性，减小尺寸，较少像素数就可以最大限度的减少无用操作；
 		# 限制程序速度的最主要因素就是无用操作，无用操作越少，程序执行速度就越高。
-		target = cv2.resize(dest, (IMG_WIDTH, IMG_HEIGHT))
+		target = dest
 		# HSV对光线较RGB有更好的抗干扰能力
 		target_hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 		# cv2.imshow("target", target)
@@ -626,8 +637,9 @@ class LandMarkDetecotr(BaseDetector):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
 			isbig = 200 <= cv2.contourArea(c) < 3600
-			rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
-			return isbig and 3 < rect_w <= 60 and 3 < rect_h <= 60
+			# rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
+			# return isbig and 3 < rect_w <= 60 and 3 < rect_h <= 60
+			return isbig
 
 		def set_mask_area(x: int, y: int, width: int, height: int):
 			img_world[y:y + height, x:x + width] = 0
@@ -640,37 +652,18 @@ class LandMarkDetecotr(BaseDetector):
 
 		bigest_h, bigest_w = 0, 0
 
+		landmarks = []
 		for roi_template in self.rois:
 			img_roi_hsvt = cv2.cvtColor(roi_template.roi, cv2.COLOR_BGR2HSV)
 			# cv2.imshow("roihist",img_roi_hsvt)
 			img_roi_hsvt = img_roi_hsvt
 			roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
 			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
-			# if roi_template.label == "NO1_R":
-			# 	cv2.imshow("NO1_R", foreground)
-			# cv2.imshow("NO1_R", foreground)
-			# cv2.imshow("imgworld", img_world)
 
-			# thresh=cv2.fastNlMeansDenoisingMulti(thresh,2,5,None,4,7,35)
-
-			# 使用merge变成通道图像
-			# thresh = cv2.merge((thresh, thresh, thresh))
-
-			# bk = cv2.medianBlur(bk, 3)
-			# thresh=cv2.bilateralFilter(thresh,d=0,sigmaColor=90,sigmaSpace=7)
-			# if roi_template.label == 'NO1_R':
-			# 	cv2.imshow("missed_landmark", bk)
-			# partial(cv2.calcBackProject,channels=[0, 1],ranges=[0, 180, 0, 256],scale=1)
-			# cv2.calcBackProject(images, channels, hist, ranges, scale, dst=None)
 			foreground = self.find_it(images=[target_hsvt], hist=roihist)
-			# foreground = cv2.calcBackProject([target_hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
-			# foreground = self.find_it(target_hsvt, img_roi_hsvt)
+			landmarks.append(foreground)
 
-			# 用来测试
-			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-			# foreground = cv2.filter2D(foreground, -1, disc)
-
-			# foreground = cv2.resize(foreground, (IMG_WIDTH, IMG_HEIGHT))
+			# cv2.imshow("landmark", foreground)
 
 			if roi_template.label.find("L") > 0:
 				foreground = cv2.bitwise_and(foreground, foreground, mask=left_open_mask)
@@ -681,19 +674,11 @@ class LandMarkDetecotr(BaseDetector):
 
 			kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 			foreground = cv2.dilate(foreground, kernel)
-			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-			# foreground = cv2.filter2D(foreground, -1, disc)
+			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+			foreground = cv2.filter2D(foreground, -1, disc)
 			ret, foreground = cv2.threshold(foreground, 110, 255, cv2.THRESH_BINARY)
 
 			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-			# if contours is None or len(contours)==0:
-			# 	# 前景图有白影 但是检测不到轮廓
-			# 	pass
-			# if roi_template.label == "NO2_R":
-			# 	cv2.imshow("NO2_R", foreground)
-			# 	# cv2.imshow("NO1_R", foreground)
-			# 	cv2.imshow("imgworld", img_world)
-			# 	print("contours is {}".format(len(contours)))
 
 			contours = list(filter(lambda c: warp_filter(c), contours)) if len(contours) > 1 else contours
 
@@ -797,20 +782,24 @@ class LasterDetector(BaseDetector):
 		super().__init__()
 		self.laster = None
 
-	def location_laster(self, img_show, img_copy, middle_start=200, middle_end=500):
+	def location_laster(self, img_show, img_copy, middle_start=120, middle_end=450):
 
 		def __filter_laster_contour(c):
 			x, y, w, h = cv2.boundingRect(c)
+			area = cv2.contourArea(c)
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			if w > 5 or h > 5:
-				return False
-			else:
+			print("laster is {}".format(area))
+
+			if w < 3 and h < 3 and 1 < area < 5:
 				return True
+			else:
+				return False
 
 		foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
-		contours = list(filter(__filter_laster_contour, contours))
+		# cv2.imshow("green", foregroud)
+		# contours = list(filter(__filter_laster_contour, contours))
 
-		if contours is None or len(contours) > 1 or len(contours) == 0:
+		if contours is None or len(contours) == 0 or len(contours) > 1:
 			return None, foregroud
 
 		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
@@ -822,3 +811,7 @@ class LasterDetector(BaseDetector):
 			print("laster contour is miss")
 
 		return self.laster, foregroud
+
+
+if __name__ == '__main__':
+	pass
