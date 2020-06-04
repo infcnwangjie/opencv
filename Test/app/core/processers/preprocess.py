@@ -5,13 +5,13 @@ import pickle
 import random
 from collections import defaultdict
 from functools import cmp_to_key, reduce, partial
-
+from app.log.logtool import mylog_error, mylog_debug, logger
 import cv2
 import numpy as np
 
 # 发现
 from app.config import IMG_HEIGHT, IMG_WIDTH, SUPPORTREFROI_DIR, ROIS_DIR, PROGRAM_DATA_DIR, BAGROI_DIR
-from app.core.beans.models import SupportRefRoi, LandMarkRoi, NearLandMark, Laster, BagRoi, Bag
+from app.core.beans.models import SupportRefRoi, LandMarkRoi, NearLandMark, Laster, BagRoi, Bag, Hock
 from app.core.exceptions.allexception import NotFoundLandMarkException
 from app.core.processers import SmallWords, BaseDetector
 from app.core.support.shapedetect import ShapeDetector
@@ -29,6 +29,38 @@ WITH_TRANSPORT = True
 def add_picture(img1, img2):
 	'''图片叠加'''
 	return cv2.add(img1, img2)
+
+
+def sort_bag_contours(arr):
+	'''
+	按照X轴排序
+	:param arr:
+	:return:
+	'''
+	if len(arr) <2:
+		return arr
+	elif len(arr)==2:
+		c1,c2=arr
+		c1_x, c1_y, c1_w, c1_h = cv2.boundingRect(c1)
+		c2_x, c2_y, c2_w, c2_h = cv2.boundingRect(c2)
+		if c1_x>c2_x:
+			return [c2,c1]
+		else:
+			return [c1,c2]
+
+	# print(len(arr)//2)
+	mid = arr[len(arr) // 2]
+	left, right = [], []
+	# arr.remove(mid)
+
+	m_x, m_y, m_w, m_h = cv2.boundingRect(mid)
+	for item in arr:
+		i_x, i_y, i_w, i_h = cv2.boundingRect(item)
+		if i_x >= m_x:
+			right.append(item)
+		else:
+			left.append(item)
+	return sort_bag_contours(left) + [mid] + sort_bag_contours(right)
 
 
 class BagDetector(BaseDetector):
@@ -82,7 +114,7 @@ class BagDetector(BaseDetector):
 		# Z轴无论再怎么变化，灯的面积也大于90
 		if contours is not None and len(contours) > 0:
 			contours = list(filter(lambda c: warp_filter(c), contours))
-			print("bag contour is {}".format(len(contours)))
+			logger("bag contour is {}".format(len(contours)), level='info')
 
 		return contours, foreground
 
@@ -94,16 +126,18 @@ class BagDetector(BaseDetector):
 		# 存储前景图
 		contours, foreground = self.findbags(img_copy, middle_start, middle_end)
 		# 对袋子排序
-
+		contours=sort_bag_contours(contours)
+		# print("#"*100)
 		for increased_id, c in enumerate(contours):
 			bag = Bag(c, img=None, id=increased_id)
+			# print(bag.x)
 			bag.modify_box_content(no_num=True)
 			if success_location:
 				cv2.putText(dest, bag.box_content,
 				            (bag.boxcenterpoint[0], bag.boxcenterpoint[1] + 10),
 				            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 
-			for existbag in (item for item in self.bags if item.finish_move == False):
+			for existbag in (item for item in self.bags if item.status_map['finish_move'] == False):
 				if abs(existbag.x - bag.x) < 20 and abs(existbag.y - bag.y) < 20:
 					existbag.x, existbag.y = bag.x, bag.y
 					break
@@ -451,7 +485,7 @@ class LandMarkDetecotr(BaseDetector):
 				return dest, False
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
-			print("self.ALL_LANDMARKS_DICT.keys() < 3")
+			logger("self.ALL_LANDMARKS_DICT.keys() < 3", level='debug')
 			return dest, False
 
 		real_positions = self.__landmark_position_dic()
@@ -476,11 +510,11 @@ class LandMarkDetecotr(BaseDetector):
 			cv2.putText(dest,
 			            "({},{})".format(real_col, real_row),
 			            (col, row + 90),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+			            cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 0), 1)
 			cv2.putText(dest,
 			            "{}".format(landmark_roi.label),
 			            (col, row + 60),
-			            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+			            cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 0), 1)
 		# 获取最佳的四个地标，如果缺失一个可以通过计算获取
 		position_dic, success = self.choose_best_cornors()
 
@@ -788,7 +822,7 @@ class LasterDetector(BaseDetector):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			print("laster is {}".format(area))
+			logger("laster is {}".format(area), 'info')
 
 			if w < 3 and h < 3 and 1 < area < 5:
 				return True
@@ -808,9 +842,49 @@ class LasterDetector(BaseDetector):
 			self.laster = Laster(contours[0], foregroud, id=0)
 			self.laster.modify_box_content()
 		except Exception as e:
-			print("laster contour is miss")
+			mylog_error("laster contour is miss")
 
 		return self.laster, foregroud
+
+
+
+class HockDetector(BaseDetector):
+	'''
+	钩子检测算法
+	'''
+
+	def __init__(self):
+		super().__init__()
+		self.hock = None
+
+	def location_hock(self, img_show, img_copy, middle_start=120, middle_end=450):
+
+		def __filter_laster_contour(c):
+			x, y, w, h = cv2.boundingRect(c)
+			area = cv2.contourArea(c)
+			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
+
+			if area>100:
+				return True
+			else:
+				return False
+
+		foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
+		# cv2.imshow("green", foregroud)
+		contours = list(filter(__filter_laster_contour, contours))
+
+		if contours is None or len(contours) == 0 or len(contours) > 1:
+			return None, foregroud
+
+		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
+
+		try:
+			self.hock = Hock(contours[0], foregroud, id=0)
+			self.hock.modify_box_content()
+		except Exception as e:
+			mylog_error("hock contour is miss")
+
+		return self.hock, foregroud
 
 
 if __name__ == '__main__':

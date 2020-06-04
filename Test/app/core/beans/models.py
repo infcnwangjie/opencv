@@ -55,12 +55,22 @@ class Box:
 
 # 袋子
 class Bag(Box):
-	def __init__(self, contour, img, id=1):
+	'''
+			choose: 选为目标袋子
+			move_close: 钩子移动靠近目标袋子
+			drop_hock:  放下钩子
+			pull_hock:  拉起钩子
+			put_down_bag:   放下袋子到传送带
+			finish: 完成运输
+	'''
+
+	def __init__(self, contour, img=None, id=None):
 		super().__init__(contour, img, id)
-		self.finish_move = False
-		self.status_map = dict(move_close=True, drop_hock=False, pull_hock=False, put_down_bag=False)
-
-
+		self.status_map = dict(choose=False, move_close=False, drop_hock=False, pull_hock=False, put_down_bag=False,
+		                       finish_move=False)
+		self.step: str = None
+		self.step_pointer = -1
+		self.down_hock_much=0
 
 	def modify_box_content(self, no_num=True):
 		self.box_content = "(" + str(self.x) + "," + str(

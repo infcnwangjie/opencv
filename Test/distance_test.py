@@ -100,17 +100,21 @@ def test_one_image():
 def avi_play():
 	import cv2
 
-	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142918548.avi")  # 打开相机
-	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")  # 打开相机
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142647832.avi")  # 打开相机
+	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")  # 打开相机
 	a = LandMarkDetecotr()
 	b = BagDetector()
 	c = LasterDetector()
+	# 背景差分法
+	fgbg  = cv2.createBackgroundSubtractorMOG2()
 	while (True):
 		ret, frame = cap.read()  # 捕获一帧图像
 		time.sleep(1 / 13)
-		# frame = cv2.resize(frame, (IMG_WIDTH,IMG_HEIGHT))
+		frame = cv2.resize(frame, (IMG_HEIGHT,IMG_WIDTH))
 		if ret:
 			dest, success = a.position_landmark(frame)
+			fgmask = fgbg.apply(frame)
+			cv2.imshow("fgmask",fgmask)
 			dest_copy = dest.copy()
 			if success:
 				print("landmark 定位:{}".format(success))
@@ -130,10 +134,38 @@ def avi_play():
 def time_test():
 	time_str = time.strftime("%Y%m%d%X", time.localtime()).replace(":", "")
 	print(time_str)
+#
+# def quick_sort(arr):
+#     """快速排序"""
+#     if len(arr) < 2:
+#         return arr
+#     # 选取基准，随便选哪个都可以，选中间的便于理解
+#     mid = arr[len(arr) // 2]
+#     # 定义基准值左右两个数列
+#     left, right = [], []
+#     # 从原始数组中移除基准值
+#     arr.remove(mid)
+#     for item in arr:
+#         # 大于基准值放右边
+#         if item.x >= mid.x:
+#             right.append(item)
+#         else:
+#             # 小于基准值放左边
+#             left.append(item)
+#     # 使用迭代进行比较
+#     return quick_sort(left) + [mid] + quick_sort(right)
+#
+#
+# def test_sort():
+# 	b = [11, 99, 33, 69, 77, 88, 55, 11, 33, 36, 39, 66, 44, 22]
+# 	c=quick_sort(b)
+# 	for num in c:
+# 		print(num)
 
 
 if __name__ == '__main__':
 	# test_one_image()
 	avi_play()
-# time_test()
-# numpy_mat()
+	# test_sort()
+	# time_test()
+	# numpy_mat()

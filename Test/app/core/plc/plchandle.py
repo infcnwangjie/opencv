@@ -77,7 +77,7 @@ class PlcHandle(object):
 
 			for port_index in range(0, 10):
 				port = "COM{}".format(port_index)
-				print("test COM{}".format(port_index))
+				# print("test COM{}".format(port_index))
 				success = self.change_port(port)
 				if success:
 					self.port = port
@@ -143,7 +143,7 @@ class PlcHandle(object):
 		:return:
 		'''
 		try:
-			self.info()
+			# self.info()
 			self._plc_status = True
 		except Exception as e:
 			logger("PLC 连接失败，请检查端口", level='error')
