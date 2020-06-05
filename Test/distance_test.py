@@ -5,7 +5,7 @@ import cv2
 import numpy
 
 from app.config import IMG_HEIGHT, IMG_WIDTH
-from app.core.processers.preprocess import BagDetector, LasterDetector
+from app.core.processers.preprocess import BagDetector, LasterDetector, HockDetector
 from app.core.processers.preprocess import LandMarkDetecotr, WITH_TRANSPORT
 
 
@@ -94,7 +94,55 @@ def test_one_image():
 '''
 
 
+def avi_without_hock():
+	# Video_20200605142854079.avi
+	import cv2
 
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")  # 打开相机
+	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")  # 打开相机
+	a = LandMarkDetecotr()
+	b = BagDetector()
+	c = LasterDetector()
+	d=HockDetector()
+	# 背景差分法
+
+	middle_start=120
+	middle_end=570
+	while (True):
+		ret, frame = cap.read()  # 捕获一帧图像
+		time.sleep(1 / 13)
+		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
+		# gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+
+		if ret:
+			dest, success = a.position_landmark(frame)
+
+
+			# cv2.imshow("fgmask", fgmask)
+			dest_copy = dest.copy()
+			# zero = numpy.zeros_like(gray)
+			# zero[0:IMG_HEIGHT, middle_start:middle_end] = 255
+
+			if success:
+
+				print("landmark 定位:{}".format(success))
+
+				bags, foreground = b.location_bags(dest, dest_copy, middle_start=middle_start, middle_end=middle_end)
+				#
+				# laster, lasterforeground = c.location_laster(dest, dest_copy, middle_start=120, middle_end=450)
+				hock,hockforeground=d.location_hock(dest,dest_copy,middle_start=middle_start, middle_end=middle_end)
+
+
+				cv2.imshow("hock_foreground", hockforeground)
+
+			cv2.imshow('frame', dest)
+			cv2.waitKey(1)
+		else:
+			break
+
+	cap.release()  # 关闭相机
+	cv2.destroyAllWindows()  # 关闭窗
 
 
 def avi_play():
@@ -165,7 +213,8 @@ def time_test():
 
 if __name__ == '__main__':
 	# test_one_image()
-	avi_play()
+	# avi_play()
+	avi_without_hock()
 	# test_sort()
 	# time_test()
 	# numpy_mat()

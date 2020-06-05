@@ -221,3 +221,5 @@ class BaseDetector(object, metaclass=SmallWords):
 		# foreground = cv2.medianBlur(foreground, 3)
 		green_contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return foreground, green_contours
+
+

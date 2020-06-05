@@ -10,8 +10,8 @@ import cv2
 import numpy as np
 
 # 发现
-from app.config import IMG_HEIGHT, IMG_WIDTH, SUPPORTREFROI_DIR, ROIS_DIR, PROGRAM_DATA_DIR, BAGROI_DIR
-from app.core.beans.models import SupportRefRoi, LandMarkRoi, NearLandMark, Laster, BagRoi, Bag, Hock
+from app.config import IMG_HEIGHT, IMG_WIDTH, SUPPORTREFROI_DIR, ROIS_DIR, PROGRAM_DATA_DIR, BAGROI_DIR, HOCK_ROI
+from app.core.beans.models import SupportRefRoi, LandMarkRoi, NearLandMark, Laster, BagRoi, Bag, Hock, HockRoi
 from app.core.exceptions.allexception import NotFoundLandMarkException
 from app.core.processers import SmallWords, BaseDetector
 from app.core.support.shapedetect import ShapeDetector
@@ -37,16 +37,16 @@ def sort_bag_contours(arr):
 	:param arr:
 	:return:
 	'''
-	if len(arr) <2:
+	if len(arr) < 2:
 		return arr
-	elif len(arr)==2:
-		c1,c2=arr
+	elif len(arr) == 2:
+		c1, c2 = arr
 		c1_x, c1_y, c1_w, c1_h = cv2.boundingRect(c1)
 		c2_x, c2_y, c2_w, c2_h = cv2.boundingRect(c2)
-		if c1_x>c2_x:
-			return [c2,c1]
+		if c1_x > c2_x:
+			return [c2, c1]
 		else:
-			return [c1,c2]
+			return [c1, c2]
 
 	# print(len(arr)//2)
 	mid = arr[len(arr) // 2]
@@ -126,7 +126,7 @@ class BagDetector(BaseDetector):
 		# 存储前景图
 		contours, foreground = self.findbags(img_copy, middle_start, middle_end)
 		# 对袋子排序
-		contours=sort_bag_contours(contours)
+		contours = sort_bag_contours(contours)
 		# print("#"*100)
 		for increased_id, c in enumerate(contours):
 			bag = Bag(c, img=None, id=increased_id)
@@ -847,7 +847,6 @@ class LasterDetector(BaseDetector):
 		return self.laster, foregroud
 
 
-
 class HockDetector(BaseDetector):
 	'''
 	钩子检测算法
@@ -856,6 +855,51 @@ class HockDetector(BaseDetector):
 	def __init__(self):
 		super().__init__()
 		self.hock = None
+		self._roi = None
+		self.__hock_sub_mog = cv2.createBackgroundSubtractorMOG2(history=600, varThreshold=36, detectShadows=False)
+
+	def back_sub_apply(self, img):
+		'''
+		背景差分法需要时刻更新背景，并检测出前景目标
+		:param img:
+		:return:
+		'''
+		foreground = self.__hock_sub_mog.apply(img)
+		return foreground
+
+	@property
+	def hock_roi(self):
+		if self._roi is None:
+			hock_rois = [
+				HockRoi(img=cv2.imread(os.path.join(HOCK_ROI, roi_img)))
+				for
+				roi_img in
+				os.listdir(HOCK_ROI)]
+			if len(os.listdir(HOCK_ROI)) == 0:
+				self._roi = None
+			self._roi = hock_rois[0]
+		return self._roi
+
+	def hock_foreground(self, img_copy, middle_start=120, middle_end=450):
+		# target_hsvt = cv2.cvtColor(img_copy, cv2.COLOR_BGR2HSV)
+		# img_roi_hsvt = cv2.cvtColor(self.hock_roi.img, cv2.COLOR_BGR2HSV)
+		# # cv2.imshow("roihist",img_roi_hsvt)
+		# img_roi_hsvt = img_roi_hsvt
+		# roihist = cv2.calcHist([img_roi_hsvt], [0, 1], None, [180, 256], [0, 180, 0, 256])
+		# cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
+		#
+		# foreground = self.find_it(images=[target_hsvt], hist=roihist)
+
+
+		foreground=self.back_sub_apply(img_copy)
+
+		gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
+		middle_mask = np.zeros_like(gray)
+		middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		cv2.bitwise_and(foreground, foreground, middle_mask)
+
+		contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return contours, foreground
 
 	def location_hock(self, img_show, img_copy, middle_start=120, middle_end=450):
 
@@ -863,18 +907,25 @@ class HockDetector(BaseDetector):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-
-			if area>100:
-				return True
-			else:
+			if middle_start>x or x>middle_end:
 				return False
+			if area<50 or area>3000:
+				return False
+			return True
 
-		foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
-		# cv2.imshow("green", foregroud)
+
+
+
+
+		# foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
+		contours, foregroud = self.hock_foreground(img_copy, middle_start, middle_end)
+		green_ret, foreground = cv2.threshold(foregroud, 0, 255, cv2.THRESH_BINARY)
+		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+		# foregroud = cv2.filter2D(foregroud, -1, disc)
 		contours = list(filter(__filter_laster_contour, contours))
 
-		if contours is None or len(contours) == 0 or len(contours) > 1:
-			return None, foregroud
+		# if contours is None or len(contours) == 0 or len(contours) > 1:
+		# 	return None, foregroud
 
 		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
 

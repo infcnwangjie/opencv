@@ -70,7 +70,7 @@ class Bag(Box):
 		                       finish_move=False)
 		self.step: str = None
 		self.step_pointer = -1
-		self.down_hock_much=0
+		self.down_hock_much = 0
 
 	def modify_box_content(self, no_num=True):
 		self.box_content = "(" + str(self.x) + "," + str(
@@ -169,6 +169,18 @@ class BagRoi:
 		self.roi = img
 		self.x, self.y = 0, 0
 		self.id = id
+
+	def set_position(self, x, y):
+		self.x, self.y = x, y
+
+	def get_position(self):
+		return self.x, self.y
+
+
+class HockRoi:
+	def __init__(self, img):
+		self.img = img
+		self.x, self.y = 0, 0
 
 	def set_position(self, x, y):
 		self.x, self.y = x, y
