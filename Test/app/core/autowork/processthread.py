@@ -9,7 +9,7 @@ import numpy
 from PyQt5.QtCore import QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QImage, QPixmap
 
-from app.config import IMG_WIDTH, IMG_HEIGHT, SAVE_VIDEO_DIR, LASTER_HOCK_DISTANCE
+from app.config import IMG_WIDTH, IMG_HEIGHT, SAVE_VIDEO_DIR, LASTER_HOCK_DISTANCE, HOCK_DISTANCE, DEBUG
 from app.core.beans.models import Bag, Laster, Hock
 from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
 from app.core.plc.plchandle import PlcHandle
@@ -55,7 +55,7 @@ class DetectorHandle(object):
 
 	def plc_connect(self):
 		plcconnect = self.plchandle.is_open()
-		return plcconnect
+		return plcconnect if not DEBUG else True
 
 	# def init_background(self):
 	# 	self.foreground = cv2.createBackgroundSubtractorMOG2()
@@ -66,55 +66,57 @@ class DetectorHandle(object):
 		:param show:
 		:return:
 		'''
-		dest, success = self.landmark_detect.position_landmark(show)
-
-		# 地标定位失败，就下一帧
-		if success == False:
-			self.vision_no_bag(msg="没有发现地标，向东移动1米")
-			return dest
 		plc_connect = self.plc_connect()
+		dest, success = self.landmark_detect.position_landmark(show)
 
 		if plc_connect == False:
 			logger("PLC连接失败", level='info')
+			cv2.putText(dest, "plc connect fail", (300, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+			            (255, 255, 255), 2)
+			return dest
+
+		# 地标定位失败，就下一帧
+		if success == False:
+			self.vision_no_landmark(msg="没有发现地标，向东移动1米")
 			return dest
 
 		# 计算最近的袋子,就能与钩子最近的袋子找到
-		self.find_laster(dest, success)
+		find_hock = self.find_hock(dest, success)
+		# TODO while not find_hock:drop_down_hock()
 		# 如果当前袋子为空,或者当前袋子执行完毕,需要切换目标袋子
 		self.choose_or_update_currentbag(dest, success)
 
-		if self.current_bag is not None and self.laster is not None:
+		if self.current_bag is not None and self.hock is not None:
 			# 当选定袋子并且激光灯也定位到,并且钩子并没有抵达
-			# TODO 实现落钩细节
-			self.check_arive_withlaster(dest)
-
-		elif self.current_bag is not None and self.laster is None:
-			# 当前袋子不为空，激光斑点定位失败
-			# TODO 激光斑点定位失败，需要尝试其他办法来定位钩子，来取代激光灯
-			self.check_arive_withoutlaster(dest)
-
+			self.check_arive_withhock(dest)
+		#
+		# elif self.current_bag is not None and self.hock is None:
+		# 	# 当前袋子不为空，激光斑点定位失败
+		# 	self.check_arive_withouthock(dest)
 		else:
 			# 行车与目标距离较远，没有识别到
-			self.vision_no_bag(msg="没有发现袋子，向东移动1米")
+			self.vision_no_landmark(msg="没有发现袋子，向东移动1米")
 
 		return dest
 
-	def check_arive_withlaster(self, dest):
-		if abs(
-				self.current_bag.x - self.laster.x) > 50 or abs(
-			self.current_bag.y - self.laster.y - LASTER_HOCK_DISTANCE) > 200:
-			self.move_to_nearestbag(dest)
-		elif abs(
-				self.current_bag.x - self.laster.x) <= 30 or abs(
-			self.current_bag.y - self.laster.y - LASTER_HOCK_DISTANCE) < 100:
-			# TODO 落钩实现细节
-			self.arrive_bag(has_close=True)
+	def check_arive_withhock(self, dest):
 
-	def vision_no_bag(self, msg=None):
+		print("hock position({},{}),bag position({},{})".format(self.hock.x,self.hock.y,self.current_bag.x,self.current_bag.y))
+
+		if abs(
+				self.current_bag.x - self.hock.x) > 40 and abs(
+			self.current_bag.y - self.hock.y - HOCK_DISTANCE) > 40:
+			self.move_to_nearestbag(dest)
+		else:
+			self.arrive_bag(dest, has_close=True)
+
+	def vision_no_landmark(self, msg=None):
 		'''
 		看不到地标或者看不到目标，是因为还没有进入视野
 		:return:
 		'''
+		if DEBUG:
+			return
 		try:
 			move_status = self.plchandle.read_status()
 			is_ugent_stop = self.plchandle.is_ugent_stop()
@@ -143,25 +145,23 @@ class DetectorHandle(object):
 		self.laster = laster
 		return dest
 
-	# 找不到激光灯的时候就找钩子
+	# 找到定位钩
 	def find_hock(self, dest, find_landmark=False):
-		'''
-				找不到激光灯的时候，找钩子
-				:param dest:
-				:return:
-				'''
 		dest_copy = dest.copy()
-		hock, hock_foreground = self.hock_detect.location_hock(dest, dest_copy, middle_start=100,
-		                                                       middle_end=450)
+		hock, hock_foreground = self.hock_detect.location_hock(dest, dest_copy, middle_start=120,
+		                                                       middle_end=470)
 		if hock is not None and find_landmark == True:
 			self.last_hock = hock
 		self.hock = hock
-		return dest
+		return self.hock is None
 
 	# 决定抓取哪个袋子
 	def choose_or_update_currentbag(self, dest, find_landmark):
-		# 如果紧急停止状态,就不要移动行车了,仅仅显示视频即可
-		ugent_stop_status = self.plchandle.is_ugent_stop()
+		if not DEBUG:
+			ugent_stop_status = self.plchandle.is_ugent_stop()
+		else:
+			ugent_stop_status=0
+
 		if ugent_stop_status == 1 or find_landmark == False:
 			self.landmark_detect.draw_grid_lines(dest)
 			return dest
@@ -171,33 +171,33 @@ class DetectorHandle(object):
 		# 如果当前袋子不为空,并且当前袋子并没有完成任务,就直接返回该袋子好了,不过
 		# 也有不妥的地方，假如前面的几帧因为角度问题，误差很大，还得需要计算袋子的定位
 		# 因此这里牺牲了效率，追求准确
-		bags, bag_forground = self.bag_detect.location_bags(dest, dest_copy, find_landmark, middle_start=100,
-		                                                    middle_end=450)
-
+		bags, bag_forground = self.bag_detect.location_bags(dest, dest_copy, find_landmark, middle_start=120,
+		                                                    middle_end=500)
 		self.bags = bags
 
 		if self.current_bag is not None:
 			for bag in self.bags:
 				if bag.id == self.current_bag.id and self.current_bag.status_map['finish_move'] == False:
-					if abs(self.current_bag.y - bag.y) > 100:
+					self.current_bag=bag
+					# if abs(self.current_bag.y - bag.y) > 100:
 						# 误差过大，八成是地标识别错误
-						break
-					else:
-						self.current_bag = bag
-						break
+						# break
+					# else:
+					# 	self.current_bag = bag
+					# 	break
 
 		if self.current_bag and self.current_bag.status_map['finish_move'] == False:
 			return dest
 
 		if bags is None or len(bags) == 0:
-			if self.laster is not None:
-				if self.laster.y < 100:
+			if self.hock is not None:
+				if self.hock.y < 100:
 					self.finish_job = True  # 结束自动运输任务
 					self.plchandle.ugent_stop = True  # 越界紧急停止运动
 					self.plchandle.power = False  # 行车梯形图断电
 			else:
 				# 袋子检测失败
-				self.find_objects_first(msg="没有发现袋子，向东移动一米")
+				self.vision_no_landmark(msg="没有发现袋子，向东移动一米")
 				self.landmark_detect.draw_grid_lines(dest)
 			return dest
 		else:
@@ -208,14 +208,14 @@ class DetectorHandle(object):
 				self.plchandle.power = False
 				return dest
 
-		if self.laster is None:
+		if self.hock is None:
 			# 当前帧，钩子定位失败
 			self.landmark_detect.draw_grid_lines(dest)
 			return dest
 
 		# 如果当前没有需要运行的袋子，或者当前目标袋子已经处理完成，则换一个袋子
 		if self.current_bag is None or self.current_bag.status_map['finish_move'] == True:
-			choose_index = self.choose_nearest_bag(self.bags, self.laster)
+			choose_index = self.choose_nearest_bag(self.bags, self.hock)
 			choosed_bag = bags[choose_index]
 			self.current_bag = choosed_bag
 			self.current_bag.status_map['choose'] = True
@@ -224,9 +224,8 @@ class DetectorHandle(object):
 
 		return dest
 
-
 	# 放下钩子
-	def down_hock(self,much=50):
+	def down_hock(self, much=50):
 		'''
 		放下钩子
 		:param much:
@@ -234,11 +233,9 @@ class DetectorHandle(object):
 		'''
 		self.plchandle.move(down=much)
 		if self.current_bag is not None:
-			self.current_bag.down_hock_much+=much
+			self.current_bag.down_hock_much += much
 
-
-	# TODO 抵达袋子如何处理
-	def arrive_bag(self,has_close=False, z=50):
+	def arrive_bag(self, dest, has_close=False, z=50):
 		'''
 			pick_up=False #捡起
 			max_drop_z=700
@@ -253,12 +250,13 @@ class DetectorHandle(object):
 				pull_hock(has_droped_Z)
 				#然后就是运到传送带
 			'''
+		cv2.putText(dest, "droping hock", (300, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+		            (255, 255, 255), 2)
 		self.current_bag.status_map['drop_hock'] = True
 		self.current_bag.step = 'drop_hock'
-		pass
 
-	# TODO 找不到激光灯，如何判断是否抵达
-	def check_arive_withoutlaster(self, dest):
+	# TODO 视频识别是否需要停止落钩
+	def check_arive_withouthock(self, dest):
 		'''
 					if  检测到钩子:
 						distance=computedistance(钩子，袋子)
@@ -283,8 +281,8 @@ class DetectorHandle(object):
 					#如果检测不到钩子，判断最后一次出现，钩子的位置，并计算钩子的位置与目标袋子距离多少
 					#如果距离够近，尝试落钩，直到摄像头能检测到
 					'''
-		if abs(self.last_laster.x - self.current_bag.x) < 100 and abs(
-				self.last_laster.y - self.current_bag.y - LASTER_HOCK_DISTANCE) < 100:
+		if abs(self.last_hock.x - self.current_bag.x) < 100 and abs(
+				self.last_hock.y - self.current_bag.y - HOCK_DISTANCE) < 100:
 			# 最近一次检测到的激光灯已经接近目标袋子了,
 			hock_has_drop = 0
 			MAX_DROP_HOCK = 700
@@ -294,10 +292,10 @@ class DetectorHandle(object):
 				hock_has_drop += 50
 				self.find_hock(dest=dest, find_landmark=True)
 				if self.hock is not None:
-					find=True
-				if find==True or hock_has_drop > MAX_DROP_HOCK: break
+					find = True
+				if find == True or hock_has_drop > MAX_DROP_HOCK: break
 			# end while
-			if find==True:
+			if find == True:
 				# TODO 落钩细节
 				# self.arrive_bag(has_close=True)
 				pass
@@ -306,8 +304,6 @@ class DetectorHandle(object):
 			# 先放下钩子，检测到钩子，再判断距离袋子的距离做打算
 			pass
 
-
-
 	def move_to_nearestbag(self, dest):
 		'''
 		钩子向袋子靠近
@@ -315,8 +311,12 @@ class DetectorHandle(object):
 		:return:
 		'''
 		try:
-			move_status = self.plchandle.read_status()
-			is_ugent_stop = self.plchandle.is_ugent_stop()
+			if not DEBUG:
+				move_status = self.plchandle.read_status()
+				is_ugent_stop = self.plchandle.is_ugent_stop()
+			else:
+				move_status=0
+				is_ugent_stop=0
 
 			# move==1说明行车在移动中，0静止
 			if move_status == 1 or is_ugent_stop == 1:
@@ -328,7 +328,7 @@ class DetectorHandle(object):
 				return dest
 
 			# 视频中行车激光位置，钩子的位置需要定位
-			current_car_x, current_car_y, current_car_z = self.laster.x, self.laster.y + LASTER_HOCK_DISTANCE, 0
+			current_car_x, current_car_y, current_car_z = self.hock.x, self.hock.y + HOCK_DISTANCE, 0
 			# self.hock_points.append(current_car_x, current_car_y)
 
 			# 写入目标坐标
@@ -362,7 +362,8 @@ class DetectorHandle(object):
 				down = abs(target_z - current_car_z)
 				move_info += ",DOWN {} cm".format(down)
 
-			self.plchandle.move(east=east, west=west, south=south, nourth=north, up=up, down=down)
+			if not DEBUG:
+				self.plchandle.move(east=east, west=west, south=south, nourth=north, up=up, down=down)
 			logger(move_info, level='info')
 			self.input_move_instructs.append(move_info)
 
@@ -383,7 +384,8 @@ class DetectorHandle(object):
 			cv2.putText(dest, error_info, (300, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
 
-			self.ugent_stop_car(current_car_x, current_car_y, current_car_z, dest)
+			if not DEBUG:
+				self.ugent_stop_car(current_car_x, current_car_y, current_car_z, dest)
 		except Exception as e:
 			print(e)
 			self.landmark_detect.draw_grid_lines(dest)  # 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
@@ -402,9 +404,10 @@ class DetectorHandle(object):
 			self.work = False
 			if self.save_video:
 				self.update_savevideo.emit(self.save_video_name)
-			self.plchandle.ugent_stop()
+			if not DEBUG:
+				self.plchandle.ugent_stop()
 
-	def choose_nearest_bag(self, bags, laster):
+	def choose_nearest_bag(self, bags, hock):
 		'''
 		选择距离钩子最近的袋子
 		:param bags:
@@ -412,7 +415,7 @@ class DetectorHandle(object):
 		:return:
 		'''
 
-		def __compute_distance(bag, laster):
+		def __compute_distance(bag, hock):
 			'''
 			choose_nearest_bag内部的计算袋子与钩子距离的方法
 			:param bag:
@@ -420,14 +423,14 @@ class DetectorHandle(object):
 			:return:
 			'''
 			# start= time.perf_counter()
-			X_2 = math.pow(bag.x - laster.x, 2)
-			Y_2 = math.pow(bag.y - laster.y, 2)
+			X_2 = math.pow(bag.x - hock.x, 2)
+			Y_2 = math.pow(bag.y - hock.y, 2)
 			distance = math.sqrt(X_2 + Y_2)
 			# end = time.perf_counter()
 			# print("distance is {},compute cost:{}".format(distance,end-start))
 			return distance
 
-		distances = [__compute_distance(bag, laster) for bag in bags if bag.status_map['finish_move'] == False]
+		distances = [__compute_distance(bag, hock) for bag in bags if bag.status_map['finish_move'] == False]
 
 		min_distance, choose_index = 10000, 0
 		for index, d in enumerate(distances):
@@ -479,7 +482,6 @@ class ProcessThread(QThread):
 		if self.save_video:
 			fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 保存视频的编码
 			out = cv2.VideoWriter(os.path.join(SAVE_VIDEO_DIR, self.save_video_name), fourcc, 20.0, (900, 700))
-
 		# index = 0
 		while self.play and self.IMAGE_HANDLE:
 			sleep(1 / 13)

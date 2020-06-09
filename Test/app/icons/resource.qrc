@@ -21,5 +21,7 @@
         <file>power.png</file>
         <file>set.png</file>
         <file>fresh.png</file>
+        <file>up.png</file>
+        <file>down.png</file>
     </qresource>
 </RCC>

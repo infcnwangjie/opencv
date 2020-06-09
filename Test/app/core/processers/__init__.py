@@ -151,7 +151,8 @@ class BaseDetector(object, metaclass=SmallWords):
 
 	def red_contours(self, img, middle_start=180, middle_end=500):
 		'''返回红色轮廓'''
-		red_low, red_high = [120, 50, 50], [180, 255, 255]
+		# red_low, red_high = [120, 50, 50], [180, 255, 255]
+		red_low, red_high = [156, 43, 46], [180, 255, 255]
 		red_min, red_max = np.array(red_low), np.array(red_high)
 		# 去除颜色范围外的其余颜色
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -198,23 +199,23 @@ class BaseDetector(object, metaclass=SmallWords):
 
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		# cv2.imshow("hsv",hsv)
+		# green_low, green_high = [35, 43, 46], [77, 255, 255]
 		green_low, green_high = [35, 43, 46], [77, 255, 255]
-		# green_low, green_high = [17, 43, 46], [77, 255, 255]
 		green_min, green_max = np.array(green_low), np.array(green_high)
 		green_mask = cv2.inRange(hsv, green_min, green_max)
 
 		green_ret, foreground = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
 
 
-		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-		# binarry = cv2.filter2D(binarry, -1, disc)
+		disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+		foreground = cv2.filter2D(foreground, -1, disc)
 
-		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		middle_mask = np.zeros_like(gray)
-		middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		# gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		# middle_mask = np.zeros_like(gray)
+		# middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
 		#
 		#
-		foreground = cv2.bitwise_and(foreground, foreground, mask=middle_mask)
+		# foreground = cv2.bitwise_and(foreground, foreground, mask=middle_mask)
 		# cv2.imshow("green_binary", middle_mask)
 
 		# cv2.imshow("green_binary", foreground)

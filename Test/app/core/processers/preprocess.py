@@ -89,7 +89,7 @@ class BagDetector(BaseDetector):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
 			area = cv2.contourArea(c)
-			isbig = (60 <= area and area < 10000)
+			isbig = (area>50 and area < 10000)
 			# rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
 			return isbig
 
@@ -118,7 +118,7 @@ class BagDetector(BaseDetector):
 
 		return contours, foreground
 
-	def location_bags(self, dest, img_copy, success_location=True, middle_start=110, middle_end=450):
+	def location_bags(self, dest, img_copy, success_location=True, middle_start=110, middle_end=500):
 		'''
 	     cm:def location_bags(self,target,success_location=True,middle_start=150,middle_end=500):
 		'''
@@ -126,7 +126,7 @@ class BagDetector(BaseDetector):
 		# 存储前景图
 		contours, foreground = self.findbags(img_copy, middle_start, middle_end)
 		# 对袋子排序
-		contours = sort_bag_contours(contours)
+		contours = sorted(contours,key=lambda c: cv2.boundingRect(c)[0],reverse=False)
 		# print("#"*100)
 		for increased_id, c in enumerate(contours):
 			bag = Bag(c, img=None, id=increased_id)
@@ -144,7 +144,7 @@ class BagDetector(BaseDetector):
 			else:
 				self.bags.append(bag)
 
-		cv2.drawContours(dest, contours, -1, (0, 255, 255), 3)
+		cv2.drawContours(dest, contours, -1, (170, 0, 255), 3)
 
 		return self.bags, foreground
 
@@ -594,7 +594,7 @@ class LandMarkDetecotr(BaseDetector):
 
 			# 生成透视变换矩阵；进行透视变换
 			M = cv2.getPerspectiveTransform(pts1, pts2)
-			dst = cv2.warpPerspective(src, M, (W_cols, H_rows))
+			dst = cv2.warpPerspective(src, M, (H_rows, W_cols))
 		return dst, True
 
 	def __compare_hsv_similar(self, img1, img2):
@@ -857,14 +857,135 @@ class HockDetector(BaseDetector):
 		self.hock = None
 		self._roi = None
 		self.__hock_sub_mog = cv2.createBackgroundSubtractorMOG2(history=600, varThreshold=36, detectShadows=False)
+		self.mask = None
 
-	def back_sub_apply(self, img):
+	def find_edige(self, dest):
 		'''
-		背景差分法需要时刻更新背景，并检测出前景目标
+
+		:param dest:
+		:return:
+		'''
+		bottom_edge = 0
+		for row in range(IMG_HEIGHT // 2, IMG_HEIGHT):
+			value = sum([dest[row, i, 0] for i in range(IMG_WIDTH // 2, IMG_WIDTH)])
+			if value == 0:
+				print("{} 为0".format(row))
+				bottom_edge = row
+				break
+
+		right_edge = 0
+		for col in range(IMG_WIDTH // 2, IMG_WIDTH):
+			value = sum([dest[i, col, 0] for i in range(IMG_HEIGHT // 2, IMG_HEIGHT)])
+			if value == 0:
+				right_edge = value
+				break
+
+		return bottom_edge, right_edge
+
+	def find_move_foregrond_method1(self, img):
+		'''
+		find foreground by build background
 		:param img:
 		:return:
 		'''
 		foreground = self.__hock_sub_mog.apply(img)
+		return foreground
+
+	def find_move_foregrond_method2(self, img):
+		'''
+		find foreground by diff
+
+		:return:
+		'''
+		frame_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		if not hasattr(self, 'one_frame') or not hasattr(self, 'two_frame') or not hasattr(self,
+		                                                                                   'three_frame') or self.one_frame is None or self.two_frame is None or self.three_frame is None:
+			self.one_frame = np.zeros_like(frame_gray)
+			self.two_frame = np.zeros_like(frame_gray)
+			self.three_frame = np.zeros_like(frame_gray)
+
+		# if self.mask is None:
+		# 	self.mask = np.zeros_like(frame_gray)
+
+		self.one_frame, self.two_frame, self.three_frame = self.two_frame, self.three_frame, frame_gray
+		# if self.one_frame.shape !=self.two_frame.shape:
+		# 	return None
+		abs1 = cv2.absdiff(self.one_frame, self.two_frame)  # 相减
+		_, thresh1 = cv2.threshold(abs1, 40, 255, cv2.THRESH_BINARY)  # 二值，大于40的为255，小于0
+
+		# if self.two_frame.shape !=self.three_frame.shape:
+		# 	return None
+		abs2 = cv2.absdiff(self.two_frame, self.three_frame)
+		_, thresh2 = cv2.threshold(abs2, 40, 255, cv2.THRESH_BINARY)
+
+		foreground = cv2.bitwise_and(thresh1, thresh2)  # 与运算
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+		#
+		# foreground[0:IMG_HEIGHT,0:110]=0
+		# foreground[0:IMG_HEIGHT, 450:] = 0
+		foreground = cv2.filter2D(foreground, -1, kernel)
+
+		#
+		# dilate = cv2.dilate(foreground, kernel)  # 膨胀
+		# erode = cv2.erode(dilate, kernel)  # 腐蚀
+		# dilate = cv2.dilate(dilate, kernel)  # 膨胀
+
+		# contours, hei = cv2.findContours(dilate.copy(), mode=cv2.RETR_EXTERNAL,
+		#                                  method=cv2.CHAIN_APPROX_SIMPLE)  # 寻找轮廓
+
+		# cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		# for contour in contours:
+		# 	if 100 < cv2.contourArea(contour) < 40000:
+		# 		x, y, w, h = cv2.boundingRect(contour)  # 找方框
+		# 		cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255))
+
+		return foreground
+
+	def find_move_foregrond_method3(self, img):
+		'''
+		find foreground by diff
+
+		:return:
+		'''
+		frame_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		if not hasattr(self, 'one_frame') or not hasattr(self,
+		                                                 'two_frame') or self.one_frame is None or self.two_frame is None:
+			self.one_frame = np.zeros_like(frame_gray)
+			self.two_frame = np.zeros_like(frame_gray)
+
+		# if self.mask is None:
+		# 	self.mask = np.zeros_like(frame_gray)
+
+		self.one_frame, self.two_frame = self.two_frame, frame_gray
+		# if self.one_frame.shape !=self.two_frame.shape:
+		# 	return None
+		abs1 = cv2.absdiff(self.one_frame, self.two_frame)  # 相减
+		_, thresh1 = cv2.threshold(abs1, 40, 255, cv2.THRESH_BINARY)  # 二值，大于40的为255，小于0
+
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+		#
+		# foreground[0:IMG_HEIGHT,0:110]=0
+		# foreground[0:IMG_HEIGHT, 450:] = 0
+		foreground = cv2.filter2D(thresh1, -1, kernel)
+
+		#
+		# dilate = cv2.dilate(foreground, kernel)  # 膨胀
+		# erode = cv2.erode(dilate, kernel)  # 腐蚀
+		# dilate = cv2.dilate(dilate, kernel)  # 膨胀
+
+		# contours, hei = cv2.findContours(dilate.copy(), mode=cv2.RETR_EXTERNAL,
+		#                                  method=cv2.CHAIN_APPROX_SIMPLE)  # 寻找轮廓
+
+		# cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		# for contour in contours:
+		# 	if 100 < cv2.contourArea(contour) < 40000:
+		# 		x, y, w, h = cv2.boundingRect(contour)  # 找方框
+		# 		cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255))
+
+		return foreground
+
+	def find_green_contours(self, img, middle_start=120, middle_end=450):
+		foreground, contours = self.green_contours(img, middle_start=middle_start, middle_end=middle_end)
 		return foreground
 
 	@property
@@ -880,7 +1001,7 @@ class HockDetector(BaseDetector):
 			self._roi = hock_rois[0]
 		return self._roi
 
-	def hock_foreground(self, img_copy, middle_start=120, middle_end=450):
+	def hock_foreground(self, img_copy, middle_start=120, middle_end=470):
 		# target_hsvt = cv2.cvtColor(img_copy, cv2.COLOR_BGR2HSV)
 		# img_roi_hsvt = cv2.cvtColor(self.hock_roi.img, cv2.COLOR_BGR2HSV)
 		# # cv2.imshow("roihist",img_roi_hsvt)
@@ -890,43 +1011,69 @@ class HockDetector(BaseDetector):
 		#
 		# foreground = self.find_it(images=[target_hsvt], hist=roihist)
 
+		# foreground = self.find_move_foregrond_method3(img_copy)
 
-		foreground=self.back_sub_apply(img_copy)
+		move_foreground=self.find_move_foregrond_method1(img_copy)
 
-		gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
-		middle_mask = np.zeros_like(gray)
-		middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
-		cv2.bitwise_and(foreground, foreground, middle_mask)
+		# 检测定位钩方法
+		yellow_foreground, _d = self.yellow_contours(img_copy)
+
+		foreground=cv2.bitwise_and(move_foreground,yellow_foreground,mask=None)
+
+		# bottom_edge,right_edge=self.find_edige(img_copy)
+		foreground[0:IMG_HEIGHT, 0:middle_start] = 0
+		foreground[0:IMG_HEIGHT, middle_end:] = 0
+
+		# gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
+		# middle_mask = np.zeros_like(gray)
+		# middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		# middle_mask[0:bottom_edge, middle_start:middle_end] = 255
+		# result_foreground=cv2.bitwise_and(foreground1, foreground1, middle_mask)
 
 		contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return contours, foreground
 
-	def location_hock(self, img_show, img_copy, middle_start=120, middle_end=450):
+	def location_hock(self, img_show, img_copy, middle_start=120, middle_end=470):
+		'''
+		定位钩子需要解决的问题：
+		1、去除前景目标边框噪音及移动造成的空洞噪音
+		2、钩子多方法融合，根据检测点区域检测出来
+		:param img_show:
+		:param img_copy:
+		:param middle_start:
+		:param middle_end:
+		:return:
+		'''
 
 		def __filter_laster_contour(c):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			if middle_start>x or x>middle_end:
+			if x < middle_start or x > middle_end:
 				return False
-			if area<50 or area>3000:
+			# roi_img = cv2.resize(self.hock_roi.img, (w, h))
+			# radio=self.color_similar_ratio(roi_img,img_copy[y:y+h,x:x+w])
+			# print(radio)
+			print("wide is {},height is {}".format(w, h))
+
+			if not (10<w<30 and 10<h<30):
 				return False
+
+			# if radio<0.5:
+			# 	return False
 			return True
-
-
-
-
 
 		# foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
 		contours, foregroud = self.hock_foreground(img_copy, middle_start, middle_end)
-		green_ret, foreground = cv2.threshold(foregroud, 0, 255, cv2.THRESH_BINARY)
+		# green_ret, foreground = cv2.threshold(foregroud, 40, 255, cv2.THRESH_BINARY)
 		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 		# foregroud = cv2.filter2D(foregroud, -1, disc)
 		contours = list(filter(__filter_laster_contour, contours))
 
-		# if contours is None or len(contours) == 0 or len(contours) > 1:
-		# 	return None, foregroud
+		print("hock contour is {}".format(len(contours)))
 
+		if contours is None or len(contours) == 0 or len(contours) > 1:
+			return None, foregroud
 		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
 
 		try:

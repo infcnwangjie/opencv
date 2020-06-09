@@ -93,6 +93,31 @@ class CentWindowUi(object):
 		self.stop_button.setStyleSheet("border:none")
 		operate_layout.addWidget(self.stop_button, *(0, 1))
 
+		self.up_hock_button = QtWidgets.QToolButton(self)
+		self.up_hock_button.setIcon(QIcon(":icons/up.png"))
+		self.up_hock_button.setIconSize(QSize(60, 60))
+		self.up_hock_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		self.up_hock_button.setObjectName("up_hock_button")
+		self.up_hock_button.setStyleSheet("border:none")
+		operate_layout.addWidget(self.up_hock_button, *(1, 0))
+
+		self.down_hock_button = QtWidgets.QToolButton(self)
+		self.down_hock_button.setIcon(QIcon(":icons/down.png"))
+		self.down_hock_button.setIconSize(QSize(60, 60))
+		self.down_hock_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		self.down_hock_button.setObjectName("down_hock_button")
+		self.down_hock_button.setStyleSheet("border:none")
+		operate_layout.addWidget(self.down_hock_button, *(1, 1))
+
+		# self.move_east_button = QtWidgets.QToolButton(self)
+		# self.move_east_button.setText("东")
+		# self.move_east_button.setIcon(QIcon(":icons/down.png"))
+		# self.move_east_button.setIconSize(QSize(60, 60))
+		# self.move_east_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		# self.move_east_button.setObjectName("move_east_button")
+		# # self.move_east_button.setStyleSheet("border:none")
+		# operate_layout.addWidget(self.move_east_button, *(2, 0))
+
 		self.info_box = QtWidgets.QGroupBox()
 		self.info_box.setTitle("操作状态")
 		plc_status_layout = QtWidgets.QFormLayout()
@@ -111,9 +136,9 @@ class CentWindowUi(object):
 		self.ladder_edit.setReadOnly(True)
 		plc_status_layout.addRow(ladder_label, self.ladder_edit)
 
-		self.fresh_pushbutton=QToolButton()
+		self.fresh_pushbutton = QToolButton()
 		self.fresh_pushbutton.setIcon(QIcon(":icons/fresh.png"))
-		self.fresh_pushbutton.setIconSize(QSize(60,60))
+		self.fresh_pushbutton.setIconSize(QSize(60, 60))
 		self.fresh_pushbutton.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 		self.fresh_pushbutton.setText("刷新")
 		self.fresh_pushbutton.setStyleSheet("border:none")
@@ -210,6 +235,8 @@ class CentWindowUi(object):
 		self.operatorBox.setTitle(_translate("MainWindow", "操作区域"))
 		self.play_button.setText(_translate("MainWindow", "开始"))
 		self.stop_button.setText(_translate("MainWindow", "停止"))
+		self.up_hock_button.setText("上")
+		self.down_hock_button.setText("下")
 		self.videoBox.setTitle(_translate("MainWindow", "视频区域"))
 
 
@@ -220,7 +247,7 @@ class CenterWindow(QWidget, CentWindowUi):
 		self.init_button()  # 按钮状态设置
 		with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'rb') as comfile:
 			info = pickle.load(comfile)
-			# print(info)
+		# print(info)
 		self.plchandle = PlcHandle(plc_port=info['PLC_COM'])
 		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label, plchandle=self.plchandle)
 		self.process.intelligentthread.update_savevideo.connect(self.add_save_video)
@@ -231,6 +258,8 @@ class CenterWindow(QWidget, CentWindowUi):
 	def init_button(self):
 		self.play_button.clicked.connect(self.play)
 		self.stop_button.clicked.connect(self.stop)
+		self.up_hock_button.clicked.connect(self.up_hock)
+		self.down_hock_button.clicked.connect(self.down_hock)
 
 	def check_test_status(self):
 		self.test_status_edit.setText('测试' if DEBUG else "正式")
@@ -269,20 +298,25 @@ class CenterWindow(QWidget, CentWindowUi):
 			                    self.tr("还没有开启摄像头或者选择播放视频!"))
 			print("关闭")
 
-	def startwork(self):
-		'''这是正儿八经的开始移动行车
-		'''
-		self.process.intelligentthread.work = True
-		try:
-			imagehandle = ImageProvider(ifsdk=True)
-			self.process.IMGHANDLE = imagehandle
-			if self.process.IMGHANDLE:
-				self.process.IMGHANDLE = imagehandle
-				self.process.intelligentthread.play = True
-				self.process.intelligentthread.start()
-		except:
+	def up_hock(self):
+		'''升钩'''
+		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
+		if self.process.plchandle:
+			print("升钩20公分")
+			self.process.plchandle.move(up=20)
+		else:
 			QMessageBox.warning(self, "警告",
-			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+			                    self.tr("没有连接PLC!"))
+
+	def down_hock(self):
+		'''降钩'''
+		# self.final_picture_label.resize(IMG_WIDTH, IMG_HEIGHT)
+		if self.process.plchandle:
+			self.process.plchandle.move(down=20)
+			print("落钩20公分")
+		else:
+			QMessageBox.warning(self, "警告",
+			                    self.tr("没有连接PLC!"))
 
 	def startwork(self):
 		'''这是正儿八经的开始移动行车
@@ -298,6 +332,21 @@ class CenterWindow(QWidget, CentWindowUi):
 		except:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+
+	# def startwork(self):
+	# 	'''这是正儿八经的开始移动行车
+	# 	'''
+	# 	self.process.intelligentthread.work = True
+	# 	try:
+	# 		imagehandle = ImageProvider(ifsdk=True)
+	# 		self.process.IMGHANDLE = imagehandle
+	# 		if self.process.IMGHANDLE:
+	# 			self.process.IMGHANDLE = imagehandle
+	# 			self.process.intelligentthread.play = True
+	# 			self.process.intelligentthread.start()
+	# 	except:
+	# 		QMessageBox.warning(self, "警告",
+	# 		                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
 
 	def switch_power(self):
 		'''
@@ -331,11 +380,11 @@ class CenterWindow(QWidget, CentWindowUi):
 		print("关闭摄像")
 		self.process.intelligentthread.play = False
 
-
 	def fresh_all(self):
 		self.check_test_status()
 		self.check_plc_status()
 		self.check_ladder_status()
+
 
 class MainWindow(QMainWindow):
 	def __init__(self):
@@ -343,7 +392,7 @@ class MainWindow(QMainWindow):
 		self.resize(1289, 1000)
 		self.init_window()
 		self.set_roi_widget = SetRoiWidget()
-		self.common_set_widget=CommonSetWidget()
+		self.common_set_widget = CommonSetWidget()
 		self.coordinate_widget = SetCoordinateWidget()
 
 	def init_window(self):

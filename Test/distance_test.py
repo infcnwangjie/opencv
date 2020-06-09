@@ -103,21 +103,19 @@ def avi_without_hock():
 	a = LandMarkDetecotr()
 	b = BagDetector()
 	c = LasterDetector()
-	d=HockDetector()
+	d = HockDetector()
 	# 背景差分法
 
-	middle_start=120
-	middle_end=570
+	middle_start = 120
+	middle_end = 570
 	while (True):
 		ret, frame = cap.read()  # 捕获一帧图像
 		time.sleep(1 / 13)
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		# gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-
 		if ret:
 			dest, success = a.position_landmark(frame)
-
 
 			# cv2.imshow("fgmask", fgmask)
 			dest_copy = dest.copy()
@@ -125,14 +123,13 @@ def avi_without_hock():
 			# zero[0:IMG_HEIGHT, middle_start:middle_end] = 255
 
 			if success:
-
 				print("landmark 定位:{}".format(success))
 
 				bags, foreground = b.location_bags(dest, dest_copy, middle_start=middle_start, middle_end=middle_end)
 				#
 				# laster, lasterforeground = c.location_laster(dest, dest_copy, middle_start=120, middle_end=450)
-				hock,hockforeground=d.location_hock(dest,dest_copy,middle_start=middle_start, middle_end=middle_end)
-
+				hock, hockforeground = d.location_hock(dest, dest_copy, middle_start=middle_start,
+				                                       middle_end=middle_end)
 
 				cv2.imshow("hock_foreground", hockforeground)
 
@@ -145,30 +142,64 @@ def avi_without_hock():
 	cv2.destroyAllWindows()  # 关闭窗
 
 
+def match_ORB(img2):
+	img1 = cv2.imread('D:/NTY_IMG_PROCESS/HOCK_ROI/HOCK_.png', 0)
+	# img2 = cv2.imread('./gggg/002.png',0)
+
+	# 使用ORB特征检测器和描述符，计算关键点和描述符
+	orb = cv2.ORB_create()
+	kp1, des1 = orb.detectAndCompute(img1, None)
+	kp2, des2 = orb.detectAndCompute(img2, None)
+
+	bf = cv2.BFMatcher(normType=cv2.NORM_L1, crossCheck=True)
+	matches = bf.match(des1, des2)
+	matches = sorted(matches, key=lambda x: x.distance)
+
+	img3 = cv2.drawMatches(img1=img1, keypoints1=kp1,
+	                       img2=img2, keypoints2=kp2,
+	                       matches1to2=matches,
+	                       outImg=img2, flags=2)
+	return img3
+
+
 def avi_play():
 	import cv2
 
-	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142647832.avi")  # 打开相机
-	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")  # 打开相机
+	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142647832.avi")  # 打开相机
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200609142146157.avi")  # 打开相机
 	a = LandMarkDetecotr()
 	b = BagDetector()
-	c = LasterDetector()
+	# c = LasterDetector()
+	d = HockDetector()
 	# 背景差分法
-	fgbg  = cv2.createBackgroundSubtractorMOG2()
+	# fgbg  = cv2.createBackgroundSubtractorMOG2()
+	cv2.namedWindow("foreground")
 	while (True):
 		ret, frame = cap.read()  # 捕获一帧图像
 		time.sleep(1 / 13)
-		frame = cv2.resize(frame, (IMG_HEIGHT,IMG_WIDTH))
+		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		if ret:
 			dest, success = a.position_landmark(frame)
-			fgmask = fgbg.apply(frame)
-			cv2.imshow("fgmask",fgmask)
+			# fgmask = fgbg.apply(frame)
+			# cv2.imshow("fgmask",fgmask)
 			dest_copy = dest.copy()
+			# match_img=match_ORB(dest_copy)
+			# cv2.imshow("match",match_img)
+
+			# positions=numpy.argwhere(dest_copy==0)
+			# for index,positionlist in enumerate(positions):
+			# 	print(index)
+			# 	print(positionlist)
+			# print(positions)
+
 			if success:
 				print("landmark 定位:{}".format(success))
 				bags, foreground = b.location_bags(dest, dest_copy, middle_start=120, middle_end=450)
+				_1, foreground = d.location_hock(dest, dest_copy)
+				if foreground is not None:
+					cv2.imshow("foreground", foreground)
 
-				laster, lasterforeground = c.location_laster(dest, dest_copy, middle_start=120, middle_end=450)
+			# laster, lasterforeground = c.location_laster(dest, dest_copy, middle_start=120, middle_end=450)
 
 			cv2.imshow('frame', dest)
 			cv2.waitKey(1)
@@ -182,6 +213,47 @@ def avi_play():
 def time_test():
 	time_str = time.strftime("%Y%m%d%X", time.localtime()).replace(":", "")
 	print(time_str)
+
+
+def hock_play():
+	import cv2
+
+	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142647832.avi")  # 打开相机
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200609142146157.avi")  # 打开相机
+	a = LandMarkDetecotr()
+	b = BagDetector()
+	# c = LasterDetector()
+	d = HockDetector()
+	# 背景差分法
+	# fgbg  = cv2.createBackgroundSubtractorMOG2()
+	cv2.namedWindow("foreground")
+	while (True):
+		ret, frame = cap.read()  # 捕获一帧图像
+		time.sleep(1 / 13)
+		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
+		if ret:
+			dest, success = a.position_landmark(frame)
+			# fgmask = fgbg.apply(frame)
+			# cv2.imshow("fgmask",fgmask)
+			dest_copy = dest.copy()
+
+			if success:
+				print("landmark 定位:{}".format(success))
+				bags, bagf = b.location_bags(dest, dest_copy, middle_start=120, middle_end=500)
+				cv2.imshow("bagf",bagf)
+				_1, foreground = d.location_hock(dest, dest_copy)
+				if foreground is not None:
+					cv2.imshow("foreground", foreground)
+
+			cv2.imshow('frame', dest)
+			cv2.waitKey(1)
+		else:
+			break
+
+	cap.release()  # 关闭相机
+	cv2.destroyAllWindows()  # 关闭窗
+
+
 #
 # def quick_sort(arr):
 #     """快速排序"""
@@ -211,10 +283,113 @@ def time_test():
 # 		print(num)
 
 
+def three_frame_differencing():
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")
+	width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+	one_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	two_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	three_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	while cap.isOpened():
+		ret, frame = cap.read()
+		frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		if not ret:
+			break
+		one_frame, two_frame, three_frame = two_frame, three_frame, frame_gray
+		abs1 = cv2.absdiff(one_frame, two_frame)  # 相减
+		_, thresh1 = cv2.threshold(abs1, 40, 255, cv2.THRESH_BINARY)  # 二值，大于40的为255，小于0
+
+		abs2 = cv2.absdiff(two_frame, three_frame)
+		_, thresh2 = cv2.threshold(abs2, 40, 255, cv2.THRESH_BINARY)
+
+		binary = cv2.bitwise_and(thresh1, thresh2)  # 与运算
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+		erode = cv2.erode(binary, kernel)  # 腐蚀
+		dilate = cv2.dilate(erode, kernel)  # 膨胀
+		dilate = cv2.dilate(dilate, kernel)  # 膨胀
+
+		contours, hei = cv2.findContours(dilate.copy(), mode=cv2.RETR_EXTERNAL,
+		                                 method=cv2.CHAIN_APPROX_SIMPLE)  # 寻找轮廓
+
+		# cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		# for contour in contours:
+		# 	if 100 < cv2.contourArea(contour) < 40000:
+		# 		x, y, w, h = cv2.boundingRect(contour)  # 找方框
+		# 		cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255))
+		cv2.namedWindow("binary", cv2.WINDOW_NORMAL)
+		# cv2.namedWindow("dilate", cv2.WINDOW_NORMAL)
+		# cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+		cv2.imshow("binary", binary)
+		# cv2.imshow("dilate", dilate)
+		# cv2.imshow("frame", frame)
+		if cv2.waitKey(50) & 0xFF == ord("q"):
+			break
+	cap.release()
+	cv2.destroyAllWindows()
+
+
+def two_frame_differencing():
+	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200602132439483.avi")
+	width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+	one_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	two_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	# three_frame = numpy.zeros((height, width), dtype=numpy.uint8)
+	while cap.isOpened():
+		ret, frame = cap.read()
+		frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		if not ret:
+			break
+		one_frame, two_frame = two_frame, frame_gray
+		abs1 = cv2.absdiff(one_frame, two_frame)  # 相减
+		_, thresh1 = cv2.threshold(abs1, 40, 255, cv2.THRESH_BINARY)  # 二值，大于40的为255，小于0
+
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+		erode = cv2.erode(thresh1, kernel)  # 腐蚀
+		dilate = cv2.dilate(erode, kernel)  # 膨胀
+		# dilate = cv2.dilate(dilate, kernel)  # 膨胀
+
+		contours, hei = cv2.findContours(dilate.copy(), mode=cv2.RETR_EXTERNAL,
+		                                 method=cv2.CHAIN_APPROX_SIMPLE)  # 寻找轮廓
+
+		# cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		# for contour in contours:
+		# 	if 100 < cv2.contourArea(contour) < 40000:
+		# 		x, y, w, h = cv2.boundingRect(contour)  # 找方框
+		# 		cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255))
+		cv2.namedWindow("binary", cv2.WINDOW_NORMAL)
+		# cv2.namedWindow("dilate", cv2.WINDOW_NORMAL)
+		# cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+		cv2.imshow("binary", dilate)
+		# cv2.imshow("dilate", dilate)
+		# cv2.imshow("frame", frame)
+		if cv2.waitKey(50) & 0xFF == ord("q"):
+			break
+	cap.release()
+	cv2.destroyAllWindows()
+
+
+def rp():
+	# str_t = r"刘喆 鲁C962EL,18766963345"
+	str1_t = r"吕绪文，15065872895,鲁C3U608"
+	import re
+	match_car_no = re.compile(".*?([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-Z0-9]{4}[A-Z0-9挂学警港澳]{1}).*?")
+
+	result=re.match(match_car_no,str1_t)
+	if result is not None:
+		print(result.group(1))
+	else:
+		print("fail")
+
+
 if __name__ == '__main__':
 	# test_one_image()
 	# avi_play()
-	avi_without_hock()
-	# test_sort()
-	# time_test()
-	# numpy_mat()
+	hock_play()
+	# rp()
+# two_frame_differencing()
+# avi_without_hock()
+# test_sort()
+# time_test()
+# numpy_mat()
+# three_frame_differencing()

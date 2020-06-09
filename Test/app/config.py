@@ -12,7 +12,7 @@ DISTANCE_LASTER_HOCK_X = 60  # 灯与钩子X轴误差距离60cm
 
 DISTANCE_LASTER_HOCK_Y = 60  # 灯与钩子Y轴误差距离60cm
 
-DEBUG = False  #开启测试模式
+DEBUG = True  #开启测试模式
 SDK_OPEN = True #开启海康摄像头
 
 DISTANCE_SAMEXLANDMARK_SPACE = 200 if not DEBUG else 20  # 地标与地标之间间隔大概2米
@@ -42,3 +42,4 @@ LOG_PATH="D:/NTY_IMG_PROCESS/LOGS"# 日志存储文档
 
 PLC_COM='COM7' #PLC端口号
 LASTER_HOCK_DISTANCE=30 #cm
+HOCK_DISTANCE=30 #CM

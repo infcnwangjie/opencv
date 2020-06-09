@@ -143,7 +143,7 @@ class PlcHandle(object):
 		:return:
 		'''
 		try:
-			# self.info()
+			self.info()
 			self._plc_status = True
 		except Exception as e:
 			logger("PLC 连接失败，请检查端口", level='error')
@@ -182,7 +182,11 @@ class PlcHandle(object):
 		:param position: dict
 		:return:
 		'''
+
+
 		try:
+			self.__write(HOCK_MOVE_STATUS_PLC, int(1)) #钩子运动状态上升
+
 			if east != 0:
 				self.__write(EAST_PLC, int(east))
 			if west != 0:
@@ -201,6 +205,12 @@ class PlcHandle(object):
 				self.__write(DOWN_PLC, int(down))
 
 		except Exception as exc:
+			logger("PLC 无法写入数值，请检查端口", level='error')
+
+	def hock_stop(self):
+		try:
+			self.__write(HOCK_MOVE_STATUS_PLC,int(0))
+		except Exception as e:
 			logger("PLC 无法写入数值，请检查端口", level='error')
 
 	def ugent_stop(self):
