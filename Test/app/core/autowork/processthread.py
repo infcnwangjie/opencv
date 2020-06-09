@@ -104,8 +104,8 @@ class DetectorHandle(object):
 		print("hock position({},{}),bag position({},{})".format(self.hock.x,self.hock.y,self.current_bag.x,self.current_bag.y))
 
 		if abs(
-				self.current_bag.x - self.hock.x) > 40 and abs(
-			self.current_bag.y - self.hock.y - HOCK_DISTANCE) > 40:
+				self.current_bag.x - self.hock.x) > 50 or abs(
+			self.current_bag.y - self.hock.y - HOCK_DISTANCE) > 50:
 			self.move_to_nearestbag(dest)
 		else:
 			self.arrive_bag(dest, has_close=True)
@@ -235,25 +235,55 @@ class DetectorHandle(object):
 		if self.current_bag is not None:
 			self.current_bag.down_hock_much += much
 
-	def arrive_bag(self, dest, has_close=False, z=50):
+	# 	检查定位钩吸起袋子
+	def check_suck(self,dest):
 		'''
-			pick_up=False #捡起
-			max_drop_z=700
-			has_droped_z=0
-			while not pick_up:
-				drop_hock(z=50cm)
-				has_droped_z+=50
-				pick_up=check_pickup()
-				if pick_up or has_droped_z>max_drop_z:break
-			if pick_up==True:
-				self.current_bag
-				pull_hock(has_droped_Z)
-				#然后就是运到传送带
-			'''
+		袋子如果被定位钩抓起，尝试拉起袋子，会让袋子左右摇晃
+		:return:
+		'''
+		# TODO
+		cv2.putText(dest, "check_suck", (310, 600), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+					(255, 255, 255), 2)
+		return True
+
+	# 检查机械手抓住袋子
+	def  check_hold(self,dest):
+		'''
+		检测机械手抓住袋子：袋子的面积会因为被机械手遮挡而变小
+		:return:
+		'''
+		cv2.putText(dest, "check_hold", (360, 600), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
+					(255, 255, 255), 2)
+		return True
+
+	# 拉起袋子
+	def pull_bag(self):
+		'''
+		拉起袋子，放到目的区域，目前没做
+		:return:
+		'''
+		pass
+
+	def arrive_bag(self, dest, has_close=False, z=50):
 		cv2.putText(dest, "droping hock", (300, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 		            (255, 255, 255), 2)
 		self.current_bag.status_map['drop_hock'] = True
 		self.current_bag.step = 'drop_hock'
+
+		if_suck,max_drop_z,has_droped_z = False,600,0  # 捡起
+		while not if_suck and has_droped_z<max_drop_z:
+			self.down_hock(50)
+			has_droped_z += 50
+			self.move_to_nearestbag(dest)
+			if_suck= self.check_suck(dest)
+		# endwhile
+		if if_suck == True:
+			hold_bag=self.check_hold(dest)
+			if hold_bag:
+				self.pull_bag()
+
+
+
 
 	# TODO 视频识别是否需要停止落钩
 	def check_arive_withouthock(self, dest):

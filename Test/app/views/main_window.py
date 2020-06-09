@@ -12,7 +12,8 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, \
 	QTreeWidgetItem, QTreeWidget, QFileDialog, QMessageBox, QDesktopWidget, QLabel, QLineEdit, QSplitter, QListView, \
 	QListWidgetItem, QPushButton, QToolButton
 
-from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR, SAVE_VIDEO_DIR, PROGRAM_DATA_DIR
+from app.config import SDK_OPEN, DEBUG, IMG_WIDTH, IMG_HEIGHT, VIDEO_DIR, ROIS_DIR, SAVE_VIDEO_DIR, PROGRAM_DATA_DIR, \
+	PLC_COM
 from app.core.autowork.process import IntelligentProcess
 from app.core.plc.plchandle import PlcHandle
 from app.core.video.imageprovider import ImageProvider
@@ -245,10 +246,14 @@ class CenterWindow(QWidget, CentWindowUi):
 		super().__init__()
 		self.setupUi(self)
 		self.init_button()  # 按钮状态设置
-		with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'rb') as comfile:
-			info = pickle.load(comfile)
-		# print(info)
-		self.plchandle = PlcHandle(plc_port=info['PLC_COM'])
+		try:
+			with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'rb') as comfile:
+				info = pickle.load(comfile)
+			# print(info)
+			self.plchandle = PlcHandle(plc_port=info['PLC_COM'])
+		except Exception as e:
+			self.plchandle = PlcHandle(plc_port=PLC_COM)
+
 		self.process = IntelligentProcess(IMGHANDLE=None, img_play=self.final_picture_label, plchandle=self.plchandle)
 		self.process.intelligentthread.update_savevideo.connect(self.add_save_video)
 		self.check_test_status()
