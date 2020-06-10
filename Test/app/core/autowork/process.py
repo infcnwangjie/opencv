@@ -14,6 +14,7 @@ class IntelligentProcess(object):
 		self._IMGHANDLE = IMGHANDLE
 		self.init_imgplay(img_play)
 		self.init_imgdetector_thread()
+		self.status_show=None
 
 	@property
 	def IMGHANDLE(self):

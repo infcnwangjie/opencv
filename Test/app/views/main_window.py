@@ -249,7 +249,6 @@ class CenterWindow(QWidget, CentWindowUi):
 		try:
 			with open(os.path.join(PROGRAM_DATA_DIR, 'plccom.txt'), 'rb') as comfile:
 				info = pickle.load(comfile)
-			# print(info)
 			self.plchandle = PlcHandle(plc_port=info['PLC_COM'])
 		except Exception as e:
 			self.plchandle = PlcHandle(plc_port=PLC_COM)
@@ -276,11 +275,9 @@ class CenterWindow(QWidget, CentWindowUi):
 		print(self.plchandle.is_open())
 		self.plc_status_edit.setText('连接' if self.plchandle.is_open() else "断开")
 
+
 	def check_ladder_status(self):
-		'''
-		检测梯形图状态
-		:return:
-		'''
+		'''检测梯形图开启状态'''
 		self.ladder_edit.setText('启动' if self.plchandle.power else "未开启")
 
 	def onTreeClicked(self, qmodeLindex):
@@ -338,20 +335,8 @@ class CenterWindow(QWidget, CentWindowUi):
 			QMessageBox.warning(self, "警告",
 			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
 
-	# def startwork(self):
-	# 	'''这是正儿八经的开始移动行车
-	# 	'''
-	# 	self.process.intelligentthread.work = True
-	# 	try:
-	# 		imagehandle = ImageProvider(ifsdk=True)
-	# 		self.process.IMGHANDLE = imagehandle
-	# 		if self.process.IMGHANDLE:
-	# 			self.process.IMGHANDLE = imagehandle
-	# 			self.process.intelligentthread.play = True
-	# 			self.process.intelligentthread.start()
-	# 	except:
-	# 		QMessageBox.warning(self, "警告",
-	# 		                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
+	def init_process_status_show(self):
+		pass
 
 	def switch_power(self):
 		'''
@@ -406,6 +391,7 @@ class MainWindow(QMainWindow):
 		self.setCentralWidget(self.centralwidget)  # 将它设置成QMainWindow的中心组件。中心组件占据了所有剩下的空间。
 		self.showMaximized()
 		self.init_menu_toolbar()
+
 
 	def init_menu_toolbar(self):
 		openFileAction = QAction(QIcon(":icons/openfile.png"), '打开', self)
@@ -490,7 +476,10 @@ class MainWindow(QMainWindow):
 		savevideoToolBar.addAction(video_save_action)
 
 		self.setWindowTitle('Main window')
-		self.statusBar().show()
+		self.status_bar = self.statusBar()  # 创建状态栏
+		self.status_bar.showMessage("ready!")  # 显示消息
+		self.centralwidget.process.intelligentthread.detectorhandle.status_show=self.status_bar
+
 
 	def _openfile(self):
 		filename, filetype = QFileDialog.getOpenFileName(self,

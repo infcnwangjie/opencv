@@ -27,6 +27,8 @@ class Box:
 		# if img is None:
 		# 	raise Exception("box img must not none")
 		self.id, self.img = id, img
+		# 用于解决地标检测不到的时候，使用的坐标
+		self.img_x, self.img_y = None, None
 		self.contour = contour
 		self.box = cv2.boundingRect(contour)
 		self.x, self.y, self.w, self.h = self.box
@@ -71,6 +73,7 @@ class Bag(Box):
 		self.step: str = None
 		self.step_pointer = -1
 		self.down_hock_much = 0
+		self.suck_map={}#帧，bool
 
 	def modify_box_content(self, no_num=True):
 		self.box_content = "(" + str(self.x) + "," + str(
@@ -93,7 +96,7 @@ class Laster(Box):
 class Hock(Box):
 	def modify_box_content(self):
 		# 如果box内部没有内部轮廓，就直接退出循环
-		self.box_content = "hock:" + "->(" + str(self.boxcenterpoint[0]) + "," + str(
+		self.box_content = "h:" + "(" + str(self.boxcenterpoint[0]) + "," + str(
 			self.boxcenterpoint[1]) + ")"
 
 
@@ -241,3 +244,14 @@ class LandMarkRoi:
 			return int(result.group(1))
 		else:
 			return -1
+
+
+
+class BagContour:
+	def __init__(self,c):
+		self._c=c
+
+
+	@property
+	def contour(self):
+		return self._c

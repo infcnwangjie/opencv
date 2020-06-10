@@ -226,26 +226,30 @@ def hock_play():
 	d = HockDetector()
 	# 背景差分法
 	# fgbg  = cv2.createBackgroundSubtractorMOG2()
-	cv2.namedWindow("foreground")
+	# cv2.namedWindow("foreground")
 	while (True):
 		ret, frame = cap.read()  # 捕获一帧图像
 		time.sleep(1 / 13)
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		if ret:
-			dest, success = a.position_landmark(frame)
-			# fgmask = fgbg.apply(frame)
-			# cv2.imshow("fgmask",fgmask)
-			dest_copy = dest.copy()
+			# dest, success = a.position_landmark(frame)
+			# dest_copy = dest.copy()
+			#
+			# if success:
+			# 	print("landmark 定位:{}".format(success))
+			# 	bags, bagf = b.location_bags(dest, dest_copy, middle_start=120, middle_end=500)
+			# 	cv2.imshow("bagf",bagf)
+			# 	_1, foreground = d.location_hock(dest, dest_copy)
+			# 	if foreground is not None:
+			# 		cv2.imshow("foreground", foreground)
 
-			if success:
-				print("landmark 定位:{}".format(success))
-				bags, bagf = b.location_bags(dest, dest_copy, middle_start=120, middle_end=500)
-				cv2.imshow("bagf",bagf)
-				_1, foreground = d.location_hock(dest, dest_copy)
-				if foreground is not None:
-					cv2.imshow("foreground", foreground)
 
-			cv2.imshow('frame', dest)
+			bags, bagf = b.location_bags(frame, frame.copy(),success_location=False, middle_start=240, middle_end=500)
+			# cv2.imshow("bag",bagf)
+			_1, foreground = d.location_hock(frame, frame.copy(),find_landmark=False,middle_start=245,middle_end=490)
+			# if foreground is not None:
+			# 		cv2.imshow("hock", foreground)
+			cv2.imshow('frame', frame)
 			cv2.waitKey(1)
 		else:
 			break
@@ -382,10 +386,23 @@ def rp():
 		print("fail")
 
 
+def fangcha():
+	a=[1,5,6,7,8,9]
+
+	average_v=numpy.average(a[-4:])
+	print(average_v)
+	Q2=0
+	for item in a[-4:]:
+		Q2+=math.pow(item-average_v,2)
+	print(math.sqrt(Q2))
+
+	# print(a[-4:])
+
 if __name__ == '__main__':
 	# test_one_image()
 	# avi_play()
 	hock_play()
+	# fangcha()
 	# rp()
 # two_frame_differencing()
 # avi_without_hock()

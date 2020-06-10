@@ -89,7 +89,7 @@ class BagDetector(BaseDetector):
 		def warp_filter(c):
 			'''内部过滤轮廓'''
 			area = cv2.contourArea(c)
-			isbig = (area>50 and area < 10000)
+			isbig = (area > 30 and area < 10000)
 			# rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(c)
 			return isbig
 
@@ -118,7 +118,7 @@ class BagDetector(BaseDetector):
 
 		return contours, foreground
 
-	def location_bags(self, dest, img_copy, success_location=True, middle_start=110, middle_end=500):
+	def location_bags_withlandmark(self, dest, img_copy, success_location=True, middle_start=110, middle_end=500):
 		'''
 	     cm:def location_bags(self,target,success_location=True,middle_start=150,middle_end=500):
 		'''
@@ -126,11 +126,15 @@ class BagDetector(BaseDetector):
 		# 存储前景图
 		contours, foreground = self.findbags(img_copy, middle_start, middle_end)
 		# 对袋子排序
-		contours = sorted(contours,key=lambda c: cv2.boundingRect(c)[0],reverse=False)
+		contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0], reverse=False)
+		cv2.drawContours(dest, contours, -1, (170, 0, 255), 3)
 		# print("#"*100)
 		for increased_id, c in enumerate(contours):
 			bag = Bag(c, img=None, id=increased_id)
-			# print(bag.x)
+			if success_location == False:
+				bag.img_x = bag.x
+				bag.img_y = bag.y
+
 			bag.modify_box_content(no_num=True)
 			if success_location:
 				cv2.putText(dest, bag.box_content,
@@ -140,12 +144,11 @@ class BagDetector(BaseDetector):
 			for existbag in (item for item in self.bags if item.status_map['finish_move'] == False):
 				if abs(existbag.x - bag.x) < 20 and abs(existbag.y - bag.y) < 20:
 					existbag.x, existbag.y = bag.x, bag.y
+					if bag.img_x is not None and bag.img_y is not None:
+						existbag.img_x, existbag.img_y = bag.img_x, bag.img_y
 					break
 			else:
 				self.bags.append(bag)
-
-		cv2.drawContours(dest, contours, -1, (170, 0, 255), 3)
-
 		return self.bags, foreground
 
 
@@ -464,8 +467,6 @@ class LandMarkDetecotr(BaseDetector):
 		rows, cols, channels = image.shape
 		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
 			dest = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH))
-		# rows, cols, channels = dest.shape
-		# print("rows:{},cols:{}".format(rows, cols))
 		else:
 			dest = image
 		self.candidate_landmarks(dest, left_start=110, left_end=210, right_start=510, right_end=600)
@@ -475,13 +476,7 @@ class LandMarkDetecotr(BaseDetector):
 			exception_labels = [landmarkname for landmarkname, (itemx, itemy) in self.ALL_POSITIONS.items() if
 			                    (re.match(self.landmark_match, landmarkname).group('NO') < no and itemy > y) or (
 					                    re.match(self.landmark_match, landmarkname).group('NO') > no and itemy < y)]
-			# print(exception_labels)
-			# print("{}:({},{})".format(label,x,y))
 			if len(exception_labels) > 0:
-				# for exception_label in exception_labels:
-				# 	print("{}is {}，but {} is {}".format(label, y, exception_label,
-				# 	                                    self.ALL_POSITIONS[exception_label][1]))
-				# print("exception_labels >0")
 				return dest, False
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
@@ -492,10 +487,6 @@ class LandMarkDetecotr(BaseDetector):
 		real_position_dic = {key: [int(float(value.split(',')[0])), int(float(value.split(',')[1]))] for key, value in
 		                     real_positions.items()}
 
-		# cv2.rectangle(dest, (left_start, 0), (left_end, 900), color=(0, 0, 255),
-		#               thickness=2)
-		# cv2.rectangle(dest, (right_start, 0), (right_end, 900), color=(0, 0, 255),
-		#               thickness=2)
 		for landmark_roi in self.rois:
 			landmark = landmark_roi.landmark
 			if landmark is None or landmark_roi.label not in self.ALL_LANDMARKS_DICT:
@@ -1013,12 +1004,16 @@ class HockDetector(BaseDetector):
 
 		# foreground = self.find_move_foregrond_method3(img_copy)
 
-		move_foreground=self.find_move_foregrond_method1(img_copy)
+		move_foreground = self.find_move_foregrond_method1(img_copy)
+
+		mask = np.zeros_like(move_foreground)
+		mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
 
 		# 检测定位钩方法
 		yellow_foreground, _d = self.yellow_contours(img_copy)
 
-		foreground=cv2.bitwise_and(move_foreground,yellow_foreground,mask=None)
+		foreground = cv2.bitwise_and(move_foreground, yellow_foreground, mask)
+		# foreground=yellow_foreground
 
 		# bottom_edge,right_edge=self.find_edige(img_copy)
 		foreground[0:IMG_HEIGHT, 0:middle_start] = 0
@@ -1033,7 +1028,7 @@ class HockDetector(BaseDetector):
 		contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return contours, foreground
 
-	def location_hock(self, img_show, img_copy, middle_start=120, middle_end=470):
+	def location_hock_withlandmark(self, img_show, img_copy, find_landmark: bool, middle_start=120, middle_end=470):
 		'''
 		定位钩子需要解决的问题：
 		1、去除前景目标边框噪音及移动造成的空洞噪音
@@ -1054,31 +1049,32 @@ class HockDetector(BaseDetector):
 			# roi_img = cv2.resize(self.hock_roi.img, (w, h))
 			# radio=self.color_similar_ratio(roi_img,img_copy[y:y+h,x:x+w])
 			# print(radio)
-			print("wide is {},height is {}".format(w, h))
+			# print("wide is {},height is {}".format(w, h))
 
-			if not (10<w<30 and 10<h<30):
+			if not (5 < w < 30 and 5 < h < 30):
 				return False
 
 			# if radio<0.5:
 			# 	return False
 			return True
 
-		# foregroud, contours = self.green_contours(img_copy, middle_start, middle_end)
 		contours, foregroud = self.hock_foreground(img_copy, middle_start, middle_end)
 		# green_ret, foreground = cv2.threshold(foregroud, 40, 255, cv2.THRESH_BINARY)
 		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 		# foregroud = cv2.filter2D(foregroud, -1, disc)
 		contours = list(filter(__filter_laster_contour, contours))
 
-		print("hock contour is {}".format(len(contours)))
-
+		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
 		if contours is None or len(contours) == 0 or len(contours) > 1:
 			return None, foregroud
-		cv2.drawContours(img_show, contours, -1, (255, 0, 0), 3)
 
 		try:
 			self.hock = Hock(contours[0], foregroud, id=0)
 			self.hock.modify_box_content()
+			cv2.putText(img_show, self.hock.box_content,
+			            (self.hock.boxcenterpoint[0], self.hock.boxcenterpoint[1]),
+			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
+		# print(self.hock.img_x,self.hock.img_y)
 		except Exception as e:
 			mylog_error("hock contour is miss")
 
