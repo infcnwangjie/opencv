@@ -1,4 +1,5 @@
 import math
+import os
 import time
 
 import cv2
@@ -108,8 +109,10 @@ def avi_without_hock():
 
 	middle_start = 120
 	middle_end = 570
+	index = 0
 	while (True):
 		ret, frame = cap.read()  # 捕获一帧图像
+		index += 1
 		time.sleep(1 / 13)
 		frame = cv2.resize(frame, (IMG_HEIGHT, IMG_WIDTH))
 		# gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -121,6 +124,7 @@ def avi_without_hock():
 			dest_copy = dest.copy()
 			# zero = numpy.zeros_like(gray)
 			# zero[0:IMG_HEIGHT, middle_start:middle_end] = 255
+			print("当前帧：{}".format(index))
 
 			if success:
 				print("landmark 定位:{}".format(success))
@@ -215,8 +219,25 @@ def time_test():
 	print(time_str)
 
 
+
+
+def compare_hsv_similar( img1, img2):
+	if img1 is None or img2 is None:
+		return 0
+	img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
+	img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
+	hist1 = cv2.calcHist([img1], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+	cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+	hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+	cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+	degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)  # HISTCMP_BHATTACHARYYA    HISTCMP_CORREL
+	return degree
+
+
 def hock_play():
 	import cv2
+
+	roi_imgs=[cv2.imread(os.path.join("D:/NTY_IMG_PROCESS/SUCK_ROI",img_path)) for img_path in os.listdir("D:/NTY_IMG_PROCESS/SUCK_ROI") if img_path=='suck1.jpg']
 
 	# cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200520142647832.avi")  # 打开相机
 	cap = cv2.VideoCapture("D:/PIC/MV-CA060-10GC (00674709176)/Video_20200609142146157.avi")  # 打开相机
@@ -243,12 +264,20 @@ def hock_play():
 			# 	if foreground is not None:
 			# 		cv2.imshow("foreground", foreground)
 
-
-			bags, bagf = b.location_bags(frame, frame.copy(),success_location=False, middle_start=240, middle_end=500)
+			# bags, bagf = b.location_bags_withoutlandmark(frame, middle_start=240, middle_end=500)
 			# cv2.imshow("bag",bagf)
-			_1, foreground = d.location_hock(frame, frame.copy(),find_landmark=False,middle_start=245,middle_end=490)
-			# if foreground is not None:
-			# 		cv2.imshow("hock", foreground)
+			hock, foreground = d.location_hock_withoutlandmark(frame, middle_start=245, middle_end=490)
+			if hock is not None:
+				x, y, w, h = hock.x, hock.y, hock.w, hock.h
+				# if foreground is not None:
+				# 		cv2.imshow("hock", foreground)
+				cv2.rectangle(frame, (x - 6, y - 6), (x + w + 6, y + h + 6), (0, 255, 0), 1)
+
+				for img_roi in roi_imgs:
+
+					roi = cv2.resize(img_roi, (y+h+6-y+6, x+w+6-x+6))
+					result=compare_hsv_similar(frame[y-6:y+h+6,x-6:x+w+6],roi)
+					print(result)
 			cv2.imshow('frame', frame)
 			cv2.waitKey(1)
 		else:
@@ -375,35 +404,42 @@ def two_frame_differencing():
 
 def rp():
 	# str_t = r"刘喆 鲁C962EL,18766963345"
-	str1_t = r"吕绪文，15065872895,鲁C3U608"
-	import re
-	match_car_no = re.compile(".*?([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-Z0-9]{4}[A-Z0-9挂学警港澳]{1}).*?")
+	# str1_t = r"吕绪文，15065872895,鲁C3U608"
+	# import re
+	# match_car_no = re.compile(".*?([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-Z0-9]{4}[A-Z0-9挂学警港澳]{1}).*?")
+	#
+	# result = re.match(match_car_no, str1_t)
+	# if result is not None:
+	# 	print(result.group(1))
+	# else:
+	# 	print("fail")
 
-	result=re.match(match_car_no,str1_t)
-	if result is not None:
-		print(result.group(1))
-	else:
-		print("fail")
+	mystr = "11111111111110011111"
+	import re
+	match_re = re.compile("(\w)\1/g")
+	result = re.match(match_re, mystr)
+	print(result)
 
 
 def fangcha():
-	a=[1,5,6,7,8,9]
+	a = [1, 5, 6, 7, 8, 9]
 
-	average_v=numpy.average(a[-4:])
+	average_v = numpy.average(a[-4:])
 	print(average_v)
-	Q2=0
+	Q2 = 0
 	for item in a[-4:]:
-		Q2+=math.pow(item-average_v,2)
+		Q2 += math.pow(item - average_v, 2)
 	print(math.sqrt(Q2))
 
-	# print(a[-4:])
+
+# print(a[-4:])
 
 if __name__ == '__main__':
 	# test_one_image()
 	# avi_play()
 	hock_play()
-	# fangcha()
-	# rp()
+# fangcha()
+# 	rp()
 # two_frame_differencing()
 # avi_without_hock()
 # test_sort()

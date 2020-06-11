@@ -179,9 +179,9 @@ class BaseDetector(object, metaclass=SmallWords):
 
 		yellow_mask = cv2.inRange(hsv, yellow_min, yellow_max)
 
-		yellow_ret, yellow_binary = cv2.threshold(yellow_mask, 0, 255, cv2.THRESH_BINARY)
+		yellow_ret, yellow_binary = cv2.threshold(yellow_mask, 100, 255, cv2.THRESH_BINARY)
 		# 去噪
-		yellow_binary = cv2.medianBlur(yellow_binary, 3)
+		# yellow_binary = cv2.medianBlur(yellow_binary, 3)
 
 		yellow_contours, _hierarchy = cv2.findContours(yellow_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 

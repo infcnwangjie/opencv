@@ -137,14 +137,14 @@ class CentWindowUi(object):
 		self.ladder_edit.setReadOnly(True)
 		plc_status_layout.addRow(ladder_label, self.ladder_edit)
 
-		self.fresh_pushbutton = QToolButton()
-		self.fresh_pushbutton.setIcon(QIcon(":icons/fresh.png"))
-		self.fresh_pushbutton.setIconSize(QSize(60, 60))
-		self.fresh_pushbutton.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-		self.fresh_pushbutton.setText("刷新")
-		self.fresh_pushbutton.setStyleSheet("border:none")
-		self.fresh_pushbutton.clicked.connect(self.fresh_all)
-		plc_status_layout.addRow(self.fresh_pushbutton)
+		# self.fresh_pushbutton = QToolButton()
+		# self.fresh_pushbutton.setIcon(QIcon(":icons/fresh.png"))
+		# self.fresh_pushbutton.setIconSize(QSize(60, 60))
+		# self.fresh_pushbutton.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		# self.fresh_pushbutton.setText("刷新")
+		# self.fresh_pushbutton.setStyleSheet("border:none")
+		# self.fresh_pushbutton.clicked.connect(self.fresh_all)
+		# plc_status_layout.addRow(self.fresh_pushbutton)
 
 		self.info_box.setLayout(plc_status_layout)
 

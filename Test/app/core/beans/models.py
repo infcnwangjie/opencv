@@ -99,17 +99,17 @@ class Bag(Box):
 
     def __init__(self, bagcontour: BagContour = None):
         super().__init__(bagcontour.c, "{}_{}".format(bagcontour.col_sort_index, bagcontour.row_sort_index))
-        self.status_map = dict(choose=False, move_close=False, drop_hock=False, pull_hock=False, put_down_bag=False,
+        self.status_map = dict(choose=False, move_close=False, drop_hock=False,hock_suck=False, pull_hock=False, put_down_bag=False,
                                finish_move=False)
         self.step: str = None
         self.step_pointer = -1
         self.down_hock_much = 0
         self.if_suck = False
         self.suck_times=0
-        self.suck_frame_status={}
+        self.suckhock_positions={}
 
     def modify_box_content(self):
-        self.box_content = "(" + str(self.x) + "," + str(
+        self.box_content = "b:(" + str(self.x) + "," + str(
             self.y) + ")"
 
     def __str__(self):
@@ -129,6 +129,8 @@ class Laster(Box):
 class Hock(Box):
     def modify_box_content(self):
         # 如果box内部没有内部轮廓，就直接退出循环
+        if not hasattr(self,'box_content'):
+            self.box_content=None
         self.box_content = "h:" + "(" + str(self.boxcenterpoint[0]) + "," + str(
             self.boxcenterpoint[1]) + ")"
 
