@@ -6,8 +6,8 @@ import cv2
 import numpy
 
 from app.config import IMG_HEIGHT, IMG_WIDTH
-from app.core.processers.preprocess import BagDetector, LasterDetector, HockDetector
-from app.core.processers.preprocess import LandMarkDetecotr, WITH_TRANSPORT
+from app.core.autowork.detector import BagDetector, LasterDetector, HockDetector
+from app.core.autowork.detector import LandMarkDetecotr
 
 
 # TODO 计算物体距离摄像头的距离
@@ -414,11 +414,13 @@ def rp():
 	# else:
 	# 	print("fail")
 
-	mystr = "11111111111110011111"
-	import re
-	match_re = re.compile("(\w)\1/g")
-	result = re.match(match_re, mystr)
-	print(result)
+	# mystr = "11111111111110011111"
+	# import re
+	# match_re = re.compile("(\w)\1/g")
+	# result = re.match(match_re, mystr)
+	# print(result)
+	import platform
+	platform.architecture()
 
 
 def fangcha():
@@ -437,9 +439,9 @@ def fangcha():
 if __name__ == '__main__':
 	# test_one_image()
 	# avi_play()
-	hock_play()
+	# hock_play()
 # fangcha()
-# 	rp()
+	rp()
 # two_frame_differencing()
 # avi_without_hock()
 # test_sort()

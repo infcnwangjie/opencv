@@ -1,24 +1,19 @@
 # -*- coding: utf-8 -*-
 import math
-import os
 import pickle
-import random
-from collections import defaultdict
-from functools import cmp_to_key, reduce, partial
-from app.log.logtool import mylog_error, mylog_debug, logger
 import cv2
 import numpy as np
-
-# 发现
-from app.config import IMG_HEIGHT, IMG_WIDTH, SUPPORTREFROI_DIR, ROIS_DIR, PROGRAM_DATA_DIR, BAGROI_DIR, HOCK_ROI
-from app.core.beans.models import SupportRefRoi, LandMarkRoi, NearLandMark, Laster, BagRoi, Bag, Hock, HockRoi, \
-	BagContour
-from app.core.exceptions.allexception import NotFoundLandMarkException
-from app.core.processers import SmallWords, BaseDetector
-from app.core.support.shapedetect import ShapeDetector
-import ctypes
-from ctypes import cdll, c_uint, c_void_p, c_int, c_float, c_char_p, POINTER, byref, Structure, cast, c_uint8
 import re
+import ctypes
+from ctypes import cdll
+from collections import defaultdict
+from functools import cmp_to_key, reduce, partial
+
+from app.core.beans.models import *
+from app.log.logtool import mylog_error, mylog_debug, logger
+
+from app.config import *
+from app.core.exceptions.allexception import NotFoundLandMarkException
 
 from app.log.logtool import mylog_error
 
@@ -62,6 +57,151 @@ def sort_bag_contours(arr):
 		else:
 			left.append(item)
 	return sort_bag_contours(left) + [mid] + sort_bag_contours(right)
+
+
+class BaseDetector(object):
+	'''
+	methods:{
+	shape: 返回图像的高度、宽度信息；
+	sharper:图像锐化，凸显边缘信息;
+	interpolation_binary_data:图像插值，图像增强范畴
+	error_causedby_angel_height:误差模拟
+	enhanceimg：图像增强
+	red_contours：红色轮廓检测
+	}
+	'''
+
+	OPENCV_SUPPLYDLL = cdll.LoadLibrary(
+		SUPPLY_OPENCV_DLL_64_PATH if PLAT == '64' else SUPPLY_OPENCV_DLL_32_PATH)
+
+	def logger(self, msg: str, lever='info'):
+		from app.log.logtool import logger
+		logger(msg, lever)
+
+	@property
+	def shape(self):
+		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		rows, cols = gray.shape
+		return rows, cols
+
+	# 图像锐化操作
+	def sharper(self, image):
+		kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], np.float32)  # 定义一个核
+		dst = cv2.filter2D(image, -1, kernel=kernel)
+		return dst
+
+	# 对灰度图像做数据插值运算
+	def interpolation_binary_data(self, binary_image):
+		destimg = np.zeros_like(binary_image)
+		cv2.resize(binary_image, destimg, interpolation=cv2.INTER_NEAREST)
+		return destimg
+
+	def enhanceimg(self):
+		rows, cols = self.shape
+		self.hsv[:, 0:int(0.5 * cols), 2] += 3
+		self.hsv[:, int(0.5 * cols + 1):cols, 2] += 10
+		self.hsv = self.hsv
+
+	def color_similar_ratio(self, image1, image2):
+		'''两张图片的相似度'''
+		if image1 is None or image2 is None:
+			return 0
+		img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
+		img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2HSV)
+		hist1 = cv2.calcHist([img1], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist1, hist1, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		# cv2.imshow("hist1",hist1)
+		hist2 = cv2.calcHist([img2], [0, 1], None, [180, 256], [0, 180, 0, 255.0])
+		cv2.normalize(hist2, hist2, 0, 255, cv2.NORM_MINMAX)  # 规划到0-255之间
+		degree = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+		return degree
+
+	def red_contours(self, img, middle_start=180, middle_end=500):
+		'''返回红色轮廓'''
+		# red_low, red_high = [120, 50, 50], [180, 255, 255]
+		red_low, red_high = [156, 43, 46], [180, 255, 255]
+		red_min, red_max = np.array(red_low), np.array(red_high)
+		# 去除颜色范围外的其余颜色
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		red_mask = cv2.inRange(hsv, red_min, red_max)
+		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
+		middle_open_mask = np.zeros_like(red_binary)
+		middle_open_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		red_binary = cv2.bitwise_and(red_binary, red_binary, mask=middle_open_mask)
+		red_binary = cv2.medianBlur(red_binary, 3)
+		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return red_binary, red_contours
+
+	def yellow_contours(self, img):
+		'''
+		返回黄色轮廓
+		:return:
+		'''
+		yellow_low, yellow_high = [11, 43, 46], [34, 255, 255]
+
+		yellow_min, yellow_max = np.array(yellow_low), np.array(yellow_high)
+		# 去除颜色范围外的其余颜色
+
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+		yellow_mask = cv2.inRange(hsv, yellow_min, yellow_max)
+
+		yellow_ret, yellow_binary = cv2.threshold(yellow_mask, 100, 255, cv2.THRESH_BINARY)
+		# 去噪
+		# yellow_binary = cv2.medianBlur(yellow_binary, 3)
+
+		yellow_contours, _hierarchy = cv2.findContours(yellow_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+		return yellow_binary, yellow_contours
+
+	def green_contours(self, img, middle_start=100, middle_end=450):
+		'''
+		返回黄色轮廓
+		:return:
+		'''
+		rows, cols, channels = img.shape
+		# 如果尺寸已经调整，就无须调整
+		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
+			img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
+
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		# cv2.imshow("hsv",hsv)
+		# green_low, green_high = [35, 43, 46], [77, 255, 255]
+		green_low, green_high = [35, 43, 46], [77, 255, 255]
+		green_min, green_max = np.array(green_low), np.array(green_high)
+		green_mask = cv2.inRange(hsv, green_min, green_max)
+
+		green_ret, foreground = cv2.threshold(green_mask, 0, 255, cv2.THRESH_BINARY)
+
+		disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+		foreground = cv2.filter2D(foreground, -1, disc)
+
+		# gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		# middle_mask = np.zeros_like(gray)
+		# middle_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		#
+		#
+		# foreground = cv2.bitwise_and(foreground, foreground, mask=middle_mask)
+		# cv2.imshow("green_binary", middle_mask)
+
+		# cv2.imshow("green_binary", foreground)
+		# foreground = cv2.medianBlur(foreground, 3)
+		green_contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		return foreground, green_contours
+
+	@classmethod
+	def FIND_IT(cls, input, model):
+
+		input_h, input_w = input.shape[0], input.shape[1]
+		m_h, m_w = model.shape[0], model.shape[1]
+
+		cls.OPENCV_SUPPLYDLL.find_it.restype = ctypes.POINTER(ctypes.c_uint8)
+		result_img = np.array(
+			np.fromiter(cls.OPENCV_SUPPLYDLL.find_it(np.array(input, dtype=np.uint8).ctypes.data_as(ctypes.c_char_p),
+			                                         np.asarray(model, dtype=np.uint8).ctypes.data_as(ctypes.c_char_p),
+			                                         input_w, input_h, m_w, m_h),
+			            dtype=np.uint8, count=input_h * input_w))
+		return result_img.reshape((input_h, input_w))
 
 
 class BagDetector(BaseDetector):
@@ -683,7 +823,7 @@ class LandMarkDetecotr(BaseDetector):
 			real_positions = pickle.load(coordinate)
 		return real_positions
 
-	def candidate_landmarks(self, dest=None, left_start=120, left_end=260, right_start=550, right_end=700):
+	def candidate_landmarks(self, dest=None, left_start=110, left_end=210, right_start=510, right_end=600):
 		'''left_start=120, left_end=260, right_start=550, right_end=700'''
 		global rows, cols, step
 
@@ -726,7 +866,7 @@ class LandMarkDetecotr(BaseDetector):
 			cv2.normalize(roihist, roihist, 0, 256, cv2.NORM_MINMAX)
 
 			# foreground = self.find_it(images=[target_hsvt], hist=roihist)
-			foreground = self.FIND_IT(target,roi_template.roi)
+			foreground = self.FIND_IT(target, roi_template.roi)
 			landmarks.append(foreground)
 
 			# cv2.imshow("landmark", foreground)

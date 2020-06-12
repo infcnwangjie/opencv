@@ -6,19 +6,13 @@ from collections import defaultdict
 from time import sleep
 
 import cv2
-import numpy
-from PyQt5.QtCore import QThread, pyqtSignal, QSize
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QMessageBox
 
-from app.config import IMG_WIDTH, IMG_HEIGHT, SAVE_VIDEO_DIR, LASTER_HOCK_DISTANCE, HOCK_DISTANCE, DEBUG
-from app.core.beans.models import Bag, Laster, Hock
-from app.core.exceptions.allexception import SdkException, NotFoundBagException, NotFoundHockException
-from app.core.plc.plchandle import PlcHandle
-from app.core.processers.preprocess import LandMarkDetecotr, BagDetector, LasterDetector, HockDetector
+from app.config import IMG_WIDTH, IMG_HEIGHT, SAVE_VIDEO_DIR, HOCK_DISTANCE, DEBUG
+from app.core.autowork.detector import LandMarkDetecotr, BagDetector, LasterDetector, HockDetector
 
-from app.log.logtool import mylog_error, mylog_debug, logger
-from app.status import HockStatus
+from app.log.logtool import logger
 
 
 class DetectorHandle(object):
@@ -39,11 +33,11 @@ class DetectorHandle(object):
 
 	def __init__(self, plchandle):
 		self.bags = []  # 袋子列表
-		self.current_bag: Bag = None  # 当前处理的袋子
-		self.hock: Hock = None  # 钩子
-		self.last_hock: Hock = None  # 最近一次检测到的hock
-		self.laster: Laster = None  # 激光灯
-		self.last_laster: Laster = None  # 最近一次检测到的激光灯
+		self.current_bag = None  # 当前处理的袋子
+		self.hock = None  # 钩子
+		self.last_hock = None  # 最近一次检测到的hock
+		self.laster = None  # 激光灯
+		self.last_laster = None  # 最近一次检测到的激光灯
 		self.finish_job = False  # 完成了所有搬运工作
 		self.landmark_detect = LandMarkDetecotr()
 		self.bag_detect = BagDetector()
