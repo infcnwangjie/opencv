@@ -325,12 +325,17 @@ class CenterWindow(QWidget, CentWindowUi):
 		'''
 		self.process.intelligentthread.work = True
 		try:
-			imagehandle = ImageProvider(ifsdk=True)
-			self.process.IMGHANDLE = imagehandle
-			if self.process.IMGHANDLE:
-				self.process.IMGHANDLE = imagehandle
+			if self.process.IMGHANDLE is not None:
 				self.process.intelligentthread.play = True
 				self.process.intelligentthread.start()
+			else:
+				imagehandle = ImageProvider(ifsdk=True)
+				self.process.IMGHANDLE = imagehandle
+				if self.process.IMGHANDLE:
+					self.process.IMGHANDLE = imagehandle
+					self.process.intelligentthread.play = True
+					self.process.intelligentthread.start()
+
 		except:
 			QMessageBox.warning(self, "警告",
 			                    self.tr("您只是在模拟行车软件，因为没有连接行车摄像头!"))
