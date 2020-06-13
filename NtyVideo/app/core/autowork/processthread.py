@@ -15,10 +15,13 @@ from app.core.autowork.detector import LandMarkDetecotr, BagDetector, LasterDete
 from app.log.logtool import logger
 
 
+# ------------------------------------------------
+# 名称：DetectorHandle
+# 功能：检测句柄，作为SERVICE层使用，供线程调用使用
+# 状态：在用，后期重构之后会改动
+# 作者：王杰  2020-4-15
+# ------------------------------------------------
 class DetectorHandle(object):
-	'''
-	袋子处理表
-	'''
 	instance = None
 	current_target_x, current_target_y = 0, 0  # 当前目标袋子坐标 x,y
 	current_hock_x, current_hock_y = 0, 0  # 当前钩子坐标 x,y
@@ -48,16 +51,28 @@ class DetectorHandle(object):
 		self.plchandle = plchandle
 		self.status_show = None  # 状态栏更新消息
 
+	# ------------------------------------------------
+	# 名称：plc_connect
+	# 功能：检测PLC是否连接
+	# 状态：在用
+	# 参数： [None]   ---
+	# 返回： [布尔]   ---连接与否
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def plc_connect(self):
 		plcconnect = self.plchandle.is_open()
 		return plcconnect if not DEBUG else True
 
+	# ------------------------------------------------
+	# 名称：compute_img
+	# 功能：处理视频帧处理
+	# 状态：在用
+	# 参数： [show]   ---输入图像
+	#        [index]   ---当前帧数
+	# 返回： [image]   ---检测地标成功返回透视变换后的图片，否则返回未透视化的
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def compute_img(self, show, index):
-		'''
-		# 落钩时机判断需要执行
-		:param show:
-		:return:
-		'''
 		plc_connect = self.plc_connect()
 
 		if plc_connect == False:
@@ -92,13 +107,17 @@ class DetectorHandle(object):
 
 			return perspective_img
 
+	# ------------------------------------------------
+	# 名称：move_or_suck
+	# 功能：处理视频帧处理
+	# 状态：在用
+	# 参数： [perspective_img]   ---透视变化图像
+	#        [original_img]   ---未透视变化的图像
+	#        [frameindex]   ---当前帧数
+	# 返回： [None]   ---定位钩与目标袋子位移太大时，运动；否则，降钩并且处理落钩问题
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def move_or_suck(self, perspective_img, original_img, frameindex):
-		'''
-		判断运动行车还是落钩吸住袋子
-		:param perspective_img:
-		:param original_img:
-		:return:
-		'''
 
 		# print("hock position({},{}),bag position({},{})".format(self.hock.x, self.hock.y, self.current_bag.x,
 		#                                                         self.current_bag.y))
@@ -114,11 +133,15 @@ class DetectorHandle(object):
 			if self.current_bag.step == 'drop_hock' and self.current_bag.status_map['drop_hock'] == True:
 				self.suck_bag(perspective_img=None, original_img=original_img, frameindex=frameindex)
 
+	# ------------------------------------------------
+	# 名称：vision_no_landmark
+	# 功能：目前视野中没有指定目标
+	# 状态：在用
+	# 参数： [msg]    ---反馈信息
+	# 返回： [None]   ---看不到地标或者看不到目标，是因为还没有进入视野
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def vision_no_landmark(self, msg=None):
-		'''
-		看不到地标或者看不到目标，是因为还没有进入视野
-		:return:
-		'''
 		if DEBUG:
 			return
 		try:
@@ -135,11 +158,15 @@ class DetectorHandle(object):
 		except Exception as e:
 			logger("plc没有开启或者连接失败", "error")
 
+	# ------------------------------------------------
+	# 名称：vision_no_bag
+	# 功能：目前视野中没有指定袋子
+	# 状态：在用
+	# 参数： [msg]    ---反馈信息
+	# 返回： [None]   ---看不到地标或者看不到目标，是因为还没有进入视野
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def vision_no_bag(self, msg=None):
-		'''
-		看不到地标或者看不到目标，是因为还没有进入视野
-		:return:
-		'''
 		if DEBUG:
 			return
 		try:
@@ -156,12 +183,17 @@ class DetectorHandle(object):
 		except Exception as e:
 			logger("plc没有开启或者连接失败", "error")
 
+	# ------------------------------------------------
+	# 名称：find_laster
+	# 功能：定位激光灯
+	# 状态：在用
+	# 参数： [dest]             ---输入图像
+	#        [find_landmark]    ---是否发现地标
+	# 返回： [dest]   ---dest中有激光灯的轮廓
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def find_laster(self, dest, find_landmark=False):
-		'''
-		找到激光灯
-		:param dest:
-		:return:
-		'''
+
 		dest_copy = dest.copy()
 		laster, laster_foreground = self.laster_detect.location_laster(dest, dest_copy, middle_start=100,
 		                                                               middle_end=450)
@@ -170,13 +202,31 @@ class DetectorHandle(object):
 		self.laster = laster
 		return dest
 
+	# ------------------------------------------------
+	# 名称：hock_moveto_center
+	# 功能：启动行车时候，先将行车移到中间区域X=center，防止因边界条件检测不到定位钩
+	# 状态：在用
+	# 参数： [None]             ---
+	# 返回： [None]   ---移动钩子到行车中间区域X=center
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def hock_moveto_center(self):
 		try:
 			self.plchandle.move(nourth=2)
 		except:
 			logger("plc is not connect", level="error")
 
-	# 找到定位钩
+	# ------------------------------------------------
+	# 名称：update_hockposition
+	# 功能：实时更新定位钩坐标
+	# 状态：在用
+	# 参数： [perspective_img]          ---透视图像
+	#        [original_img]             ---未透视的图像
+	#        [find_landmark]            ---是否定位地标成功
+	# 返回： [hock_x]   ---定位钩X坐标
+	#       [hock_y]   ---定位钩Y坐标
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def update_hockposition(self, perspective_img=None, original_img=None, find_landmark=False):
 		if find_landmark == False:
 			return None
@@ -194,13 +244,17 @@ class DetectorHandle(object):
 		else:
 			self.hock.x, self.hock.y = hock.x, hock.y
 
-	# 地标定位失败时，更新袋子坐标
+	# ------------------------------------------------
+	# 名称：get_currentbag_position_withoutlandmark
+	# 功能：更新袋子坐标，仅限于地标定位失败之时
+	# 状态：在用
+	# 参数： [original_img]          ---未透视的图像
+	# 返回： [bag_x]   ---选择袋子X坐标
+	#       [bag_y]   ---选择袋子Y坐标
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def get_currentbag_position_withoutlandmark(self, original_img=None):
-		'''
-		更新袋子坐标，仅限于地标定位失败之时
-		:param original_img:
-		:return:
-		'''
+
 		bags, _foreground = self.bag_detect.location_bags_withoutlandmark(original_img)
 		if bags is None or self.current_bag is None:
 			return None
@@ -210,13 +264,16 @@ class DetectorHandle(object):
 		else:
 			return choose_bag[0].x, choose_bag[0].y
 
-	# 地标定位失败时，更新钩子坐标
+	# ------------------------------------------------
+	# 名称：get_hock_position_withoutlandmark
+	# 功能：更新钩子坐标，仅限于地标定位失败之时
+	# 状态：在用
+	# 参数： [original_img]          ---未透视的图像
+	# 返回： [hock_x]   ---定位钩X坐标
+	#       [hock_y]   ---定位钩Y坐标
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def get_hock_position_withoutlandmark(self, original_img=None):
-		'''
-		更新钩子坐标，仅限于地标定位失败之时
-		:param original_img:
-		:return:
-		'''
 		hock, _foreground = self.hock_detect.location_hock_withoutlandmark(original_img)
 		if hock is None:
 			return None
@@ -225,7 +282,16 @@ class DetectorHandle(object):
 			cv2.rectangle(original_img, (x - 6, y - 6), (x + w + 6, y + h + 6), (0, 255, 0), 1)
 			return hock.x, hock.y
 
-	# 决定抓取哪个袋子
+	# ------------------------------------------------
+	# 名称：choose_or_update_currentbag
+	# 功能：选择并更新当前袋子的坐标
+	# 状态：在用
+	# 参数： [perspective_img]          ---未透视的图像
+	#        [original_img]          ---未透视的图像
+	#       [original_img]          ---未透视的图像
+	# 返回： [None]   ---设置当前袋子
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def choose_or_update_currentbag(self, perspective_img=None, original_img=None, find_landmark=False):
 		if find_landmark == False:
 			return None
@@ -234,18 +300,21 @@ class DetectorHandle(object):
 		else:
 			ugent_stop_status = 0
 
+		# 如果处在紧急停止状态，就不做处理了
 		if ugent_stop_status == 1:
 			self.landmark_detect.draw_grid_lines(perspective_img if perspective_img is not None else original_img)
 			return None
 
 		perspective_copy_img = perspective_img.copy()
 
+		# 定位到地标与定位失败最大的区别就是，开始边界与结束边界不一样，坐标系也不一样
 		bags, bag_forground = self.bag_detect.location_bags_withlandmark(perspective_img, perspective_copy_img,
 		                                                                 find_landmark,
 		                                                                 middle_start=120,
 		                                                                 middle_end=500)
 		self.bags = bags
 
+		# 每个袋子有唯一ID
 		if self.current_bag is not None:
 			for bag in self.bags:
 				if bag.id == self.current_bag.id and self.current_bag.status_map['finish_move'] == False:
@@ -266,6 +335,7 @@ class DetectorHandle(object):
 				self.landmark_detect.draw_grid_lines(perspective_img)
 			return None
 		else:
+			# 如果所有袋子都处理完了，PLC梯形图电源要关闭，通过寄存器地址传输信息
 			need_process_bags = [bag for bag in self.bags if bag.status_map['finish_move'] == False]
 			if need_process_bags is None or len(need_process_bags) == 0:
 				# 没有要移动的袋子,让plc关闭梯形图程序
@@ -287,32 +357,43 @@ class DetectorHandle(object):
 			self.current_bag.step = 'choose'
 			logger("find nearest bag->({},{})".format(choosed_bag.x, choosed_bag.y), level='info')
 
-	# 放下钩子
+	# ------------------------------------------------
+	# 名称：down_hock
+	# 功能：放下定位钩，正常情况，定位钩与真实钩子同时下落
+	# 状态：在用
+	# 参数： [much]          ---下降步数为50公分
+	# 返回： [None]   ---下落钩子
+	# 作者：王杰  2020-6-xx
+	# ------------------------------------------------
 	def down_hock(self, much=50):
-		'''
-		放下钩子
-		:param much:
-		:return:
-		'''
 		self.plchandle.move(down=much)
 		if self.current_bag is not None:
 			self.current_bag.down_hock_much += much
 
-	# 	检查定位钩吸起袋子
+	# ------------------------------------------------
+	# 名称：check_suck
+	# 功能：检测定位钩是否吸住袋子
+	# TODO  目前还在做着按照下面5个方向逐渐试试
+	# 方向：1、定位钩会一直下降，下降的过程中，定位钩会做一定幅度的摆动
+	# 		2、定位钩下降过程中，如果摆动小了或者没有摆动，可能就吸住了
+	# 		3、定位钩与袋子的坐标一致
+	# 		4、混动定位钩时，袋子是否发生位移
+	# 		5、难点：磁铁吸住袋子的时候，地标检测失败，程序丢失信息，因此改用original_img
+	# 状态：在用
+	# 参数： [perspective_img]       ---透视变换后的图像
+	#        [original_img]          ---未透视变换后的图像
+	#        [frame_index]           ---当前帧数
+	# 返回： [布尔]   ---是否吸住
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def check_suck(self, perspective_img=None, original_img=None, frame_index=0):
-		'''
-		检测定位钩是否吸住了袋子：
-		1、定位钩会一直下降，下降的过程中，定位钩会做一定幅度的摆动
-		2、定位钩下降过程中，如果摆动小了或者没有摆动，可能就吸住了
-		3、定位钩与袋子的坐标一致
-		4、难点：磁铁吸住袋子的时候，地标检测失败，程序丢失信息，因此改用original_img
-		:return:
-		'''
+
 		if self.current_bag is None:
 			return False
 
-		# 地标定位失败之时
+		# 检测袋子坐标信息
 		bag_info = self.get_currentbag_position_withoutlandmark(original_img)
+		# 检测钩子坐标信息
 		hock_info = self.get_hock_position_withoutlandmark(original_img)
 		if bag_info is None or hock_info is None:
 			return False
@@ -320,6 +401,7 @@ class DetectorHandle(object):
 		bag_col, bag_row = bag_info
 		hock_col, hock_row = hock_info
 
+		# 只记录坐标误差小于20的钩子坐标信息
 		if abs(hock_col - bag_col) < 20 and abs(
 				hock_row - bag_row) < 20:
 			self.current_bag.suckhock_positions[str(frame_index)] = hock_info
@@ -332,12 +414,13 @@ class DetectorHandle(object):
 		suck_success = False
 		suck_time_tj = defaultdict(int)
 		keep_frames = 0
+		# 当前帧-10至当前帧内的位置信息
 		for index, position in {int(index_str): location for index_str, location in
 		                        self.current_bag.suckhock_positions.items() if
 		                        frame_index - 10 < int(index_str) < frame_index}.items():
 			if position is None:
 				continue
-
+			# 如果前一帧为空，但现在帧不为空，那么持续帧置keep_frames=1
 			if str(index - 1) not in self.current_bag.suckhock_positions or \
 					self.current_bag.suckhock_positions[
 						str(index - 1)] is None:
@@ -346,16 +429,19 @@ class DetectorHandle(object):
 
 			if str(index - 1) in self.current_bag.suckhock_positions and self.current_bag.suckhock_positions[
 				str(index - 1)] is not None:
+
 				if position is None:
+					# 如果当前帧为空，那么持续帧置keep_frames=1
 					suck_time_tj[str(keep_frames)] += 1
 					keep_frames = 0
 					continue
 				else:
+					# 如果当前帧不为空，那么持续帧置keep_frames累加，如果累加数大于5就返回TRUE
 					col, row = position
 					col_last, row_last = self.current_bag.suckhock_positions[
 						str(index - 1)]
 
-					if abs(col - col_last) ==0 and abs(row - row_last) ==0:
+					if abs(col - col_last) == 0 and abs(row - row_last) == 0:
 						keep_frames += 1
 
 						if suck_time_tj['5'] > 1:
@@ -374,7 +460,17 @@ class DetectorHandle(object):
 
 		return suck_success
 
-	# 检查机械手抓住袋子
+	# ------------------------------------------------
+	# 名称：check_hold
+	# 功能：检测真实抓手是否抓住袋子
+	# TODO  目前靠想象去做
+	# 状态：准备用
+	# 参数： [perspective_img]       ---透视变换后的图像
+	#        [original_img]          ---未透视变换后的图像
+	#        [index]                 ---当前帧数
+	# 返回： [布尔]   ---是否抓住
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def check_hold(self, perspective_img, original_img, index=0):
 		'''
 		检测机械手抓住袋子：袋子的面积会因为被机械手遮挡而变小
@@ -389,7 +485,15 @@ class DetectorHandle(object):
 			self.status_show.showMessage("检测是否钩住袋子")
 		return True
 
-	# 拉起袋子
+	# ------------------------------------------------
+	# 名称：pull_bag
+	# 功能：检测真实抓手是否抓住袋子
+	# TODO  目前靠想象去做
+	# 状态：准备用
+	# 参数： [None]       ---透视变换后的图像
+	# 返回： [布尔]   ---是否拉起
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def pull_bag(self):
 		'''
 		拉起袋子，放到目的区域，目前没做
@@ -397,16 +501,19 @@ class DetectorHandle(object):
 		'''
 		pass
 
-	# 吸住袋子
+	# ------------------------------------------------
+	# 名称：suck_bag
+	# 功能：吸住钩子操作
+	# 难点：行车下降多少，胡工控制不住，不能我让它下降多少它就下降多少，我还在要求他做到可控！！！！！
+	# TODO  目前在做
+	# 状态：准备用
+	# 参数： [perspective_img]       ---透视变换后的图像
+	#        [original_img]          ---未透视变换后的图像
+	#        [frameindex]                 ---当前帧数
+	# 返回： [None]   ---吸住钩子控制逻辑
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def suck_bag(self, perspective_img=None, original_img=None, frameindex=0):
-		'''
-		定位钩下降吸住袋子
-		:param perspective_img:
-		:param original_img:
-		:param has_close:
-		:param z:
-		:return:
-		'''
 
 		if self.current_bag is not None and self.current_bag.status_map['hock_suck'] == True:
 			return True
@@ -446,6 +553,17 @@ class DetectorHandle(object):
 			if hold_bag:
 				self.pull_bag()
 
+	# ------------------------------------------------
+	# 名称：suck_bag
+	# 功能：吸住钩子操作
+	# TODO  目前在做
+	# 状态：准备用
+	# 参数： [perspective_img]       ---透视变换后的图像
+	#        [original_img]          ---未透视变换后的图像
+	#        [frameindex]                 ---当前帧数
+	# 返回： [None]   ---吸住钩子控制逻辑
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def move_to_nearestbag(self, perspective_img):
 		'''
 		钩子向袋子靠近
@@ -540,6 +658,18 @@ class DetectorHandle(object):
 		self.landmark_detect.draw_grid_lines(perspective_img)  # 放到最后是为了防止网格线给袋子以及激光灯的识别带来干扰
 		return perspective_img
 
+	# ------------------------------------------------
+	# 名称：ugent_stop_car
+	# 功能：紧急停止行车
+	# 初衷：行车移动过程越界可能会造成危险
+	# 状态：在用
+	# 参数： [current_car_x]       ---当前行车x坐标
+	#        [current_car_y]       ---当前行车y坐标
+	#        [current_car_z]       ---当前行车z坐标
+	#        [dest]                ---目标图像
+	# 返回： [None]   ---紧急停止逻辑
+	# 作者：王杰  编写 2020-6-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def ugent_stop_car(self, current_car_x, current_car_y, current_car_z, dest=None):
 		# 智能识别紧急停止行车
 		if current_car_y == 0 or current_car_y > 800 or current_car_x == 0 or current_car_x > 500 or current_car_x < 0 or current_car_y < 0:
@@ -554,21 +684,21 @@ class DetectorHandle(object):
 			if not DEBUG:
 				self.plchandle.ugent_stop()
 
+	# ------------------------------------------------
+	# 名称：choose_nearest_bag
+	# 功能：选择距离钩子最近的袋子
+	# 初衷：选择距离钩子最近的袋子
+	# 状态：在用
+	# 参数： [current_car_x]       ---当前行车x坐标
+	#        [current_car_y]       ---当前行车y坐标
+	#        [current_car_z]       ---当前行车z坐标
+	#        [dest]                ---目标图像
+	# 返回： [None]   ---紧急停止逻辑
+	# 作者：王杰  编写 2020-5-xx  修改 2020-6-12
+	# ------------------------------------------------
 	def choose_nearest_bag(self, bags, hock):
-		'''
-		选择距离钩子最近的袋子
-		:param bags:
-		:param laster:
-		:return:
-		'''
 
 		def __compute_distance(bag, hock):
-			'''
-			choose_nearest_bag内部的计算袋子与钩子距离的方法
-			:param bag:
-			:param laster:
-			:return:
-			'''
 			# start= time.perf_counter()
 			X_2 = math.pow(bag.x - hock.x, 2)
 			Y_2 = math.pow(bag.y - hock.y, 2)
@@ -577,6 +707,7 @@ class DetectorHandle(object):
 			# print("distance is {},compute cost:{}".format(distance,end-start))
 			return distance
 
+		# 按照定位钩与每个袋子坐标的误差判断
 		distances = [__compute_distance(bag, hock) for bag in bags if bag.status_map['finish_move'] == False]
 
 		min_distance, choose_index = 10000, 0
@@ -587,6 +718,12 @@ class DetectorHandle(object):
 		return choose_index
 
 
+# ------------------------------------------------
+	# 名称：ProcessThread
+	# 功能：线程操作在界面编程中是非常实用的
+	# 状态：在用
+	# 作者：王杰  编写 2020-3-xx  修改 2020-6-12
+	# ------------------------------------------------
 class ProcessThread(QThread):
 	update_savevideo = pyqtSignal(str)
 
@@ -609,7 +746,7 @@ class ProcessThread(QThread):
 	@property
 	def play(self):
 		return self._playing
-
+	# 启动播放
 	@play.setter
 	def play(self, value=True):
 		self._playing = value
@@ -618,6 +755,14 @@ class ProcessThread(QThread):
 	def work(self):
 		return self._working
 
+	# ------------------------------------------------
+	# 名称：work
+	# 功能：智能抓手自动工作开关
+	# 状态：在用
+	# 参数： [value]       ---布尔决定是否启动开关
+	# 返回： [None]   ---
+	# 作者：王杰  编写 2020-4-xx  修改 2020-4-xx
+	# ------------------------------------------------
 	@work.setter
 	def work(self, value=True):
 		self._working = value

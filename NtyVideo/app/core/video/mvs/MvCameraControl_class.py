@@ -7,17 +7,19 @@ import ctypes
 from ctypes import *
 
 # from app.config import MVCAMERACONTROLDLL_PATH
-from app.config import MVCAMERACONTROLDLL_PATH
+from app.config import MVCAMERACONTROLDLL_PATH, PLAT, SUPPLY_OPENCV_DLL_64_PATH, SUPPLY_OPENCV_DLL_32_PATH
 from app.core.video.mvs.CameraParams_const import *
 from app.core.video.mvs.CameraParams_header import *
 from app.core.video.mvs.MvCameraControl_header import *
 from app.core.video.mvs.MvErrorDefine_const import *
 from app.core.video.mvs.PixelType_const import *
 from app.core.video.mvs.PixelType_header import *
+import numpy as np
 
 # print(MVCAMERACONTROLDLL_PATH)
 # MvCamCtrldll = WinDLL("MvCameraControl.dll")
 MvCamCtrldll = WinDLL(MVCAMERACONTROLDLL_PATH)
+
 
 
 # 用于回调函数传入相机实例
@@ -294,3 +296,5 @@ class MvCamera():
 		MvCamCtrldll.MV_CC_GetOptimalPacketSize.restype = c_uint
 		# C原型:int __stdcall MV_CC_GetOptimalPacketSize(void* handle);
 		return MvCamCtrldll.MV_CC_GetOptimalPacketSize(self.handle)
+
+
