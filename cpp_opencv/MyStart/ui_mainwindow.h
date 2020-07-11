@@ -21,6 +21,7 @@
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QWidget>
 
+
 QT_BEGIN_NAMESPACE
 
 class Ui_MainWindow
@@ -31,6 +32,11 @@ public:
     QLabel *label;
     QMenuBar *menubar;
     QStatusBar *statusbar;
+
+    QMenu *testmenu;
+
+
+
 
     void setupUi(QMainWindow *MainWindow)
     {
@@ -48,12 +54,22 @@ public:
 
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
+        menubar->setVisible(true);
         menubar->setObjectName(QStringLiteral("menubar"));
         menubar->setGeometry(QRect(0, 0, 800, 23));
+
+        testmenu=new QMenu("测试");
+        this->testmenu->setVisible(true);
+        this->menubar->addMenu(testmenu);
+
         MainWindow->setMenuBar(menubar);
+
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
+
         MainWindow->setStatusBar(statusbar);
+
+
 
         retranslateUi(MainWindow);
 
