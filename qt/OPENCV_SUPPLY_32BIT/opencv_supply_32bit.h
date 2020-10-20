@@ -31,6 +31,8 @@ extern "C"   OPENCV_SUPPLY_32BIT_EXPORT   unsigned char * find_it( unsigned char
 
 extern "C"   OPENCV_SUPPLY_32BIT_EXPORT uchar* cpp_canny(int height, int width, uchar* data) ;
 
+extern "C"   OPENCV_SUPPLY_32BIT_EXPORT int category_code(unsigned char * test_img_data,int img_h,int img_w);
+
 extern "C"   OPENCV_SUPPLY_32BIT_EXPORT void release(uchar* data) {
     free(data);
 }

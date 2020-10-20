@@ -31,11 +31,12 @@ extern "C"   OPENCV_SUPPLY_EXPORT   unsigned char * find_it( unsigned char * ima
                                                              int src_w ,int src_h,
                                                              int model_w,int model_h);
 
+extern "C"   OPENCV_SUPPLY_EXPORT   double same_rate(unsigned char * img1_data,unsigned char * img2_data, int img1_w,int img1_h,int img2_w,int img2_h);
+
+
 extern "C"   OPENCV_SUPPLY_EXPORT uchar* cpp_canny(int height, int width, uchar* data) ;
 
-extern "C"   OPENCV_SUPPLY_EXPORT void release(uchar* data) {
-    free(data);
-}
+extern "C"   OPENCV_SUPPLY_EXPORT int category_code(unsigned char * test_img_data,int img_h,int img_w);
 
 
 #endif // OPENCV_SUPPLY_H
