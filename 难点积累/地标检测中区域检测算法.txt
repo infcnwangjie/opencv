@@ -1,0 +1,99 @@
+	def area_detect(self, target=None, left_open_mask=None):
+		# ws, hs = [], []
+		outer_width = outer_height = 5
+
+		def inner_islandmark(c):
+			x, y, w, h = cv2.boundingRect(c)
+			area = cv2.contourArea(c)
+			# if len(ws) < 3 or len(hs) < 3:
+			if w < 4 and h < 4: return False
+			if w > 50 or h > 50: return False
+			if area < 100: return False
+			target_roi = target[y - outer_width:y + h + outer_height,
+			             x - outer_width:x + w + outer_width, :]
+
+			# cv2.imshow("roi",target_roi)
+			# cv2.waitKey(5000)
+			if not np.any(target_roi): return False
+			# img1_h, img1_w = target_roi.shape[0], target_roi.shape[1]
+			# if img1_w < 5 and img1_h < 7: return False
+
+			category = MvSuply.CATEGORY_CODE(
+				target_roi)
+
+			# targetroi_gray = cv2.cvtColor(target_roi, cv2.COLOR_BGR2GRAY)
+			# value = np.average(targetroi_gray)
+
+			if category == 1: return True
+
+			return False
+
+		global LANDMARK_COLOR_INFO, COLOR_RANGE
+		choosed_contours = []
+		if "YELLOW" in COLOR_RANGE: COLOR_RANGE.pop('YELLOW')
+		for color_code, [low, high] in COLOR_RANGE.items():
+			foreground = self.get_colorrange_binary(color_code, target, low, high)
+
+			foreground = cv2.medianBlur(foreground, 5)
+
+			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+			# foreground = cv2.filter2D(foreground, -1, disc)
+			# cv2.imshow(color_code, foreground)
+			foreground = cv2.bitwise_and(foreground, foreground, mask=left_open_mask)
+			ret, foreground = cv2.threshold(foreground, LANDMARK_THREHOLD_START,
+			                                LANDMARK_THREHOLD_END,
+			                                cv2.THRESH_BINARY)  # 110,255
+
+			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+			# ws.clear()
+			# hs.clear()
+			contours = sorted(list(filter(lambda c: inner_islandmark(c), contours)), key=lambda c: cv2.contourArea(c),
+			                  reverse=True)
+
+			# print("color:{},counts:{}".format(color_code, len(contours)))
+
+			if contours is not None and len(contours) > 0:
+				col, row, w, h = cv2.boundingRect(contours[0])
+				choosed_contours.append([color_code, contours[0], row])
+
+		choosed_contours = sorted(choosed_contours, key=lambda infos: infos[2])
+		# print(choosed_contours)
+		# cv2.imshow("target", target)
+		COLOR_INPUT = [colorinfo[0] for colorinfo in choosed_contours]
+		find_color_num = len(COLOR_INPUT)
+		if find_color_num < 2:
+			return (None, None)
+
+		left_landmarks = list(filter(lambda color: 'L' in color[0][0:5], LANDMARK_COLOR_INFO.items()))
+		left_landmarks = sorted(left_landmarks, key=lambda item: item[0][2])
+		# print(left_landmarks)
+
+		start = 0
+		current_landmark_names = []
+		current_nos = []
+		find = False
+		while start <= len(left_landmarks):
+
+			choosed_landmarks = [item for item in left_landmarks[start:]]
+			if len(choosed_landmarks) < 2 or len(COLOR_INPUT) < 2: break
+
+			for index in range(min(find_color_num, len(choosed_landmarks))):
+
+				if COLOR_INPUT[index] != choosed_landmarks[0:find_color_num][index][1]:
+					# print(choosed_landmarks[0:3][index][1])
+					break
+			else:
+				find = True
+				for i in range(min(find_color_num, len(choosed_landmarks))):
+					current_nos.extend(
+						[choosed_landmarks[i][0][2:3]])
+					current_landmark_names.extend(
+						[choosed_landmarks[i][0][0:5], self.get_opposite_landmark(choosed_landmarks[i][0][0:5])])
+
+			start += 1
+
+			if find == True:
+				break
+
+		# print(current_landmark_names)
+		return (current_landmark_names, current_nos) if find else (None, None)

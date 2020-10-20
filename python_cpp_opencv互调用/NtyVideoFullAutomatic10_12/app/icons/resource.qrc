@@ -1,0 +1,39 @@
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file>auto.png</file>
+        <file>camera.png</file>
+        <file>catalogue.png</file>
+        <file>close.png</file>
+        <file>instruct.png</file>
+        <file>openfile.png</file>
+        <file>pointer.png</file>
+        <file>power.png</file>
+        <file>quickly_stop.png</file>
+        <file>quit.png</file>
+        <file>recover.png</file>
+        <file>robot.png</file>
+        <file>set_roi.png</file>
+
+		<file>load.png</file>
+		<file>center.png</file>
+        <file>up.png</file>
+		<file>down.png</file>
+		  <file>left.png</file>
+		<file>right.png</file>
+		<file>up_hock.png</file>
+		<file>down_hock.png</file>
+		<file>putdown.png</file>
+        <file>grab.png</file>
+		<file>forward.png</file>
+		<file>backward.png</file>
+        <file>lamp.png</file>
+        <file>xianweiqi.png</file>
+		<file>sifu.png</file>
+        <file>dianzha.png</file>
+
+         <file>xianweiqi1.png</file>
+		<file>sifu1.png</file>
+        <file>dianzha1.png</file>
+       
+    </qresource>
+</RCC>

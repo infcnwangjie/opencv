@@ -1,6 +1,0 @@
-(dp0
-VPLC_COM
-p1
-VCOM7
-p2
-s.
