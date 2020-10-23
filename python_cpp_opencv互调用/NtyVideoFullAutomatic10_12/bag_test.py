@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 
 
-img = cv2.imread("D:/bag3.png")
+img = cv2.imread("D:/Image_20201021130945467.bmp")
+img=cv2.resize(img,(400,600))
 r=None
 g=None
 b=None

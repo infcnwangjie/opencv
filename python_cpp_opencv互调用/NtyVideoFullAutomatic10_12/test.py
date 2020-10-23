@@ -257,7 +257,7 @@ def test_landmark_bag():
 
 	loc = cv2.setMouseCallback("show", on_EVENT_LBUTTONDOWN)
 
-	cap = cv2.VideoCapture("D:\\Video_20200831092239170.avi")  # Video_20200725072828533.avi
+	cap = cv2.VideoCapture("D:/Video_20201023084819986.avi")  # Video_20200725072828533.avi
 	# cap = SdkHandle()
 	# cap = cv2.VideoCapture("D:\\Video_20200825135910294.avi")  # Video_20200725072828533.avi
 	landmark_detect = LandMarkDetecotr()
@@ -270,7 +270,11 @@ def test_landmark_bag():
 		if show is None:
 			break
 		rows, cols, channels = show.shape
-		show = cv2.resize(show, (700, 900))
+		rows, cols, channels = show.shape
+		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
+			show = cv2.resize(show, (IMG_HEIGHT, IMG_WIDTH))
+		else:
+			show = show
 
 		perspective_img, find_landmark = landmark_detect.position_landmark(show)
 		perspective_img_copy = perspective_img.copy()
@@ -679,7 +683,7 @@ def test_find_alllandmark():
 
 
 if __name__ == '__main__':
-	test_hock()
+	# test_hock()
 	# test_match()
 	# test_single_match()
 	# profile.run("test_landmark()")
@@ -696,5 +700,5 @@ if __name__ == '__main__':
 	# test_category()
 	# test_split_x_y()
 	# test_find_alllandmark()
-	# test_landmark_bag()
+	test_landmark_bag()
 

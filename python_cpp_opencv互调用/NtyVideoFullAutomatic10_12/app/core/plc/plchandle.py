@@ -86,8 +86,9 @@ class PlcHandle(object):
 		self.__write(BIG_LASTER_BUTTON, int(value))
 
 	def get_high(self):
-		HIGH_VALUE = self.__read(HIGH_GIVER)  # 毫米
-		if HIGH_VALUE is None or HIGH_VALUE == '':
+		try:
+			HIGH_VALUE = self.__read(HIGH_GIVER)  # 毫米
+		except:
 			return 0
 		else:
 			HIGH_VALUE = float(HIGH_VALUE)
@@ -194,10 +195,10 @@ class PlcHandle(object):
 			info = self.master.execute(1, cst.READ_HOLDING_REGISTERS, starting_address=address,
 			                           quantity_of_x=1)
 		except Exception as e:
-			raise e
+			logger(e.__str__(),"error")
+			raise  e
 		else:
-			result = info[0]
-		return result
+			return info[0]
 
 	def __write(self, address, value: int):
 		'''

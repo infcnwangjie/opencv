@@ -175,8 +175,6 @@ class DetectorHandle(QObject):
 
 			bags, bag_forground = self.bag_detect.location_bags_withlandmark(perspective_img, perspective_copy_img,
 			                                                                 find_landmark,
-			                                                                 middle_start=100,
-			                                                                 middle_end=500,
 			                                                                 hock=self.hock, plchandle=self.plchandle)
 
 			if bags is None or len(bags) == 0:
@@ -211,6 +209,8 @@ class DetectorHandle(QObject):
 
 			bag_positions = [[bag_locaiton_item.cent_x, bag_locaiton_item.cent_y] for bag_locaiton_item in
 			                 self.temp_bag_positions]  # if bag_locaiton_item.count() > 1
+		else:
+			self.hock_detect.has_stable = False
 		# print(self.bags_info)
 		logger("定位到{}个袋子".format(len(bag_positions)), level='info')
 		return perspective_img, bag_positions, self.error_info
@@ -252,6 +252,7 @@ class DetectorHandle(QObject):
 
 		else:
 			image_result = self.move_close_bag_withoutlandmark(correct_bag_x, correct_bag_y, show)
+			self.hock_detect.has_stable = False
 			return image_result, temp_hock_position, self.keep_x_move, self.keep_y_move, self.error_info
 
 	def move_when_misslandmark(self):
@@ -296,6 +297,7 @@ class DetectorHandle(QObject):
 
 		if self.hock is None or not hasattr(self.hock, 'x') or self.hock.x is None \
 				or self.hock.y is None or not hasattr(self.hock, 'y'):
+			self.hock_detect.has_stable = False
 			return perspective_img, temp_hock_position, self.keep_x_move, self.keep_y_move, self.error_info
 		else:
 
@@ -310,7 +312,7 @@ class DetectorHandle(QObject):
 			                                                        perspective_copy_img, perspective_img)
 			self.modify_bagposition = [correct_bag_x, correct_bag_y]
 
-			logger("当前钩子坐标为({},{})，袋子坐标为".format(hock_x, hock_y, bag_position[0], bag_position[1]), 'info')
+			logger("当前钩子坐标为({},{})，袋子坐标为({},{})".format(hock_x, hock_y, correct_bag_x, correct_bag_y), 'info')
 
 			abs_x_distance, abs_y_distance, x_distance, y_distance = self.calculate_error(correct_bag_x, correct_bag_y,
 			                                                                              hock_x, hock_y)
@@ -327,12 +329,8 @@ class DetectorHandle(QObject):
 				                   perspective_img, up, west, x_distance)
 
 			if move_to_bag_y == True:
-				if move_tobag_retry_times == 0:
-					self.keep_y_move = False
-				else:
-					self.move_y_direct(abs_y_distance, correct_bag_x, correct_bag_y, down, hock_x, hock_y, north,
-					                   perspective_img, south, up, y_distance)
-					move_tobag_retry_times -= 1
+				self.move_y_direct(abs_y_distance, correct_bag_x, correct_bag_y, down, hock_x, hock_y, north,
+				                   perspective_img, south, up, y_distance)
 
 			if move_to_bag_y == False and move_to_bag_x == False:
 				logger("钩子袋子已重叠", 'info')
@@ -341,6 +339,8 @@ class DetectorHandle(QObject):
 				            1.2,
 				            (255, 255, 255), 2)
 				self.keep_y_move, self.keep_x_move = False, False
+
+			self.retry_find_landmark = 0
 
 			return image_result, temp_hock_position, self.keep_x_move, self.keep_y_move, self.error_info
 
@@ -380,14 +380,35 @@ class DetectorHandle(QObject):
 	# @cost_time
 	def modify_bag_position(self, correct_bag_x, correct_bag_y, find_landmark, perspective_copy_img, perspective_img):
 		bags, bag_forground = self.bag_detect.location_bags_withlandmark(perspective_img, perspective_copy_img,
-		                                                                 find_landmark,
-		                                                                 middle_start=120,
-		                                                                 middle_end=500)
-		for bag in bags:
-			if abs(bag.cent_x - int(correct_bag_x)) < bag_real_width and abs(
-					bag.cent_y - int(correct_bag_y)) < bag_real_width:
-				correct_bag_x, correct_bag_y = bag.cent_x, bag.cent_y
-				break
+		                                                                 find_landmark
+		                                                                 )
+
+		if bags is None or len(bags) == 0:
+			if self.bag_detect.has_stable == True:
+				correct_bag_x, correct_bag_y = self.bag_detect.get_predict()
+				cv2.rectangle(perspective_img, (correct_bag_x - 20, correct_bag_y - 20),
+				              (correct_bag_x + 20, correct_bag_y + 20),
+				              (30, 144, 255), 3)
+				cv2.putText(perspective_img, "bag:({},{})".format(correct_bag_x, correct_bag_y),
+				            (correct_bag_x - 20, correct_bag_y - 25),
+				            cv2.FONT_HERSHEY_SIMPLEX, 1, (225, 0, 225), 2)
+		else:
+			for bag in bags:
+				if abs(bag.cent_x - int(correct_bag_x)) < bag_real_width and abs(
+						bag.cent_y - int(correct_bag_y)) < bag_real_width:
+					correct_bag_x, correct_bag_y = bag.cent_x, bag.cent_y
+					self.bag_detect.load_or_update_position((correct_bag_x, correct_bag_y))
+					break
+			else:
+				if self.bag_detect.has_stable == True:
+					correct_bag_x, correct_bag_y = self.bag_detect.get_predict()
+					cv2.rectangle(perspective_img, (correct_bag_x - 20, correct_bag_y - 20),
+					              (correct_bag_x + 20, correct_bag_y + 20),
+					              (30, 144, 255), 3)
+					cv2.putText(perspective_img, "bag:({},{})".format(correct_bag_x, correct_bag_y),
+					            (correct_bag_x - 20, correct_bag_y - 25),
+					            cv2.FONT_HERSHEY_SIMPLEX, 1, (225, 0, 225), 2)
+
 		return correct_bag_x, correct_bag_y
 
 	# Y轴方向上的位移
@@ -429,8 +450,6 @@ class DetectorHandle(QObject):
 	def move_close_bag_withoutlandmark(self, correct_bag_x=None, correct_bag_y=None, show=None, compensate=False):
 		if compensate == False:
 			self.loss_landmark_warn(correct_bag_x, correct_bag_y, show)
-		else:
-			pass
 
 		return show
 
@@ -438,14 +457,14 @@ class DetectorHandle(QObject):
 	def loss_landmark_warn(self, correct_bag_x, correct_bag_y, show):
 		self.retry_find_landmark += 1
 		self.move_when_misslandmark()
-		if self.retry_find_landmark < 10:
-			cv2.putText(show, "warn:hock miss", (500, 400), cv2.FONT_HERSHEY_SIMPLEX,
+		if self.retry_find_landmark < move_tobag_retry_times:
+			cv2.putText(show, "warn:landmark miss", (500, 400), cv2.FONT_HERSHEY_SIMPLEX,
 			            1.2,
 			            (255, 255, 255), 2)
 			cv2.putText(show, "bag:{},{}".format(correct_bag_x, correct_bag_y), (500, 500),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 			            (255, 255, 255), 2)
-			self.send_warn_info.emit("已经移动到指定位置，为了精确建议向前手动位移一段距离，找回地标")
+			self.send_warn_info.emit("地标丢失，为了精确建议向前手动位移一段距离，找回地标")
 
 		else:
 			self.send_warn_info.emit("初步移动到指定位置,地标找回重试次数已到，精确定位结束")
@@ -642,9 +661,6 @@ class DetectorHandle(QObject):
 			cv2.rectangle(perspective_img, (self.hock.center_x - 20, self.hock.center_y - 20),
 			              (self.hock.center_x + 20, self.hock.center_y + 20),
 			              (255, 0, 0), 3)
-			# cv2.putText(dest, bag.box_content,
-			#             (bag.cent_x - 20, bag.cent_y - 25),
-			#             cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 
 			cv2.putText(perspective_img, self.hock.box_content,
 			            (self.hock.center_x - 20, self.hock.center_y - 25),
@@ -1197,10 +1213,10 @@ class ProcessThread(QThread):
 
 		# index = 0
 		while self.play and self.IMAGE_HANDLE:
-			sleep(1 / 13)
+			# sleep(1 / 13)
 			# index += 1
 			show = self.IMAGE_HANDLE.read()
-			if show is None:
+			if show is None or not np.any(show):
 				continue
 
 			if self.save_video == True:
@@ -1247,13 +1263,21 @@ class ProcessThread(QThread):
 						bag_height = self.get_height(show)
 
 						cv2.putText(show, "bag:{},{},{}".format(self.detectorhandle.modify_bagposition[0],
-						                                     self.detectorhandle.modify_bagposition[1],bag_height), (300, 500),
+						                                        self.detectorhandle.modify_bagposition[1], bag_height),
+						            (300, 500),
 						            cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 						            (255, 255, 255), 2)
 
 						cv2.putText(show, "moving:{}".format(self.detectorhandle.plchandle.read_status()), (300, 600),
 						            cv2.FONT_HERSHEY_SIMPLEX, 1.2,
 						            (255, 255, 255), 2)
+						logger("arrive,bag:({},{},{}),hock:({},{})".format(self.detectorhandle.modify_bagposition[0],
+						                                                   self.detectorhandle.modify_bagposition[1],
+						                                                   bag_height,
+						                                                   self.detectorhandle.modify_hockposition[0],
+						                                                   int(self.detectorhandle.modify_hockposition[
+							                                                       1])),level="info")
+
 						if self.last_arive_bag_position is None:
 							self.last_arive_bag_position = self.target_bag_position
 							self.ariver_advice.emit(
@@ -1348,9 +1372,9 @@ class ProcessThread(QThread):
 			print("hock detect fail")
 			return show, None
 		gray = np.zeros_like(show)
-		hock_x, hock_y = self.detectorhandle.hock.center_x, self.detectorhandle.hock.center_y
-		cv2.arrowedLine(gray, (hock_x, hock_y), (int(self.target_bag_position[0]), int(self.target_bag_position[1])),
-		                (255, 255, 255), thickness=3)
+		# hock_x, hock_y = self.detectorhandle.hock.center_x, self.detectorhandle.hock.center_y
+		# cv2.arrowedLine(show, (hock_x, hock_y), (int(self.target_bag_position[0]), int(self.target_bag_position[1])),
+		#                 (255, 0, 255), thickness=3)
 		# gray.resize(400,400)
 
 		return show, gray

@@ -449,7 +449,7 @@ class CenterWindow(QWidget):
 			self.turnon_laster_button.setText('关闭激光灯')
 			self.turnon_laster_button.setToolTip("关闭激光灯")
 			self.plchandle.laster = 0
-			self.plchandle.biglaster=0
+			self.plchandle.biglaster = 0
 			self.process.intelligentthread.detectorhandle.laster_status = False
 		else:
 			self.laster_status = 1
@@ -636,6 +636,7 @@ class CenterWindow(QWidget):
 		self.process.intelligentthread.detectorhandle.bags.clear()
 		self.process.intelligentthread.detectorhandle.bag_detect.bags.clear()
 		self.process.intelligentthread.detectorhandle.temp_bag_positions.clear()
+		self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 
 	def scan_bag_byhand(self):
 		self.handmove_window = ScanBagByHandWindow(self.process)
@@ -669,7 +670,7 @@ class CenterWindow(QWidget):
 			self.process.intelligentthread.detectorhandle.bags.clear()
 			self.process.intelligentthread.detectorhandle.bag_detect.bags.clear()
 			self.process.intelligentthread.detectorhandle.temp_bag_positions.clear()
-
+			self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 
 	def grab_bag(self):
 		# TODO  抓取袋子
@@ -744,7 +745,7 @@ class CenterWindow(QWidget):
 			self.scan_button.setIcon(QIcon(":icons/stop_scan.png"))
 			self.scan_button.setText('停止扫描')
 			self.scan_button.setToolTip("停止扫描")
-
+			self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 		else:
 			self.scan_button.setIcon(QIcon(":icons/scan.png"))
 			self.scan_button.setText('扫描袋子')
@@ -858,14 +859,16 @@ class CenterWindow(QWidget):
 
 	def onTreeClicked(self, qmodeLindex):
 		item = self.position_tree.currentItem()
+		self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 		match_result = re.match(self.position_pattern, item.text(0))
 		try:
 			if match_result is not None:
 				QMessageBox.about(self, '反馈', '定位坐标({},{})'.format(match_result.group(1), match_result.group(2)))
 				self.process.intelligentthread.target_bag_position = [match_result.group(1), match_result.group(2)]
-				self.process.intelligentthread.move_close=True
+				self.process.intelligentthread.move_close = True
 				self.process.intelligentthread.move_to_bag_x = True
 				self.process.intelligentthread.move_to_bag_y = True
+
 		except:
 			print("not match")
 
@@ -971,6 +974,7 @@ class CenterWindow(QWidget):
 		self.process.intelligentthread.move_to_bag_x = False
 		self.process.intelligentthread.move_to_bag_y = False
 		self.process.intelligentthread.scan_bag = False
+		self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 
 	def fresh_all(self):
 		self.check_test_status()

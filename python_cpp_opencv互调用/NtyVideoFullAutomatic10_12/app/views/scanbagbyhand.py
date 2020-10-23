@@ -81,6 +81,7 @@ class ScanBagByHandWindow(QWidget):
 		# print("停止扫描")
 		self.process.intelligentthread.scan_bag = False
 		self.process.plchandle.clear_plc()
+		self.process.intelligentthread.detectorhandle.hock_detect.has_stable = False
 
 	def just_scan(self):
 		'''

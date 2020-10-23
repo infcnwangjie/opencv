@@ -12,6 +12,7 @@ from collections import defaultdict
 from functools import cmp_to_key, reduce, partial
 import os
 
+from app.core.autowork import f
 from app.core.autowork.processhandle import *
 from app.core.beans.models import *
 from app.core.plc.plchandle import PlcHandle
@@ -105,12 +106,7 @@ def shrink_coach_area(perspect_img):
 	contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
 
 	if len(contours) == 0: raise Exception("not find big white area")
-	# contours = sorted(list(filter(lambda c: inner_filter(c), contours)), key=lambda c: cv2.contourArea(c),
-	#                   reverse=True)
-	#
-	# cv2.drawContours(perspect_img, contours, -1, (255, 255, 255), 3)
 	black_empty = np.zeros_like(gray)
-	# cv2.drawContours(black_empty,[contours[0]],-1,(255,255,255),1)
 	try:
 		cv2.fillPoly(black_empty, [contours[0]], (255, 255, 255))
 	except Exception as e:
@@ -211,7 +207,7 @@ class BaseDetector(object):
 	#        [int]
 	# 作者：王杰  2020-4-xx
 	# ------------------------------------------------
-	def red_contours(self, img, middle_start=180, middle_end=500):
+	def red_contours(self, img, middle_start=200, middle_end=500):
 		# red_low, red_high = [120, 50, 50], [180, 255, 255]
 		red_low, red_high = [156, 43, 46], [180, 255, 255]
 		red_min, red_max = np.array(red_low), np.array(red_high)
@@ -220,7 +216,7 @@ class BaseDetector(object):
 		red_mask = cv2.inRange(hsv, red_min, red_max)
 		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
 		middle_open_mask = np.zeros_like(red_binary)
-		middle_open_mask[0:IMG_HEIGHT, middle_start:middle_end] = 255
+		middle_open_mask[:, middle_start:middle_end] = 255
 		red_binary = cv2.bitwise_and(red_binary, red_binary, mask=middle_open_mask)
 		red_binary = cv2.medianBlur(red_binary, 3)
 		# cv2.imshow("red_b",red_binary)
@@ -400,6 +396,35 @@ class BagDetector(BaseDetector):
 	def __init__(self, img=None):
 		super().__init__()
 		self.bags = []
+		self.has_init = False
+		self.has_update = False
+		self.has_stable = False
+
+	def load_or_update_position(self, p_tu=None):
+		if self.has_init == False:
+			self.f = f()
+			self.f.measurementMatrix = np.array([[1, 0], [0, 1]], np.float32)
+			self.f.transitionMatrix = np.array([[1, 0], [0, 1]], np.float32)
+			self.f.processNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 1e-3
+			self.f.measurementNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 0.01
+			self.has_init = True
+
+		if p_tu is not None:
+
+			x, y = self.get_predict()
+			if abs(x - p_tu[0]) < 100 and abs(y - p_tu[1]) < 100:
+				self.has_stable = True
+			else:
+				self.has_stable = False
+			pos = np.array([*p_tu], dtype=np.float32)
+			mes = np.reshape(pos, (2, 1))
+			self.f.correct(mes)
+			self.has_update = True
+
+	def get_predict(self):
+		guass_position = self.f.predict()
+		x, y = int(guass_position[0][0]), int(guass_position[1][0])
+		return x, y
 
 	# ------------------------------------------------
 	# 名称：bagroi_templates
@@ -426,7 +451,7 @@ class BagDetector(BaseDetector):
 	# 返回： array --- BagContour object
 	# 作者：王杰     编写 ： 2020-3-xx    修改 ： 2020-6-xx
 	# ------------------------------------------------
-	def findbags(self, img_copy=None, middle_start=300, middle_end=500):
+	def findbags(self, img_copy=None):
 		hsv_img = cv2.cvtColor(img_copy, cv2.COLOR_BGR2HSV)
 
 		# warp_filter=lambda c: self.is_single_color_obj(c,hsv_img)
@@ -438,14 +463,15 @@ class BagDetector(BaseDetector):
 			             x - outer_width:x + w + outer_width, :]
 			value = MvSuply.SAME_RATE(target_roi, self.bagroi_templates()[0].roi)
 			siglecolor = self.is_single_color_obj(c, hsv_img)
-			print("bag simility:{},singlecolor :{},final:{}".format(value, siglecolor, siglecolor or value > 0.2))
-			return siglecolor or value > 0.2
+			# print("bag simility:{},singlecolor :{},final:{}".format(value, siglecolor, (
+			# 			siglecolor or value > 0) and middle_start_withlandmark < x < middle_end_withlandmark))
+			return (siglecolor or value > 0) and middle_start_withlandmark < x < middle_end_withlandmark
 
 		global rows, cols, step
 
 		cols, rows, channels = img_copy.shape
 		# print(rows,cols,channels)
-		foreground, contours = self.red_contours(img_copy, middle_start, middle_end)
+		foreground, contours = self.red_contours(img_copy, middle_start_withlandmark, middle_end_withlandmark)
 
 		ret, foreground = cv2.threshold(foreground, 0, 255, cv2.THRESH_BINARY)
 
@@ -453,7 +479,7 @@ class BagDetector(BaseDetector):
 			foreground_bagarea = shrink_coach_area(img_copy)
 		# cv2.imshow("foreground_bagarea", foreground_bagarea)
 		except Exception as e:
-			logger(e.__str__(), "error")
+			print(e.__str__())
 		else:
 			foreground = cv2.bitwise_and(foreground, foreground, mask=foreground_bagarea)
 		contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -479,9 +505,12 @@ class BagDetector(BaseDetector):
 			area = cv2.contourArea(c)
 			x, y, w, h = cv2.boundingRect(c)
 
+			if x < middle_start_withlandmark or (x + w) > middle_end_withlandmark:
+				continue
+
 			area_match = (bag_min_area < area < bag_max_area)
 			# print("bag_w:{},bag_h:{},area_match:{}<{}<{}={}".format(w, h, bag_min_area, area, bag_max_area, area_match))
-			print("袋子大小：{}".format(area))
+			# print("袋子大小：{}".format(area))
 			if area_match == False:
 				continue
 			# cv2.drawContours(img_copy, [c], -1, (170, 0, 255), 3)
@@ -497,11 +526,11 @@ class BagDetector(BaseDetector):
 			bagclusters = None
 		return bagclusters, contours, foreground
 
-	def location_bags_withlandmark(self, dest, img_copy, success_location=True, middle_start=110, middle_end=500,
+	def location_bags_withlandmark(self, dest, img_copy, success_location=True,
 	                               hock=None, plchandle=None
 	                               ):
 		# 存储前景图
-		bagclusters, contours, foreground = self.findbags(img_copy, middle_start, middle_end)
+		bagclusters, contours, foreground = self.findbags(img_copy)
 
 		# cv2.drawContours(dest, contours, -1, (170, 0, 255), 3)
 
@@ -885,9 +914,9 @@ class LandMarkDetecotr(BaseDetector):
 			item_match_result = re.match(self.landmark_match, label)
 			position_row_table[item_match_result.group(1)].append(y)
 
-		position_row_table = {item[0]: item[1] for item in
-		                      sorted(position_row_table.items(), key=lambda record: record[0], reverse=False)}
-		position_row_temp = {}
+		# position_row_table = {item[0]: item[1] for item in
+		#                       sorted(position_row_table.items(), key=lambda record: record[0], reverse=False)}
+		# position_row_temp = {}
 
 		return positiondict, success
 
@@ -981,7 +1010,7 @@ class LandMarkDetecotr(BaseDetector):
 		for landmark_roi in self.rois:
 			landmark = landmark_roi.landmark
 			if landmark is None or landmark_roi.label not in self.ALL_LANDMARKS_DICT:
-				# self.logger("{} miss landmark".format(landmark_roi.label), "warn")
+				self.logger("{} miss landmark".format(landmark_roi.label), "warn")
 				continue
 
 			col = landmark.col
@@ -1150,15 +1179,18 @@ class LandMarkDetecotr(BaseDetector):
 		for color_code, [low, high] in COLOR_RANGE.items():
 			foreground = self.get_colorrange_binary(color_code, target, low, high)
 
-			foreground = cv2.medianBlur(foreground, 5)
+			# foreground = cv2.medianBlur(foreground, 3)
 
-			# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-			# foreground = cv2.filter2D(foreground, -1, disc)
+			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+			foreground = cv2.filter2D(foreground, -1, disc)
 			# cv2.imshow(color_code, foreground)
 			foreground = cv2.bitwise_and(foreground, foreground, mask=left_open_mask)
 			ret, foreground = cv2.threshold(foreground, LANDMARK_THREHOLD_START,
 			                                LANDMARK_THREHOLD_END,
 			                                cv2.THRESH_BINARY)  # 110,255
+
+			# if color_code in ['GREEN', 'RED', 'BLUE']:
+			# 	cv2.imshow(color_code, foreground)
 
 			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 			# ws.clear()
@@ -1211,7 +1243,7 @@ class LandMarkDetecotr(BaseDetector):
 			if find == True:
 				break
 
-		# print(current_landmark_names)
+		print(current_landmark_names)
 		return (current_landmark_names, current_nos) if find else (None, None)
 
 	# ------------------------------------------------
@@ -1268,7 +1300,7 @@ class LandMarkDetecotr(BaseDetector):
 
 			select_rois = filter(lambda roi: roi.landmark is None and roi.label.strip() in a, self.rois)
 
-		start_1 = time.time()
+		# start_1 = time.time()
 		for roi_template in select_rois:
 
 			# color_code=None
@@ -1296,7 +1328,8 @@ class LandMarkDetecotr(BaseDetector):
 			neighbours = self.calc_neighbours(roi_template)
 			self.init_all_landmarks_dict(bigest_h, bigest_w, c, center_x, center_y, color_code, contours, h, neighbours,
 			                             roi_template, set_mask_area, target, w, x, y)
-		end_1 = time.time()
+		# end_1 = time.time()
+		# print(self.ALL_LANDMARKS_DICT)
 
 	# print("for cost:{}".format(end_1 - start_1))
 
@@ -1388,8 +1421,41 @@ class LandMarkDetecotr(BaseDetector):
 		if color_code is not None:
 			color_low, color_high = COLOR_RANGE[color_code]
 		color1_min, color1_max = np.array(color_low), np.array(color_high)
-		color1_mask = cv2.inRange(hsv, color1_min, color1_max)
-		ret, foreground = cv2.threshold(color1_mask, 30, 255, cv2.THRESH_BINARY)
+		foreground = cv2.inRange(hsv, color1_min, color1_max)
+
+		b, g, r = cv2.split(target)
+		if color_code == 'GREEN':
+			gx_ignore, gy_ignore = np.where((b > 100) | (r > 100))
+			g[gx_ignore, gy_ignore] = 0
+			ret, g = cv2.threshold(g, 140,
+			                       255,
+			                       cv2.THRESH_BINARY)  # 110,255
+			g = cv2.bitwise_and(g, g, mask=foreground)
+
+			return g
+
+		if color_code == 'RED':
+			rx_ignore, ry_ignore = np.where((g > 100) | (b > 100))
+			r[rx_ignore, ry_ignore] = 0
+			ret, r = cv2.threshold(r, 140,
+			                       255,
+			                       cv2.THRESH_BINARY)  # 110,255
+
+			r = cv2.bitwise_and(r, r, mask=foreground)
+
+			return r
+
+		if color_code == 'BLUE':
+			bx_ignore, by_ignore = np.where((g > 100) | (r > 100))
+			b[bx_ignore, by_ignore] = 0
+			ret, b = cv2.threshold(b, 140,
+			                       255,
+			                       cv2.THRESH_BINARY)  # 110,255
+
+			b = cv2.bitwise_and(b, b, mask=foreground)
+
+			return b
+
 		return foreground
 
 	def delete_error_landmark(self):
@@ -1474,6 +1540,7 @@ class LandMarkDetecotr(BaseDetector):
 						roi_template.set_match_obj(landmark_obj, target)
 						self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
 						break
+
 
 	def init_landmark_showwindow(self, NO1_L, NO1_R, NO2_L, NO2_R, NO3_L, NO3_R, foreground, roi_template):
 		if DEBUG == True:
@@ -1567,6 +1634,7 @@ class LasterDetector(BaseDetector):
 			self.laster.modify_box_content()
 		except Exception as e:
 			mylog_error("laster contour is miss")
+			raise e
 
 		return self.laster, foregroud
 
@@ -1584,6 +1652,32 @@ class HockDetector(BaseDetector):
 		self.hock = None
 		self._roi = None
 		self.mask = None
+		self.has_init = False
+		self.has_update = False
+		self.has_stable = False
+
+	def load_or_update_position(self, p_tu=None, hock_contour_num=0):
+		if self.has_init == False:
+			self.f = f()
+			self.f.measurementMatrix = np.array([[1, 0], [0, 1]], np.float32)
+			self.f.transitionMatrix = np.array([[1, 0], [0, 1]], np.float32)
+			self.f.processNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 1e-3
+			self.f.measurementNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 0.01
+			self.has_init = True
+
+		if p_tu is not None:
+			x, y = self.get_predict()
+			self.has_stable = hock_contour_num == 1 and abs(x - p_tu[0]) < 100 and abs(
+				y - p_tu[1]) < 100
+			pos = np.array([*p_tu], dtype=np.float32)
+			mes = np.reshape(pos, (2, 1))
+			self.f.correct(mes)
+			self.has_update = True
+
+	def get_predict(self):
+		guass_position = self.f.predict()
+		x, y = int(guass_position[0][0]), int(guass_position[1][0])
+		return x, y
 
 	# ------------------------------------------------
 	# 名称：find_edige
@@ -1697,7 +1791,7 @@ class HockDetector(BaseDetector):
 		def filter_hock_contour(c):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
-			print("hock area:{},x:{},y:{},w:{},h:{}".format(area, x, y, w, h))
+			# print("hock area:{},x:{},y:{},w:{},h:{}".format(area, x, y, w, h))
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
 
 			if area < hock_min_area or area > hock_max_area:
@@ -1720,7 +1814,7 @@ class HockDetector(BaseDetector):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
 			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			print("laster is {}".format(area))
+			# print("laster is {}".format(area))
 
 			if w < hock_min_width or h < hock_min_height:
 				return False
@@ -1768,28 +1862,64 @@ class HockDetector(BaseDetector):
 					cent_x = int(0.5 * (min_x + max_x))
 					cent_y = int(0.5 * (min_y + max_y))
 					try:
+
 						self.hock = Hock(biggest_c)
-						self.hock.set_position(cent_x, cent_y)
+						if self.has_stable == True:
+							x, y = self.get_predict()
+							if abs(x - cent_x) > 100 or abs(y - cent_y) > 100:
+								self.hock.set_position(x, y)
+							# self.load_or_update_position((cent_x, cent_y))
+							else:
+								self.hock.set_position(cent_x, cent_y)
+								self.load_or_update_position((cent_x, cent_y), len(laster_contours))
+						# self.hock.set_position(cent_x, cent_y)
+						# self.load_or_update_position((cent_x, cent_y))
 						self.hock.modify_box_content()
 					# cv2.rectangle(img_show, (min_x, min_y), (max_x, max_y),
 					#           (30, 144, 255), 3)
 
 					except Exception as e:
-						mylog_error("laster contour is miss")
+						print(e.__str__())
+						raise e
 				elif len(laster_contours) == 1:
 					biggest_c = laster_contours[0]
 					# cv2.drawContours(img_show, laster_contours, -1, (255, 0, 255), 3)
 					try:
 						self.hock = Hock(biggest_c)
+
+						if self.has_stable == True:
+							x, y = self.get_predict()
+							if abs(x - self.hock.center_x) > 100 or abs(y - self.hock.center_y) > 100:
+								self.hock.set_position(x, y)
+							# self.load_or_update_position((x, y))
+							else:
+								self.load_or_update_position((self.hock.center_x, self.hock.center_y), 1)
+						else:
+							self.load_or_update_position((self.hock.center_x, self.hock.center_y))
+
 						self.hock.modify_box_content()
-						# cv2.drawContours(img_show, laster_contours, -1, (255, 0, 255), 3)
+
+					# cv2.drawContours(img_show, laster_contours, -1, (255, 0, 255), 3)
 
 					except Exception as e:
-						mylog_error("laster contour is miss")
+						print(e.__str__())
+						raise e
 				else:
 					plchandle = PlcHandle()
 					plchandle.laster = 0
 					plchandle.biglaster = 1
+
+					try:
+						if self.has_stable == True:
+							guass_position = self.get_predict()
+							self.hock = Hock(biggest_c)
+							self.hock.set_position(*guass_position)
+							self.hock.modify_box_content()
+					except Exception as e:
+						print(e.__str__())
+						raise e
+
+
 
 		else:
 			assert laster_of_on, "没有开启激光灯"
