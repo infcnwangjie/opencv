@@ -81,10 +81,11 @@ def test_landmark_bag():
 			break
 		rows, cols, channels = show.shape
 		rows, cols, channels = show.shape
-		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
-			show = cv2.resize(show, (IMG_HEIGHT, IMG_WIDTH))
-		else:
-			show = show
+		# if rows != IMG_HEIGHT or cols != IMG_WIDTH:
+		# 	show = cv2.resize(show, (IMG_HEIGHT, IMG_WIDTH))
+		# else:
+		# 	show = show
+		show = cv2.resize(show, (300, IMG_HEIGHT))
 
 		r=get_colorrange_binary("RED",show
 		                      )
@@ -101,11 +102,11 @@ def test_landmark_bag():
 		b = cv2.filter2D(b, -1, disc)
 
 
-		cv2.imshow("b",b)
-		cv2.imshow("g", g)
-		cv2.imshow("r", r)
-		# result=np.concatenate((r,g,b), axis=1)
-		# cv2.imshow("result",result)
+		# cv2.imshow("b",b)
+		# cv2.imshow("g", g)
+		# cv2.imshow("r", r)
+		result=np.concatenate((r,g,b), axis=1)
+		cv2.imshow("result",result)
 		cv2.imshow("show",show)
 
 

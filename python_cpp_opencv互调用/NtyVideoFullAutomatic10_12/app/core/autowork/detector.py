@@ -752,7 +752,8 @@ class LandMarkDetecotr(BaseDetector):
 		# next_direct = "R" if current_direct == "L" else "L"
 		direct = "R" if sourth_step == 1 else current_direct
 
-		no = current_no + west_step if west_step > 0 else current_no
+		# no = current_no + west_step if west_step > 0 else current_no
+		no = current_no + west_step
 		landmark_labelname = "NO{NO}_{D}".format(NO=no, D=direct)
 		return landmark_labelname
 
@@ -891,8 +892,8 @@ class LandMarkDetecotr(BaseDetector):
 
 				if key == key_j:
 					continue
-				if (key_no < keyj_no and y > yj) or (
-						key_no > keyj_no and y < yj):  # or (key_no==keyj_no and abs(y-yj)>100)
+				if (int(key_no) < int(keyj_no) and y > yj) or (
+						int(key_no) > int(keyj_no) and y < yj):  # or (key_no==keyj_no and abs(y-yj)>100)
 					return positiondict, False
 
 				if key_no == keyj_no and key_direct != keyj_direct and abs(y - yj) > 100:
@@ -910,9 +911,9 @@ class LandMarkDetecotr(BaseDetector):
 
 		position_row_table = defaultdict(list)
 
-		for label, [x, y] in positiondict.items():
-			item_match_result = re.match(self.landmark_match, label)
-			position_row_table[item_match_result.group(1)].append(y)
+		# for label, [x, y] in positiondict.items():
+		# 	item_match_result = re.match(self.landmark_match, label)
+		# 	position_row_table[item_match_result.group(1)].append(y)
 
 		# position_row_table = {item[0]: item[1] for item in
 		#                       sorted(position_row_table.items(), key=lambda record: record[0], reverse=False)}
@@ -985,18 +986,58 @@ class LandMarkDetecotr(BaseDetector):
 		self.candidate_landmarks(dest, left_start=land_mark_left_start, left_end=land_mark_left_end,
 		                         right_start=land_mark_right_start, right_end=land_mark_right_end)
 
-		exception_labels = None
-		for label, (x, y) in self.ALL_POSITIONS.items():
-			label_match_result = re.match(self.landmark_match, label)
-			if label_match_result is None: continue
-			no = label_match_result.group(1)
-			exception_labels = [landmarkname for landmarkname, (itemx, itemy) in self.ALL_POSITIONS.items() if
-			                    (re.match(self.landmark_match, landmarkname).group(1) < no and itemy > y) or (
-					                    re.match(self.landmark_match, landmarkname).group(1) > no and itemy < y)]
+		exception_labels = []
+		if len(self.ALL_LANDMARKS_DICT.items()) > 0:
+			for label, landmarkobj in self.ALL_LANDMARKS_DICT.items():
+				label_match_result = re.match(self.landmark_match, label)
+				if label_match_result is None: continue
+				no = label_match_result.group(1)
+
+				for landmarkname, p_landmark in self.ALL_LANDMARKS_DICT.items():
+					if landmarkname == label: continue
+					maybe = False
+					if (re.match(self.landmark_match, landmarkname).group(
+							1) < no and p_landmark.row > landmarkobj.row) or (
+							re.match(self.landmark_match, landmarkname).group(
+								1) > no and p_landmark.row < landmarkobj.row):
+						maybe = True
+					item_opposite_label = self.get_opposite_landmark(landmarkname)
+					if item_opposite_label not in self.ALL_LANDMARKS_DICT and maybe == True:
+						exception_labels.append(landmarkname)
+
+					if item_opposite_label in self.ALL_LANDMARKS_DICT:
+						item_opposite = self.ALL_LANDMARKS_DICT[item_opposite_label]
+						if abs(int(item_opposite.row) - int(p_landmark.row)) > 100 and maybe == True:
+							exception_labels.append(landmarkname)
+
 		if exception_labels is not None and len(exception_labels) > 0:
 			for lb in exception_labels:
-				self.ALL_POSITIONS.pop(lb)
-				self.ALL_LANDMARKS_DICT.pop(lb)
+
+				opposite_label = self.get_opposite_landmark(lb)
+
+				lb_nbs = self.calc_neighbours(label_name=lb, ALL_LANDMARK_DIC=self.ALL_LANDMARKS_DICT)
+				for_cols = list(filter(lambda item: item[0] == 'for_col', lb_nbs))
+
+				if for_cols is None or len(for_cols)==0 or opposite_label not in self.ALL_LANDMARKS_DICT: continue
+
+				modify_status = True
+				x, y = 0, 0
+				ref_opposite_landmark = self.ALL_LANDMARKS_DICT[opposite_label]
+				y = ref_opposite_landmark.row
+				for ignore_lb, label_name in for_cols:
+					if label_name in self.ALL_LANDMARKS_DICT:
+						temp_obj = self.ALL_LANDMARKS_DICT[label_name]
+						x = temp_obj.col
+						break
+				else:
+					modify_status = False
+					if lb in self.ALL_POSITIONS: self.ALL_POSITIONS.pop(lb)
+					if lb in self.ALL_LANDMARKS_DICT: self.ALL_LANDMARKS_DICT.pop(lb)
+
+				if modify_status == True:
+					missobj = self.ALL_LANDMARKS_DICT[lb]
+					missobj.row, missobj.col = y, x
+
 			exception_labels.clear()
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
@@ -1169,9 +1210,9 @@ class LandMarkDetecotr(BaseDetector):
 			# targetroi_gray = cv2.cvtColor(target_roi, cv2.COLOR_BGR2GRAY)
 			# value = np.average(targetroi_gray)
 
-			if category == 1: return True
+			if category == 0: return False
 
-			return False
+			return True
 
 		global LANDMARK_COLOR_INFO, COLOR_RANGE
 		choosed_contours = []
@@ -1243,7 +1284,7 @@ class LandMarkDetecotr(BaseDetector):
 			if find == True:
 				break
 
-		print(current_landmark_names)
+		# print(current_landmark_names)
 		return (current_landmark_names, current_nos) if find else (None, None)
 
 	# ------------------------------------------------
@@ -1291,9 +1332,9 @@ class LandMarkDetecotr(BaseDetector):
 			return None
 		else:
 			# part1_info = "a: ["
-			# for landmark_str in area_nos:
+			# for landmark_str in b:
 			# 	part1_info += landmark_str + ","
-			# part1_info+="]"
+			# part1_info += "]"
 			# cv2.putText(target, part1_info,
 			#             (510, 800),
 			#             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
@@ -1302,7 +1343,6 @@ class LandMarkDetecotr(BaseDetector):
 
 		# start_1 = time.time()
 		for roi_template in select_rois:
-
 			# color_code=None
 			# print(color_label[0:4])
 			color_codes = [color_code_info for color_label, color_code_info in LANDMARK_COLOR_INFO.items() if
@@ -1317,7 +1357,6 @@ class LandMarkDetecotr(BaseDetector):
 				target)
 			if contours is None or len(contours) == 0:
 				continue
-
 			c = contours[0]
 			center_x, center_y = self.calc_landmarkcenter(c)
 			rect = cv2.boundingRect(c)
@@ -1328,8 +1367,9 @@ class LandMarkDetecotr(BaseDetector):
 			neighbours = self.calc_neighbours(roi_template)
 			self.init_all_landmarks_dict(bigest_h, bigest_w, c, center_x, center_y, color_code, contours, h, neighbours,
 			                             roi_template, set_mask_area, target, w, x, y)
-		# end_1 = time.time()
-		# print(self.ALL_LANDMARKS_DICT)
+
+	# end_1 = time.time()
+	# print(self.ALL_LANDMARKS_DICT)
 
 	# print("for cost:{}".format(end_1 - start_1))
 
@@ -1417,12 +1457,8 @@ class LandMarkDetecotr(BaseDetector):
 
 	# 根据颜色区域获取二值图像
 	def get_colorrange_binary(self, color_code=None, target=None, color_low=None, color_high=None):
-		hsv = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
-		if color_code is not None:
-			color_low, color_high = COLOR_RANGE[color_code]
-		color1_min, color1_max = np.array(color_low), np.array(color_high)
-		foreground = cv2.inRange(hsv, color1_min, color1_max)
 
+		foreground = None
 		b, g, r = cv2.split(target)
 		if color_code == 'GREEN':
 			gx_ignore, gy_ignore = np.where((b > 100) | (r > 100))
@@ -1430,31 +1466,37 @@ class LandMarkDetecotr(BaseDetector):
 			ret, g = cv2.threshold(g, 140,
 			                       255,
 			                       cv2.THRESH_BINARY)  # 110,255
-			g = cv2.bitwise_and(g, g, mask=foreground)
+			# g = cv2.bitwise_and(g, g, mask=foreground)
 
-			return g
+			foreground = g
 
-		if color_code == 'RED':
+		elif color_code == 'RED':
 			rx_ignore, ry_ignore = np.where((g > 100) | (b > 100))
 			r[rx_ignore, ry_ignore] = 0
 			ret, r = cv2.threshold(r, 140,
 			                       255,
 			                       cv2.THRESH_BINARY)  # 110,255
 
-			r = cv2.bitwise_and(r, r, mask=foreground)
+			# r = cv2.bitwise_and(r, r, mask=foreground)
 
-			return r
+			foreground = r
 
-		if color_code == 'BLUE':
+		elif color_code == 'BLUE':
 			bx_ignore, by_ignore = np.where((g > 100) | (r > 100))
 			b[bx_ignore, by_ignore] = 0
 			ret, b = cv2.threshold(b, 140,
 			                       255,
 			                       cv2.THRESH_BINARY)  # 110,255
 
-			b = cv2.bitwise_and(b, b, mask=foreground)
+			# b = cv2.bitwise_and(b, b, mask=foreground)
 
-			return b
+			foreground = b
+		else:
+			hsv = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
+			if color_code is not None:
+				color_low, color_high = COLOR_RANGE[color_code]
+			color1_min, color1_max = np.array(color_low), np.array(color_high)
+			foreground = cv2.inRange(hsv, color1_min, color1_max)
 
 		return foreground
 
@@ -1492,37 +1534,36 @@ class LandMarkDetecotr(BaseDetector):
 	# @cost_time
 	def init_all_landmarks_dict(self, bigest_h, bigest_w, c, center_x, center_y, color_code, contours, h, neighbours,
 	                            roi_template, set_mask_area, target, w, x, y):
+		match_ok = self.color_match_result(target, color_code, c)
+		if match_ok == False: return
+
 		for flag, ref_label in neighbours:
 
-			match_ok = self.color_match_result(target, color_code, c)
-			if match_ok == False:
-				continue
-			else:
-				# 如果颜色不匹配
-				if flag == 'for_col' and ref_label in self.ALL_LANDMARKS_DICT:
-					ref_landmark = self.ALL_LANDMARKS_DICT[ref_label]
-					if abs(ref_landmark.col - x) <= 50:
-						landmark_obj = NearLandMark(x, y,
-						                            target[y:y + h, x:x + w])
-						landmark_obj.width = max(bigest_w, w)
-						landmark_obj.height = max(bigest_h, h)
-						set_mask_area(center_x - 50, center_y - 50, 200, 200)
-						landmark_obj.add_maybe_label(roi_template.label)
-						roi_template.set_match_obj(landmark_obj, target)
-						self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
-						break
-				elif flag == 'for_row' and ref_label in self.ALL_LANDMARKS_DICT:
-					ref_landmark = self.ALL_LANDMARKS_DICT[ref_label]
-					if abs(ref_landmark.row - y) <= 50:
-						landmark_obj = NearLandMark(x, y,
-						                            target[y:y + h, x:x + w])
-						landmark_obj.width = max(bigest_w, w)
-						landmark_obj.height = max(bigest_h, h)
-						set_mask_area(center_x - 50, center_y - 50, 200, 200)
-						landmark_obj.add_maybe_label(roi_template.label)
-						roi_template.set_match_obj(landmark_obj, target)
-						self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
-						break
+			# 如果颜色不匹配
+			if flag == 'for_col' and ref_label in self.ALL_LANDMARKS_DICT:
+				ref_landmark = self.ALL_LANDMARKS_DICT[ref_label]
+				if abs(ref_landmark.col - x) <= 50:
+					landmark_obj = NearLandMark(x, y,
+					                            target[y:y + h, x:x + w])
+					landmark_obj.width = max(bigest_w, w)
+					landmark_obj.height = max(bigest_h, h)
+					set_mask_area(center_x - 50, center_y - 50, 200, 200)
+					landmark_obj.add_maybe_label(roi_template.label)
+					roi_template.set_match_obj(landmark_obj, target)
+					self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
+					break
+			elif flag == 'for_row' and ref_label in self.ALL_LANDMARKS_DICT:
+				ref_landmark = self.ALL_LANDMARKS_DICT[ref_label]
+				if abs(ref_landmark.row - y) <= 50:
+					landmark_obj = NearLandMark(x, y,
+					                            target[y:y + h, x:x + w])
+					landmark_obj.width = max(bigest_w, w)
+					landmark_obj.height = max(bigest_h, h)
+					set_mask_area(center_x - 50, center_y - 50, 200, 200)
+					landmark_obj.add_maybe_label(roi_template.label)
+					roi_template.set_match_obj(landmark_obj, target)
+					self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
+					break
 		else:
 			for key, color_code in LANDMARK_COLOR_INFO.items():
 				if roi_template.label in key:
@@ -1540,7 +1581,6 @@ class LandMarkDetecotr(BaseDetector):
 						roi_template.set_match_obj(landmark_obj, target)
 						self.ALL_LANDMARKS_DICT[roi_template.label] = landmark_obj
 						break
-
 
 	def init_landmark_showwindow(self, NO1_L, NO1_R, NO2_L, NO2_R, NO3_L, NO3_R, foreground, roi_template):
 		if DEBUG == True:
@@ -1572,12 +1612,32 @@ class LandMarkDetecotr(BaseDetector):
 
 			cv2.imshow("HEJI_IMG", HEJI_IMG)
 
-	def calc_neighbours(self, roi_template):
-		neighbours = [('for_row', self.get_opposite_landmark(roi_template.label)),
-		              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=1)),
-		              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=2)),
-		              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-1)),
-		              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-2))]
+	def calc_neighbours(self, roi_template=None, label_name=None, ALL_LANDMARK_DIC=None):
+
+		lb = None
+
+		if roi_template is not None:
+			lb = roi_template.label
+
+			neighbours = [('for_row', self.get_opposite_landmark(roi_template.label)),
+			              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=1)),
+			              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=2)),
+			              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-1)),
+			              ('for_col', self.__fetch_neigbbour(roi_template.label, sourth_step=0, west_step=-2))]
+		if label_name is not None:
+			lb = label_name
+			neighbours = [('for_row', self.get_opposite_landmark(label_name)),
+			              ('for_col', self.__fetch_neigbbour(label_name, sourth_step=0, west_step=1)),
+			              ('for_col', self.__fetch_neigbbour(label_name, sourth_step=0, west_step=2)),
+			              ('for_col', self.__fetch_neigbbour(label_name, sourth_step=0, west_step=-1)),
+			              ('for_col', self.__fetch_neigbbour(label_name, sourth_step=0, west_step=-2))]
+
+		if ALL_LANDMARK_DIC is not None:
+			result = re.match(self.landmark_match, lb)
+			current_d = result.group(2)
+			neighbours.extend([('for_col', name) for name, obj_land in ALL_LANDMARK_DIC.items() if
+			                   "_{}".format(current_d) in name and ('for_col', name) not in neighbours])
+
 		return neighbours
 
 	def calc_landmarkcenter(self, c):
