@@ -54,6 +54,7 @@ def mycolorful(theme, title=None, icon=None):
 class CenterWindow(QWidget):
 	position_pattern = re.compile(".*?(\d+).*?(\d+).*")
 	laster_status = 0  # 0是关闭 1是打开
+	biglaster_status=0 # 0是关闭 1是打开
 
 	movie_pattern = re.compile("[A-Za-z]+_(?P<time>\d+).avi")
 	tree_firsttext_pattern = re.compile("\((.*?),(.*?)\)")
@@ -159,9 +160,17 @@ class CenterWindow(QWidget):
 		self.turnon_laster_button.setObjectName("turnon_laster_button")
 		prepare_layout.addWidget(self.turnon_laster_button, *(0, 3, 1, 1))
 
+		self.turnon_biglaster_button = QPushButton(self)
+		self.turnon_biglaster_button.setToolTip("开启大射灯")
+		self.turnon_biglaster_button.setText("开启大射灯")
+		self.turnon_biglaster_button.setIcon(QIcon(":icons/laster.png"))
+		self.turnon_biglaster_button.setIconSize(QSize(40, 40))
+		self.turnon_biglaster_button.setObjectName("turnon_biglaster_button")
+		prepare_layout.addWidget(self.turnon_biglaster_button, *(1, 0, 1, 1))
+
 		self.speed_label = QLabel(self)
 		self.speed_label.setText("行车速度")
-		prepare_layout.addWidget(self.speed_label, *(1, 0, 1, 1))
+		prepare_layout.addWidget(self.speed_label, *(2, 0, 1, 1))
 		# 步数设置
 		self.speed_slide = QSlider(Qt.Horizontal)
 		self.speed_slide.setToolTip("设置行车速度")
@@ -182,12 +191,12 @@ class CenterWindow(QWidget):
 								height: 8px; 
 								}
 							""")
-		prepare_layout.addWidget(self.speed_slide, 1, 1, 1, 2)
+		prepare_layout.addWidget(self.speed_slide, 2, 1, 1, 2)
 
 		self.speed_value = QLCDNumber(3, self)
 		self.speed_value.display(700)
 
-		prepare_layout.addWidget(self.speed_value, 1, 3, 1, 1)
+		prepare_layout.addWidget(self.speed_value, 2, 3, 1, 1)
 
 		prepare_layout.setAlignment(Qt.AlignLeft)
 
@@ -441,6 +450,23 @@ class CenterWindow(QWidget):
 
 	# self.videoBox.setTitle(_translate("MainWindow", "视频区域"))
 
+	def turn_on_off_biglaster(self):
+		if self.biglaster_status == 1:
+			self.biglaster_status = 0
+			self.turnon_biglaster_button.setIcon(QIcon(":icons/turnoff.png"))
+			self.turnon_biglaster_button.setText('关闭激光灯')
+			self.turnon_biglaster_button.setToolTip("关闭激光灯")
+			# self.plchandle.laster = 0
+			self.plchandle.biglaster = 0
+			self.process.intelligentthread.detectorhandle.laster_status = False
+		else:
+			self.biglaster_status = 1
+			self.plchandle.biglaster = 1
+			self.turnon_biglaster_button.setIcon(QIcon(":icons/laster.png"))
+			self.turnon_biglaster_button.setText('打开激光灯')
+			self.turnon_biglaster_button.setToolTip("打开激光灯")
+			self.process.intelligentthread.detectorhandle.laster_status = True
+
 	# 打开或关闭激光灯
 	def turn_on_off_laster(self):
 		if self.laster_status == 1:
@@ -449,7 +475,7 @@ class CenterWindow(QWidget):
 			self.turnon_laster_button.setText('关闭激光灯')
 			self.turnon_laster_button.setToolTip("关闭激光灯")
 			self.plchandle.laster = 0
-			self.plchandle.biglaster = 0
+			# self.plchandle.biglaster = 0
 			self.process.intelligentthread.detectorhandle.laster_status = False
 		else:
 			self.laster_status = 1
@@ -598,6 +624,7 @@ class CenterWindow(QWidget):
 		self.open_sdkcamera_button.clicked.connect(self.open_haikang_camera)
 		self.lamp_open_button.clicked.connect(self.open_lamp)
 		self.turnon_laster_button.clicked.connect(self.turn_on_off_laster)
+		self.turnon_biglaster_button.clicked.connect(self.turn_on_off_biglaster)
 		# self.save_video_button.clicked.connect(self.save_video)
 		self.speed_slide.valueChanged.connect(self.speed_change)
 

@@ -249,7 +249,7 @@ class PlcHandle(object):
 			result = self.__read(HOCK_MOVE_STATUS_PLC)
 		except Exception as exc:
 			logger("PLC 无法读取数值，请检查端口", level='error')
-			result = 1
+			result = 0
 		return result
 
 	def move_status(self, value):

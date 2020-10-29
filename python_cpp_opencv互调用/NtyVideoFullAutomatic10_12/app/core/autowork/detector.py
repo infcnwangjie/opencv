@@ -32,59 +32,15 @@ WITH_TRANSPORT = True
 landmark_pattern = re.compile("""NO(?P<NO>[0-9]*)_(?P<direct>[A-Z]{1})""")
 
 
-# ------------------------------------------------
-# 名称：add_picture
-# 功能：图片相加
-# 参数：[img1] ---
-#     [img2] ---
-# 返回：array ---
-# 作者：王杰  2020-3-20
-# ------------------------------------------------
-def add_picture(img1, img2):
-	return cv2.add(img1, img2)
-
-
-# ------------------------------------------------
-# 名称：sort_bag_contours
-# 功能：袋子轮廓按照X轴排序
-# 状态：后期要废弃
-# 参数：[array]
-# 返回：array
-# 作者：王杰  2020-4-15
-# ------------------------------------------------
-def sort_bag_contours(arr):
-	if len(arr) < 2:
-		return arr
-	elif len(arr) == 2:
-		c1, c2 = arr
-		c1_x, c1_y, c1_w, c1_h = cv2.boundingRect(c1)
-		c2_x, c2_y, c2_w, c2_h = cv2.boundingRect(c2)
-		if c1_x > c2_x:
-			return [c2, c1]
-		else:
-			return [c1, c2]
-
-	# print(len(arr)//2)
-	mid = arr[len(arr) // 2]
-	left, right = [], []
-	# arr.remove(mid)
-
-	m_x, m_y, m_w, m_h = cv2.boundingRect(mid)
-	for item in arr:
-		i_x, i_y, i_w, i_h = cv2.boundingRect(item)
-		if i_x >= m_x:
-			right.append(item)
-		else:
-			left.append(item)
-	return sort_bag_contours(left) + [mid] + sort_bag_contours(right)
-
 
 def shrink_coach_area(perspect_img):
 	def inner_filter(c):
 		x, y, w, h = cv2.boundingRect(c)
 		if w < 100 or h < 100:
 			return False
-		if cv2.contourArea(c) < 10000:
+		area=cv2.contourArea(c)
+		# print("area:{}".format(area))
+		if area < 60000:
 			return False
 		return True
 
@@ -144,17 +100,6 @@ class BaseDetector(object):
 		from app.log.logtool import logger
 		logger(msg, lever)
 
-	# def filter_matches(kp1, kp2, matches, ratio=0.75):
-	# 	mkp1, mkp2 = [], []
-	# 	for m in matches:
-	# 		if  m.distance < m.distance * ratio:
-	# 			m = m[0]
-	# 			mkp1.append(kp1[m.queryIdx])
-	# 			mkp2.append(kp2[m.trainIdx])
-	# 	p1 = [kp.pt for kp in mkp1]
-	# 	p2 = [kp.pt for kp in mkp2]
-	# 	# kp_pairs = zip(mkp1, mkp2)
-	# 	return p1, p2
 
 	# 获取图像行、列总数
 	@property
@@ -163,27 +108,13 @@ class BaseDetector(object):
 		rows, cols = gray.shape
 		return rows, cols
 
-	# ------------------------------------------------
-	# 名称：sharper
-	# 功能：凸显边缘信息
-	# 状态：在用
-	# 参数： [array]
-	# 返回： array --- 输出图像
-	# 作者：王杰  2020-4-xx
-	# ------------------------------------------------
+
 	def sharper(self, image):
 		kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], np.float32)  # 定义一个核
 		dst = cv2.filter2D(image, -1, kernel=kernel)
 		return dst
 
-	# ------------------------------------------------
-	# 名称：interpolation_binary_data
-	# 功能：插值
-	# 状态：在用
-	# 参数： [array]
-	# 返回： array
-	# 作者：王杰  2020-4-xx
-	# ------------------------------------------------
+
 	def interpolation_binary_data(self, binary_image):
 		destimg = np.zeros_like(binary_image)
 		cv2.resize(binary_image, destimg, interpolation=cv2.INTER_NEAREST)
@@ -200,7 +131,6 @@ class BaseDetector(object):
 
 	# ------------------------------------------------
 	# 名称：red_contours
-	# 功能：获取红色轮廓
 	# 状态：在用
 	# 参数： [array]
 	#        [int]
@@ -208,10 +138,8 @@ class BaseDetector(object):
 	# 作者：王杰  2020-4-xx
 	# ------------------------------------------------
 	def red_contours(self, img, middle_start=200, middle_end=500):
-		# red_low, red_high = [120, 50, 50], [180, 255, 255]
 		red_low, red_high = [156, 43, 46], [180, 255, 255]
 		red_min, red_max = np.array(red_low), np.array(red_high)
-		# 去除颜色范围外的其余颜色
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		red_mask = cv2.inRange(hsv, red_min, red_max)
 		ret, red_binary = cv2.threshold(red_mask, 0, 255, cv2.THRESH_BINARY)
@@ -219,24 +147,21 @@ class BaseDetector(object):
 		middle_open_mask[:, middle_start:middle_end] = 255
 		red_binary = cv2.bitwise_and(red_binary, red_binary, mask=middle_open_mask)
 		red_binary = cv2.medianBlur(red_binary, 3)
-		# cv2.imshow("red_b",red_binary)
 		red_contours, _hierarchy = cv2.findContours(red_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		return red_binary, red_contours
 
 	# ------------------------------------------------
 	# 名称：red_contours
-	# 功能：获取黄色轮廓
 	# 状态：在用
 	# 参数： [array]   ---输入图像
 	# 要求： img是RGB格式图片
 	# 返回： 数组     ---轮廓数组
 	# 作者：王杰  2020-4-xx
 	# ------------------------------------------------
-	def yellow_contours(self, img):
+	def yellow_contours(self, img, middle_start=200, middle_end=500):
 		yellow_low, yellow_high = [11, 43, 46], [34, 255, 255]
 
 		yellow_min, yellow_max = np.array(yellow_low), np.array(yellow_high)
-		# 去除颜色范围外的其余颜色
 
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -244,29 +169,23 @@ class BaseDetector(object):
 
 		yellow_ret, yellow_binary = cv2.threshold(yellow_mask, 100, 255, cv2.THRESH_BINARY)
 
+		middle_open_mask = np.zeros_like(yellow_binary)
+		middle_open_mask[:, middle_start:middle_end] = 255
+		yellow_binary = cv2.bitwise_and(yellow_binary, yellow_binary, mask=middle_open_mask)
+
 		yellow_contours, _hierarchy = cv2.findContours(yellow_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 		return yellow_binary, yellow_contours
 
-	# ------------------------------------------------
-	# 名称：green_contours
-	# 功能：获取绿色轮廓
-	# 状态：在用
-	# 参数：  [array]
-	#         [int]
-	#         [int]
-	# 要求： img是RGB格式图片
-	# 作者：王杰  编写 2020-4-xx  修改 2020-6-xx
-	# ------------------------------------------------
+
 	def green_contours(self, img, middle_start=100, middle_end=450):
 		rows, cols, channels = img.shape
-		# 如果尺寸已经调整，就无须调整
+
 		if rows != IMG_HEIGHT or cols != IMG_WIDTH:
 			img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH))
 
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-		# cv2.imshow("hsv",hsv)
-		# green_low, green_high = [35, 43, 46], [77, 255, 255]
+
 		green_low, green_high = [35, 43, 46], [77, 255, 255]
 		green_min, green_max = np.array(green_low), np.array(green_high)
 		green_mask = cv2.inRange(hsv, green_min, green_max)
@@ -277,9 +196,9 @@ class BaseDetector(object):
 		foreground = cv2.filter2D(foreground, -1, disc)
 
 		green_contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
 		return foreground, green_contours
 
-	# 判断是否是单色
 	def is_single_color_obj(self, c, hsv_img):
 		match_times = 0
 
@@ -294,7 +213,6 @@ class BaseDetector(object):
 			range_ret, foreground = cv2.threshold(range_, 0, 255, cv2.THRESH_BINARY)
 			disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 			foreground = cv2.filter2D(foreground, -1, disc)
-
 			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 			if len(contours) > 1: match_times += 1
 
@@ -320,7 +238,7 @@ class BaseDetector(object):
 		else:
 			return False
 
-	# color_code :['GREEN','RED','YELLOW',...]
+
 	def color_match_result(self, target, color_code, c):
 		hsv = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
 		colorinfo = COLOR_RANGE[color_code]
@@ -349,7 +267,7 @@ class BaseDetector(object):
 
 			return color1_match and color2_match
 
-	# 判断是否在颜色范围内
+
 	def contour_in_range(self, area, color1_low, color1_high, test_roi):
 		if area == 0:
 			return False
@@ -385,12 +303,7 @@ class BaseDetector(object):
 		return center_x, center_y
 
 
-# ------------------------------------------------
-# 名称：BagDetector
-# 功能：袋子检测算法汇总
-# 状态：在用
-# 作者：王杰  注释后补
-# ------------------------------------------------
+# 袋子
 class BagDetector(BaseDetector):
 
 	def __init__(self, img=None):
@@ -426,14 +339,6 @@ class BagDetector(BaseDetector):
 		x, y = int(guass_position[0][0]), int(guass_position[1][0])
 		return x, y
 
-	# ------------------------------------------------
-	# 名称：bagroi_templates
-	# 功能：获取袋子模型
-	# 状态：暂时不用
-	# 参数： None
-	# 返回： array
-	# 作者：王杰  2020-4-xx
-	# ------------------------------------------------
 	def bagroi_templates(self):
 		landmark_rois = [BagRoi(img=cv2.imread(os.path.join(BAGROI_DIR, roi_img)), id=index)
 		                 for
@@ -441,16 +346,6 @@ class BagDetector(BaseDetector):
 		                 enumerate(os.listdir(BAGROI_DIR)) if roi_img.find('bag') != -1]
 		return landmark_rois
 
-	# ------------------------------------------------
-	# 名称：findbags
-	# 功能：获取袋子模型
-	# 状态：暂时不用
-	# 参数： [img_copy]
-	#        [middle_start]
-	#        [middle_end]
-	# 返回： array --- BagContour object
-	# 作者：王杰     编写 ： 2020-3-xx    修改 ： 2020-6-xx
-	# ------------------------------------------------
 	def findbags(self, img_copy=None):
 		hsv_img = cv2.cvtColor(img_copy, cv2.COLOR_BGR2HSV)
 
@@ -463,8 +358,6 @@ class BagDetector(BaseDetector):
 			             x - outer_width:x + w + outer_width, :]
 			value = MvSuply.SAME_RATE(target_roi, self.bagroi_templates()[0].roi)
 			siglecolor = self.is_single_color_obj(c, hsv_img)
-			# print("bag simility:{},singlecolor :{},final:{}".format(value, siglecolor, (
-			# 			siglecolor or value > 0) and middle_start_withlandmark < x < middle_end_withlandmark))
 			return (siglecolor or value > 0) and middle_start_withlandmark < x < middle_end_withlandmark
 
 		global rows, cols, step
@@ -473,11 +366,11 @@ class BagDetector(BaseDetector):
 		# print(rows,cols,channels)
 		foreground, contours = self.red_contours(img_copy, middle_start_withlandmark, middle_end_withlandmark)
 
-		ret, foreground = cv2.threshold(foreground, 0, 255, cv2.THRESH_BINARY)
+		# ret, foreground = cv2.threshold(foreground, 0, 255, cv2.THRESH_BINARY)
 
 		try:
 			foreground_bagarea = shrink_coach_area(img_copy)
-		# cv2.imshow("foreground_bagarea", foreground_bagarea)
+			cv2.imshow("foreground_bagarea", foreground_bagarea)
 		except Exception as e:
 			print(e.__str__())
 		else:
@@ -491,13 +384,7 @@ class BagDetector(BaseDetector):
 		# contours = list(filter(lambda c: warp_filter(c, hsv_img), contours))
 
 		if contours is None or len(contours) == 0:
-			a, b, c = cv2.split(img_copy)
-			ret, a = cv2.threshold(a, 100, 255, cv2.THRESH_BINARY)
-			ret, b = cv2.threshold(b, 100, 255, cv2.THRESH_BINARY)
-			X, Y = np.where((a > 0) | (b > 0))
-			c[X, Y] = 0
-			ret, foreground = cv2.threshold(c, 120, 255, cv2.THRESH_BINARY)
-			cs, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+			foreground, cs = self.yellow_contours(img_copy, middle_start_withlandmark, middle_end_withlandmark)
 			if cs is not None and len(cs) > 0: contours = cs
 
 		positions = []
@@ -509,8 +396,6 @@ class BagDetector(BaseDetector):
 				continue
 
 			area_match = (bag_min_area < area < bag_max_area)
-			# print("bag_w:{},bag_h:{},area_match:{}<{}<{}={}".format(w, h, bag_min_area, area, bag_max_area, area_match))
-			# print("袋子大小：{}".format(area))
 			if area_match == False:
 				continue
 			# cv2.drawContours(img_copy, [c], -1, (170, 0, 255), 3)
@@ -529,7 +414,6 @@ class BagDetector(BaseDetector):
 	def location_bags_withlandmark(self, dest, img_copy, success_location=True,
 	                               hock=None, plchandle=None
 	                               ):
-		# 存储前景图
 		bagclusters, contours, foreground = self.findbags(img_copy)
 
 		# cv2.drawContours(dest, contours, -1, (170, 0, 255), 3)
@@ -581,21 +465,14 @@ class BagDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：location_bags_withoutlandmark
-	# 功能：用地标定位袋子，另外还有一个方法location_bags_withlandmark.
-	#       有这么一个细节，位置检测与落钩选择不同定位方法
 	# 状态：在用
-	# 参数：  [original_img]
-	#         [middle_start]
-	#         [middle_end]
 	# 返回：  [数组]
 	#         [bagforeground]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def location_bags_withoutlandmark(self, original_img, middle_start=245, middle_end=490):
-		# self.bags.clear()
-		# 存储前景图
+
 		bagclusters, contours, foreground = self.findbags(original_img, middle_start, middle_end)
-		# cv2.drawContours(original_img, contours, -1, (170, 0, 255), 3)
 
 		if bagclusters is None:
 			return [], foreground
@@ -618,7 +495,6 @@ class BagDetector(BaseDetector):
 			bag.cent_y = bag_cluster.cent_y
 			bag.modify_box_content()
 
-			# 建议保留，标注袋子坐标
 			cv2.putText(original_img, bag.box_content, (bag.cent_x, bag.cent_y + 10),
 			            cv2.FONT_HERSHEY_SIMPLEX, 1, (65, 105, 225), 2)
 
@@ -647,11 +523,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： landmarkname_cmp
-	# 功能： 检测地标编号大小
-	# 状态：在用
-	# 参数：  [a]     ---例如地标 NO2-L
-	#        [b]      ---例如地标 NO3-R
-	# 返回： [int]    ---NO2-L与NO3-R返回-1
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def landmarkname_cmp(self, a, b):
@@ -728,7 +599,6 @@ class LandMarkDetecotr(BaseDetector):
 	# ------------------------------------------------
 	# 名称： corners_leveleight
 	# 功能： 检测四个角点
-	# 初衷： 坐标系标定需要四个角点
 	# 作者：王杰  编写 2020-5-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def corners_leveleight(self, left_top_landmark_name):
@@ -739,8 +609,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： __fetch_neigbbour
-	# 功能： 获取邻居
-	# 状态： 在用
 	# 作者：王杰  编写 2020-5-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def __fetch_neigbbour(self, landmark_name, sourth_step: int = 0, west_step: int = 0):
@@ -759,11 +627,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： get_next_no
-	# 功能： 获取同侧下一个编号
-	# 状态： 在用
-	# 参数： [landmark_name]
-	#        [forward]
-	# 返回： [landmark_labelname]
 	# 作者：王杰  编写 2020-4-xx  修改 2020-4-xx
 	# ------------------------------------------------
 	def get_next_no(self, landmark_name, forward=False):
@@ -779,10 +642,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： get_opposite_landmark
-	# 功能： 获取对面地标
-	# 状态： 在用
-	# 参数： [landmark_name]
-	# 返回： [landmark_labelname]
 	# 作者：王杰  编写 2020-4-xx
 	# ------------------------------------------------
 	def get_opposite_landmark(self, landmark_name):
@@ -800,9 +659,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： compute_miss_landmark_position
-	# 功能： 计算丢失地标
-	# 状态： 在用
-	# 参数： [landmark_name]
 	# 作者：王杰  编写 2020-4-xx  修改 2020-4-xx
 	# ------------------------------------------------
 	def compute_miss_landmark_position(self, landmark_name):
@@ -831,9 +687,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称： choose_best_cornors
-	# 功能： 获取最佳角点列表
-	# 状态： 在用
-	# 返回： [array]
 	# 作者：王杰  编写 2020-4-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def choose_best_cornors(self):
@@ -923,8 +776,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：  position_loss
-	# 功能： 计算丢失率
-	# 状态： 在用
 	# 作者：王杰  编写 2020-5-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def position_loss(self, best_four_label_choose, best_six_label_choose, find, level_four_min_loss,
@@ -965,11 +816,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：  position_landmark
-	# 功能： 定位地标
-	# 状态： 在用
-	# 参数： [image]
-	# 返回： [dest]
-	#       [success]
 	# 作者：王杰  编写 2020-5-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def position_landmark(self, image):
@@ -1018,7 +864,7 @@ class LandMarkDetecotr(BaseDetector):
 				lb_nbs = self.calc_neighbours(label_name=lb, ALL_LANDMARK_DIC=self.ALL_LANDMARKS_DICT)
 				for_cols = list(filter(lambda item: item[0] == 'for_col', lb_nbs))
 
-				if for_cols is None or len(for_cols)==0 or opposite_label not in self.ALL_LANDMARKS_DICT: continue
+				if for_cols is None or len(for_cols) == 0 or opposite_label not in self.ALL_LANDMARKS_DICT: continue
 
 				modify_status = True
 				x, y = 0, 0
@@ -1041,7 +887,6 @@ class LandMarkDetecotr(BaseDetector):
 			exception_labels.clear()
 
 		if len(self.ALL_LANDMARKS_DICT.keys()) < 3:
-			logger("self.ALL_LANDMARKS_DICT.keys() < 3", level='debug')
 			return dest, False
 
 		real_positions = self.__landmark_position_dic()
@@ -1051,7 +896,6 @@ class LandMarkDetecotr(BaseDetector):
 		for landmark_roi in self.rois:
 			landmark = landmark_roi.landmark
 			if landmark is None or landmark_roi.label not in self.ALL_LANDMARKS_DICT:
-				self.logger("{} miss landmark".format(landmark_roi.label), "warn")
 				continue
 
 			col = landmark.col
@@ -1102,13 +946,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：  __perspective_transform
-	# 功能： 透视变换
-	# 状态： 在用
-	# 注意事项：传递过来的坐标，需要排序
-	# 参数： [src]
-	#        [position_dic]
-	# 返回： [dest]
-	#       [success]
 	# 作者：王杰  编写 2020-5-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def __perspective_transform(self, src, position_dic):
@@ -1149,9 +986,6 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：  find_landmark
-	# 功能：  找到地标
-	# 参数： [landmark_roi]
-	#        [slide_window_obj]
 	# 作者：王杰  编写 2020-5-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def find_landmark(self, landmark_roi: LandMarkRoi, slide_window_obj: NearLandMark):
@@ -1160,8 +994,6 @@ class LandMarkDetecotr(BaseDetector):
 		roi = cv2.resize(landmark_roi.roi, (slide_window_obj.width, slide_window_obj.height))
 		similar_rgb = self.__compare_rgb_similar(roi, slide_img)
 		hsv_similar = self.__compare_hsv_similar(roi, slide_img)
-		# if landmark_roi.label=="NO1_L":
-		# 	print("{}  ({},{}) similar is {}".format(landmark_roi.label, col, row, similar))
 		slide_window_obj.similarity = max(similar_rgb, hsv_similar)
 		slide_window_obj.land_name = landmark_roi.label
 		if similar_rgb >= 0.5 or hsv_similar > 0.5:
@@ -1184,17 +1016,16 @@ class LandMarkDetecotr(BaseDetector):
 			real_positions = pickle.load(coordinate)
 		return real_positions
 
-	def test(self, target=None, left_open_mask=None):
+	def mk(self, target=None, left_open_mask=None):
 		# ws, hs = [], []
 		outer_width = outer_height = 5
 
-		def inner_islandmark(c):
+		def inner_islandmark(c, color_code):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
 			# if len(ws) < 3 or len(hs) < 3:
-			if w < 4 and h < 4: return False
-			if w > 50 or h > 50: return False
-			if area < 100: return False
+			if not 7 < w < 19 or not 20 < h < 35: return False
+			if not 100 < area < 450: return False
 			target_roi = target[y - outer_width:y + h + outer_height,
 			             x - outer_width:x + w + outer_width, :]
 
@@ -1209,8 +1040,8 @@ class LandMarkDetecotr(BaseDetector):
 
 			# targetroi_gray = cv2.cvtColor(target_roi, cv2.COLOR_BGR2GRAY)
 			# value = np.average(targetroi_gray)
-
-			if category == 0: return False
+			# print("color:{},category:{},area:{},width:{},height:{}".format(color_code, category,area,w,h))
+			if category == 0 and color_code == "BLUE": return False
 
 			return True
 
@@ -1230,24 +1061,25 @@ class LandMarkDetecotr(BaseDetector):
 			                                LANDMARK_THREHOLD_END,
 			                                cv2.THRESH_BINARY)  # 110,255
 
-			# if color_code in ['GREEN', 'RED', 'BLUE']:
-			# 	cv2.imshow(color_code, foreground)
 
 			contours, _hierarchy = cv2.findContours(foreground, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-			# ws.clear()
-			# hs.clear()
-			contours = sorted(list(filter(lambda c: inner_islandmark(c), contours)), key=lambda c: cv2.contourArea(c),
+
+			contours = sorted(list(filter(lambda c: inner_islandmark(c, color_code), contours)),
+			                  key=lambda c: cv2.contourArea(c),
 			                  reverse=True)
 
-			# print("color:{},counts:{}".format(color_code, len(contours)))
 
 			if contours is not None and len(contours) > 0:
-				col, row, w, h = cv2.boundingRect(contours[0])
-				choosed_contours.append([color_code, contours[0], row])
+				if color_code == "BLUE":
+					col, row, w, h = cv2.boundingRect(contours[0])
+					choosed_contours.append([color_code, contours[0], row])
+				else:
+					for c in contours:
+						col, row, w, h = cv2.boundingRect(c)
+						# print(color_code, row)
+						choosed_contours.append([color_code, c, row])
 
 		choosed_contours = sorted(choosed_contours, key=lambda infos: infos[2])
-		# print(choosed_contours)
-		# cv2.imshow("target", target)
 		COLOR_INPUT = [colorinfo[0] for colorinfo in choosed_contours]
 		find_color_num = len(COLOR_INPUT)
 		if find_color_num < 2:
@@ -1269,7 +1101,6 @@ class LandMarkDetecotr(BaseDetector):
 			for index in range(min(find_color_num, len(choosed_landmarks))):
 
 				if COLOR_INPUT[index] != choosed_landmarks[0:find_color_num][index][1]:
-					# print(choosed_landmarks[0:3][index][1])
 					break
 			else:
 				find = True
@@ -1289,22 +1120,14 @@ class LandMarkDetecotr(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：  candidate_landmarks
-	# 功能：  寻找候选地标区域
-	# 参数： [dest]
-	#        [left_start]
-	#        [left_end]
-	#        [right_start]
-	#        [right_end]
 	# 作者：王杰  编写 2020-5-xx  修改 2020-5-xx
 	# ------------------------------------------------
 	def candidate_landmarks(self, dest=None, left_start=110, left_end=210,
 	                        right_start=510, right_end=600):
 		global rows, cols, step
-
 		target = dest
 
 		gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
-		height, width = gray.shape
 		img_world = np.ones_like(gray)
 		ret, img_world = cv2.threshold(img_world, 0, 255, cv2.THRESH_BINARY)
 
@@ -1312,44 +1135,31 @@ class LandMarkDetecotr(BaseDetector):
 			img_world[y:y + height, x:x + width] = 0
 
 		left_open_mask = np.zeros_like(gray)
-		left_open_mask[0:height, left_start:left_end] = 255
+		left_open_mask[:, left_start:left_end] = 255
 
 		right_open_mask = np.zeros_like(gray)
-		right_open_mask[0:height, right_start:right_end] = 255
+		right_open_mask[:, right_start:right_end] = 255
 
 		bigest_h, bigest_w = 0, 0
 
-		# landmarks = []
 		self.checkmatch_roi_contour(bigest_h, bigest_w, img_world, left_open_mask, right_open_mask,
 		                            set_mask_area, target)
 
-	# @cost_time
 	def checkmatch_roi_contour(self, bigest_h, bigest_w, img_world, left_open_mask, right_open_mask,
 	                           set_mask_area, target):
 
-		a, b = self.test(target, left_open_mask)  # 0.106s
+		a, b = self.mk(target, left_open_mask)  # 0.106s
 		if a is None:
 			return None
 		else:
-			# part1_info = "a: ["
-			# for landmark_str in b:
-			# 	part1_info += landmark_str + ","
-			# part1_info += "]"
-			# cv2.putText(target, part1_info,
-			#             (510, 800),
-			#             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
 			select_rois = filter(lambda roi: roi.landmark is None and roi.label.strip() in a, self.rois)
 
-		# start_1 = time.time()
 		for roi_template in select_rois:
-			# color_code=None
-			# print(color_label[0:4])
 			color_codes = [color_code_info for color_label, color_code_info in LANDMARK_COLOR_INFO.items() if
 			               roi_template.label in color_label]
 			color_code = None if len(color_codes) == 0 else color_codes[0]
 			if color_code is None: continue
-			# print("{} has no match ".format(roi_template.label))
 			contours = self.landmark_foreground_method1(
 				left_open_mask,
 				right_open_mask,
@@ -1368,13 +1178,7 @@ class LandMarkDetecotr(BaseDetector):
 			self.init_all_landmarks_dict(bigest_h, bigest_w, c, center_x, center_y, color_code, contours, h, neighbours,
 			                             roi_template, set_mask_area, target, w, x, y)
 
-	# end_1 = time.time()
-	# print(self.ALL_LANDMARKS_DICT)
 
-	# print("for cost:{}".format(end_1 - start_1))
-
-	# 地标二值图像
-	# @cost_time
 	def landmark_foreground_method1(self, left_open_mask, right_open_mask,
 	                                roi_template, target):
 		outer_width = outer_height = 5
@@ -1382,20 +1186,16 @@ class LandMarkDetecotr(BaseDetector):
 		def warp_filter(c, label):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
-			# if len(ws) < 3 or len(hs) < 3:
 			if w < 4 and h < 4: return False
 			if w > 50 or h > 50: return False
 			if area < 100: return False
 			target_roi = target[y - outer_width:y + h + outer_height,
 			             x - outer_width:x + w + outer_width, :]
 
-			# cv2.imshow("roi",target_roi)
-			# cv2.waitKey(5000)
 			if not np.any(target_roi): return False
 
 			category = MvSuply.CATEGORY_CODE(
 				target_roi)
-			# print("{}:分类情况{}".format(label, category))
 			if category == 1: return True
 			# if w > 50 or h > 50 or w < 3 or h < 3:
 			# 	return False
@@ -1467,7 +1267,6 @@ class LandMarkDetecotr(BaseDetector):
 			                       255,
 			                       cv2.THRESH_BINARY)  # 110,255
 			# g = cv2.bitwise_and(g, g, mask=foreground)
-
 			foreground = g
 
 		elif color_code == 'RED':
@@ -1476,8 +1275,6 @@ class LandMarkDetecotr(BaseDetector):
 			ret, r = cv2.threshold(r, 140,
 			                       255,
 			                       cv2.THRESH_BINARY)  # 110,255
-
-			# r = cv2.bitwise_and(r, r, mask=foreground)
 
 			foreground = r
 
@@ -1531,7 +1328,6 @@ class LandMarkDetecotr(BaseDetector):
 			del self.ALL_LANDMARKS_DICT[label]
 
 	# 初始化所有地标
-	# @cost_time
 	def init_all_landmarks_dict(self, bigest_h, bigest_w, c, center_x, center_y, color_code, contours, h, neighbours,
 	                            roi_template, set_mask_area, target, w, x, y):
 		match_ok = self.color_match_result(target, color_code, c)
@@ -1539,7 +1335,6 @@ class LandMarkDetecotr(BaseDetector):
 
 		for flag, ref_label in neighbours:
 
-			# 如果颜色不匹配
 			if flag == 'for_col' and ref_label in self.ALL_LANDMARKS_DICT:
 				ref_landmark = self.ALL_LANDMARKS_DICT[ref_label]
 				if abs(ref_landmark.col - x) <= 50:
@@ -1600,12 +1395,7 @@ class LandMarkDetecotr(BaseDetector):
 
 	def show_landmark_binary(self, GREEN=None, RED=None, BLUE=None):
 		if DEBUG == True:
-			# NO1 = np.hstack(['GREEN', 'GREEN'])
-			# NO2 = np.hstack(['RED', 'RED'])
-			# NO3 = np.hstack(['BLUE', 'BLUE'])
-			# NO4 = np.hstack(['RED', 'RED'])
-			# NO5 = np.hstack(['GREEN', 'GREEN'])
-			# NO6 = np.hstack(['BLUE', 'BLUE'])
+
 
 			HEJI_IMG = np.vstack([GREEN, RED, BLUE])
 			HEJI_IMG = cv2.resize(HEJI_IMG, (700, 800))
@@ -1655,8 +1445,6 @@ class LandMarkDetecotr(BaseDetector):
 
 # ------------------------------------------------
 # 名称：LasterDetector
-# 功能：激光灯检测算法.
-# 状态：可能不再使用
 # 作者：王杰  编写 2020-3-xx  修改 2020-6-xx
 # ------------------------------------------------
 class LasterDetector(BaseDetector):
@@ -1665,7 +1453,6 @@ class LasterDetector(BaseDetector):
 		super().__init__()
 		self.laster = None
 
-	# 定位激光灯
 	def location_laster(self, img_show, img_copy, middle_start=120, middle_end=450):
 
 		def __filter_laster_contour(c):
@@ -1701,8 +1488,6 @@ class LasterDetector(BaseDetector):
 
 # ------------------------------------------------
 # 名称：HockDetector
-# 功能：钩子检测算法.
-# 状态：可能不再使用
 # 作者：王杰  编写 2020-3-xx  修改 2020-6-xx
 # ------------------------------------------------
 class HockDetector(BaseDetector):
@@ -1741,12 +1526,6 @@ class HockDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：find_edige
-	# 功能： 这个方法挺有意思，但是没有成功，做透视变换的时候，图像会有一部分缩减，图像部分区域会成黑色，
-	#		 这个方法就是为了检测到黑色边界
-	# 状态：未使用
-	# 参数：  [dest]
-	# 返回： [底部行号]
-	#        [右侧列号]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def find_edige(self, dest):
@@ -1770,13 +1549,6 @@ class HockDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：find_green_contours
-	# 功能： 检测绿色
-	# 状态： 使用
-	# 参数：  [img]
-	#         [middle_start]
-	#         [middle_end]
-	# 返回： [foreground]
-	#        [contours]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def find_green_contours(self, img, middle_start=120, middle_end=450):
@@ -1798,12 +1570,6 @@ class HockDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：hock_foreground
-	# 功能： 读取钩子二值图像
-	# 状态： 使用
-	# 参数：  [img_copy]
-	#         [middle_start]
-	#         [middle_end]
-	# 返回： [foreground]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def hock_foreground(self, img_copy, middle_start=110, middle_end=500):
@@ -1826,58 +1592,22 @@ class HockDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：location_hock_withlandmark
-	# 功能： 读取钩子二值图像
-	# 状态： 使用
-	# 参数：  [img_show]
-	#         [img_copy]
-	#         [find_landmark]
-	#         [middle_start]
-	#         [middle_end]
-	# 返回： [钩子对象]
-	#       [foreground]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def location_hock_withlandmark(self, img_show, img_copy, laster_of_on=True, middle_start=120,
 	                               middle_end=470):
-
-		# gray = cv2.cvtColor(img_copy, cv2.COLOR_BGR2GRAY)
-
-		# def if_rectangle(c):
-		# 	# 初始化形状名和近似的轮廓
-		# 	peri = cv2.arcLength(c, True)
-		# 	approx = cv2.approxPolyDP(c, 0.04 * peri, True)
-		# 	return len(approx) == 4
-
-		def filter_hock_contour(c):
-			x, y, w, h = cv2.boundingRect(c)
-			area = cv2.contourArea(c)
-			# print("hock area:{},x:{},y:{},w:{},h:{}".format(area, x, y, w, h))
-			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-
-			if area < hock_min_area or area > hock_max_area:
-				return False
-
-			# if x < middle_start or x > 500:
-			# 	return False
-			roi_img = cv2.resize(self.hock_roi.img, (w, h))
-			color_radio = self.color_similar_ratio(roi_img, img_show[y:y + h, x:x + w])
-			if w < hock_min_width or h < hock_min_height:
-				return False
-			if w > hock_max_width or h > hock_max_height:
-				return False
-			if color_radio < 0:
-				return False
-			return True
-
-		# 激光灯斑点过滤器
 		def filter_laster_contour(c):
 			x, y, w, h = cv2.boundingRect(c)
 			area = cv2.contourArea(c)
-			# center_x, center_y = (x + round(w * 0.5), y + round(h * 0.5))
-			# print("laster is {}".format(area))
 
-			if w < hock_min_width or h < hock_min_height:
-				return False
+			if BIG_OR_SMALL_LASTER==1:
+				# print("small area:{},x:{},y:{},w:{},h:{}".format(area, x, y, w, h))
+				if w < smalllaster_min_width and h < smalllaster_min_height and area<smalllaster_min_area:
+					return False
+			else:
+				# print("big area:{},x:{},y:{},w:{},h:{}".format(area, x, y, w, h))
+				if w < biglaster_min_width and h < biglaster_min_height and area < biglaster_min_area:
+					return False
 
 			if x < middle_start or x > middle_end:
 				return False
@@ -1911,6 +1641,7 @@ class HockDetector(BaseDetector):
 						cy = int(m['m01'] / m['m00'])
 						if abs(cx - biggest_cx) > 100 or abs(cy - biggest_cy) > 100: continue
 						x, y, w, h = cv2.boundingRect(c)
+						# 做人建议正直点，有幸看到这里也是有缘人；不要因小事情，影响自己格局，不值当
 						x_list.append(x)
 						x_list.append(x + w)
 						y_list.append(y)
@@ -1944,6 +1675,7 @@ class HockDetector(BaseDetector):
 				elif len(laster_contours) == 1:
 					biggest_c = laster_contours[0]
 					# cv2.drawContours(img_show, laster_contours, -1, (255, 0, 255), 3)
+					# 让我干半个多月了，只给一个项目，不是坑不给我，我也是心累啊
 					try:
 						self.hock = Hock(biggest_c)
 
@@ -1979,8 +1711,6 @@ class HockDetector(BaseDetector):
 						print(e.__str__())
 						raise e
 
-
-
 		else:
 			assert laster_of_on, "没有开启激光灯"
 
@@ -1996,15 +1726,6 @@ class HockDetector(BaseDetector):
 
 	# ------------------------------------------------
 	# 名称：location_hock_withoutlandmark
-	# 功能： 读取钩子二值图像
-	# 注意：1、去除前景目标边框噪音及移动造成的空洞噪音
-	# 		2、钩子多方法融合，根据检测点区域检测出来
-	# 状态： 使用
-	# 参数：  [img_show]
-	#         [middle_start]
-	#         [middle_end]
-	# 返回： [钩子]
-	#        [foreground]
 	# 作者：王杰  编写 2020-6-xx  修改 2020-6-xx
 	# ------------------------------------------------
 	def location_hock_withoutlandmark(self, img_show, middle_start=middle_start_withoutlandmark,
@@ -2034,7 +1755,7 @@ class HockDetector(BaseDetector):
 
 			# print("wide is {},height is {}".format(w, h))
 			return True
-
+		# 调部门感觉有套路在里面，某某人自保吧，哎
 		contours, foregroud = self.hock_foreground(img_show, middle_start, middle_end)
 		# green_ret, foreground = cv2.threshold(foregroud, 40, 255, cv2.THRESH_BINARY)
 		# disc = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
